@@ -1,0 +1,317 @@
+// ===================================
+// 🛒 CART PAGE STYLES
+// ===================================
+
+.cart {
+  padding: $spacing-2xl $spacing-xl;
+  @include flex(row, flex-start, flex-start, $spacing-2xl);
+  min-height: calc(100vh - 80px);
+  animation: fadeIn 0.5s ease;
+
+  // Cart Items Section
+  > main {
+    flex: 1;
+    max-width: 65%;
+    
+    > h1 {
+      @include heading(0.5px, 500);
+      text-align: center;
+      color: $color-text-secondary;
+      padding: $spacing-xl;
+      background: $color-bg-secondary;
+      border: 1px solid $color-border;
+      box-shadow: $shadow-sm;
+      border-radius: $radius-lg;
+    }
+    
+    overflow-y: auto;
+    max-height: calc(100vh - 150px);
+    @include custom-scrollbar();
+    padding-right: $spacing-md;
+  }
+
+  // Order Summary Sidebar
+  > aside {
+    width: 35%;
+    min-width: 320px;
+    max-width: 400px;
+    padding: $spacing-xl;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    box-shadow: $shadow-lg;
+    border-radius: $radius-lg;
+    @include flex(column, flex-start, stretch, $spacing-md);
+    position: sticky;
+    top: 100px;
+    animation: fadeInUp 0.5s ease;
+    
+    &::before {
+      content: 'Order Summary';
+      font-family: $font-display;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: $color-text-primary;
+      padding-bottom: $spacing-md;
+      border-bottom: 1px solid $color-border;
+      margin-bottom: $spacing-sm;
+    }
+
+    > p {
+      font-size: 0.95rem;
+      color: $color-text-secondary;
+      @include flex(row, space-between, center);
+      
+      &:last-of-type {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: $color-text-primary;
+        padding-top: $spacing-md;
+        border-top: 1px solid $color-border;
+        margin-top: $spacing-sm;
+        
+        b {
+          @include text-gradient();
+          font-size: 1.25rem;
+        }
+      }
+    }
+
+    > input {
+      @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+      border-radius: $radius-md;
+      margin-top: $spacing-md;
+      
+      &::placeholder {
+        color: $color-text-secondary;
+        opacity: 0.7;
+      }
+      
+      &:focus {
+        border-color: $color-accent-primary;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+    }
+
+    > a {
+      @include btn($spacing-md $spacing-lg);
+      @include btn-gradient();
+      text-decoration: none;
+      @include flex;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      border-radius: $radius-md;
+      margin-top: $spacing-md;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-glow;
+      }
+    }
+
+    > span {
+      margin-top: $spacing-sm;
+      @include flex(row, center, center, $spacing-sm);
+      font-size: 0.9rem;
+      padding: $spacing-sm $spacing-md;
+      border-radius: $radius-md;
+      
+      &.green {
+        background: rgba(16, 185, 129, 0.1);
+        color: $color-success;
+      }
+      
+      &.red {
+        background: rgba(239, 68, 68, 0.1);
+        color: $color-error;
+      }
+      
+      > code {
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.1);
+        padding: $spacing-xs $spacing-sm;
+        border-radius: $radius-sm;
+      }
+    }
+  }
+}
+
+// ===================================
+// 🛍️ CART ITEM
+// ===================================
+
+.CartItem {
+  padding: $spacing-lg;
+  @include flex(row, flex-start, center, $spacing-lg);
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  box-shadow: $shadow-sm;
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-md;
+  animation: fadeInUp 0.4s ease;
+  transition: all $transition-normal;
+  
+  &:hover {
+    border-color: $color-border-hover;
+    transform: translateX(4px);
+  }
+  
+  > img {
+    @include square(100px);
+    object-fit: contain;
+    border-radius: $radius-md;
+    background: rgba(0, 0, 0, 0.2);
+    padding: $spacing-sm;
+  }
+
+  > article {
+    flex: 1;
+    @include flex(column, center, flex-start, $spacing-xs);
+    
+    > a {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: $color-text-primary;
+      transition: all $transition-fast;
+      
+      &:hover {
+        color: $color-accent-primary;
+      }
+    }
+    
+    > span {
+      font-weight: 600;
+      font-size: 1rem;
+      @include text-gradient();
+    }
+  }
+
+  // Quantity Controls
+  > div {
+    @include flex(row, center, center, $spacing-sm);
+    
+    > button {
+      @include btn($spacing-xs);
+      @include square(36px);
+      border-radius: $radius-md;
+      @include flex;
+      font-size: 1rem;
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+      border: 1px solid $color-border;
+      
+      &:hover {
+        background: $color-accent-primary;
+        border-color: $color-accent-primary;
+        transform: scale(1.05);
+      }
+    }
+    
+    > span {
+      font-weight: 600;
+      font-size: 1rem;
+      min-width: 40px;
+      text-align: center;
+      color: $color-text-primary;
+    }
+  }
+
+  // Remove Button
+  > button {
+    border: none;
+    background: rgba(239, 68, 68, 0.1);
+    @include flex;
+    @include square(40px);
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: $color-error;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: lighten($color-error, 10%);
+      transform: scale(1.05);
+    }
+  }
+}
+
+// ===================================
+// RESPONSIVE CART
+// ===================================
+
+@media screen and (max-width: 1024px) {
+  .cart {
+    padding: $spacing-xl;
+    gap: $spacing-xl;
+    
+    > main {
+      max-width: 60%;
+    }
+    
+    > aside {
+      padding: $spacing-lg;
+    }
+  }
+  
+  .CartItem {
+    gap: $spacing-md;
+    
+    > img {
+      @include square(80px);
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .cart {
+    flex-direction: column;
+    padding: $spacing-lg;
+    gap: $spacing-lg;
+    
+    > main {
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      padding-right: 0;
+    }
+    
+    > aside {
+      width: 100%;
+      max-width: none;
+      min-width: auto;
+      position: static;
+      order: -1;
+    }
+  }
+  
+  .CartItem {
+    flex-wrap: wrap;
+    padding: $spacing-md;
+    
+    > img {
+      @include square(70px);
+    }
+    
+    > article {
+      flex: 1;
+      min-width: 150px;
+    }
+    
+    > div {
+      width: 100%;
+      justify-content: flex-start;
+      margin-top: $spacing-sm;
+      padding-top: $spacing-sm;
+      border-top: 1px solid $color-border;
+    }
+    
+    > button {
+      position: absolute;
+      top: $spacing-md;
+      right: $spacing-md;
+    }
+    
+    position: relative;
+  }
+}

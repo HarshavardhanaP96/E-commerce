@@ -1,0 +1,227 @@
+// ===================================
+// 📱 RESPONSIVE MEDIA QUERIES
+// ===================================
+
+// Large Tablets & Small Laptops
+@media screen and (max-width: 1200px) {
+  .admin-container {
+    overflow: auto;
+    @include grid(260px 1fr, 0);
+    
+    > aside {
+      padding: $spacing-md;
+    }
+  }
+
+  .dashboard {
+    .widget-container,
+    .graph-container,
+    .transaction-container {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .graph-container {
+      padding: $spacing-lg;
+      
+      .revenue-chart {
+        min-width: 100%;
+      }
+      
+      .dashboard-categories {
+        width: 100%;
+        max-width: none;
+      }
+    }
+    
+    .transaction-container {
+      .gender-chart {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .transaction-box {
+        min-width: 100%;
+      }
+    }
+  }
+
+  .product-management {
+    padding: $spacing-lg;
+    gap: $spacing-lg;
+  }
+}
+
+// Tablets
+@media screen and (max-width: 1100px) {
+  .admin-container {
+    grid-template-columns: 1fr !important;
+    
+    > aside {
+      position: fixed;
+      left: -100%;
+      top: 0;
+      height: 100vh;
+      width: 280px;
+      transition: left $transition-normal;
+      z-index: 150;
+      box-shadow: $shadow-lg;
+      
+      &.show {
+        left: 0;
+      }
+    }
+  }
+  
+  #hamburger {
+    display: grid !important;
+  }
+}
+
+// Mobile Landscape & Small Tablets
+@media screen and (max-width: 768px) {
+  // These styles are now in individual component files
+  // Keeping for backwards compatibility with any missed components
+  
+  .product-search-page {
+    display: block;
+    padding: 0;
+
+    > aside {
+      @include flex(row, space-between, center);
+      flex-wrap: wrap;
+      box-shadow: none;
+      border-radius: 0;
+      
+      > h2 {
+        font-size: 1rem;
+      }
+    }
+    
+    > main > input {
+      width: 100%;
+      border: 1px solid $color-border;
+    }
+  }
+  
+  .dashboard {
+    padding: $spacing-md;
+    
+    .widget-container {
+      gap: $spacing-md;
+      
+      .widget {
+        min-width: 100%;
+        max-width: none;
+      }
+    }
+    
+    .graph-container {
+      gap: $spacing-md;
+    }
+    
+    .transaction-container {
+      gap: $spacing-md;
+    }
+  }
+}
+
+// Mobile Portrait
+@media screen and (max-width: 600px) {
+  .product-management {
+    flex-direction: column;
+    align-items: stretch;
+    padding: $spacing-md;
+    
+    > section,
+    > article {
+      max-width: none;
+    }
+  }
+
+  .chart-container {
+    padding: $spacing-lg;
+    
+    > h1 {
+      font-size: 1.25rem;
+      text-align: center;
+      margin-bottom: $spacing-lg;
+    }
+    
+    > section {
+      margin: $spacing-xl auto;
+      
+      > div {
+        padding: $spacing-md;
+      }
+    }
+  }
+
+  .dashboard-app-container {
+    padding: $spacing-lg;
+    
+    > section {
+      gap: $spacing-lg;
+      
+      .coupon-form,
+      .stopwatch {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .stopwatch {
+        align-items: center;
+        
+        > h2 {
+          font-size: 2.5rem;
+        }
+        
+        > button {
+          min-width: 100px;
+        }
+      }
+      
+      .tosscoin {
+        @include square(140px);
+      }
+      
+      .coupon-form {
+        padding: $spacing-lg;
+      }
+    }
+  }
+  
+  .create-product-btn {
+    right: $spacing-md;
+    bottom: $spacing-md;
+    @include square(48px);
+    font-size: 1.25rem;
+  }
+}
+
+// Small Mobile
+@media screen and (max-width: 400px) {
+  .dashboard {
+    padding: $spacing-sm;
+    
+    .bar {
+      padding: $spacing-sm;
+      
+      > input {
+        width: 100%;
+        max-width: none;
+      }
+    }
+  }
+  
+  .dashboard-app-container > section {
+    .stopwatch > h2 {
+      font-size: 2rem;
+    }
+    
+    .tosscoin {
+      @include square(120px);
+    }
+  }
+}

@@ -1,0 +1,161 @@
+// ===================================
+// 🎮 ADMIN APPS STYLES
+// ===================================
+
+.dashboard-app-container {
+  @include glass-card(15px, 0.9);
+  padding: $spacing-2xl;
+  min-height: 100%;
+  animation: fadeIn 0.5s ease;
+
+  > section {
+    @include flex(column, center, center, $spacing-xl);
+    min-height: 60vh;
+
+
+
+    // Coupon Form
+    .coupon-form {
+      @include glass-card(15px, 0.4);
+      padding: $spacing-xl;
+      @include flex(column, flex-start, stretch, $spacing-lg);
+      max-width: 400px;
+      width: 100%;
+      
+      > input {
+        @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+        border-radius: $radius-md;
+      }
+
+      > fieldset {
+        padding: $spacing-md;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        background: rgba(0, 0, 0, 0.2);
+        @include flex(row, flex-start, center, $spacing-sm);
+        flex-wrap: wrap;
+
+        legend {
+          color: $color-text-muted;
+          font-size: 0.85rem;
+          padding: 0 $spacing-sm;
+        }
+
+        label {
+          @include flex(row, flex-start, center, $spacing-xs);
+          color: $color-text-secondary;
+          cursor: pointer;
+          
+          input {
+            accent-color: $color-accent-primary;
+          }
+          
+          span {
+            font-size: 0.85rem;
+          }
+        }
+      }
+
+      > button {
+        @include btn($spacing-md $spacing-xl);
+        @include btn-gradient();
+        width: 100%;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    // Generated Coupon Code
+    > code {
+      position: relative;
+      font-size: 1.5rem;
+      font-family: monospace;
+      letter-spacing: 3px;
+      padding: $spacing-md $spacing-xl;
+      @include glass-card(10px, 0.5);
+      cursor: pointer;
+      color: $color-accent-primary;
+      transition: all $transition-fast;
+      
+      &:hover {
+        background: rgba(99, 102, 241, 0.15);
+        
+        > span {
+          opacity: 1;
+        }
+      }
+
+      > span {
+        opacity: 0;
+        @include square(100%);
+        top: 0;
+        left: 0;
+        position: absolute;
+        border-radius: inherit;
+        background: $color-accent-gradient;
+        color: white;
+        font-size: 0.9rem;
+        @include flex;
+        transition: opacity $transition-fast;
+      }
+    }
+  }
+}
+
+// Analytics Page Styles
+.analytics-section {
+  width: 100%;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+
+  h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    color: rgba(0, 0, 0, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 0.5rem;
+  }
+
+  .chart-container {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+
+    .chart-box {
+      background-color: white;
+      border-radius: 10px;
+      padding: 1rem;
+      width: 48%; // 2 items per row
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+      
+      h3 {
+        text-align: center;
+        margin-bottom: 1rem;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      &.full-width {
+        width: 100%;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-section {
+    .chart-container {
+      .chart-box {
+        width: 100%;
+      }
+    }
+  }
+}

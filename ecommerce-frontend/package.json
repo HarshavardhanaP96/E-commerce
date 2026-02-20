@@ -1,0 +1,40 @@
+{
+  "name": "ecommerce-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.11.1",
+    "axios": "^1.13.2",
+    "chart.js": "^4.4.3",
+    "firebase": "^10.12.2",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.2.1",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^6.23.1",
+    "react-table": "^7.8.0",
+    "sass": "^1.77.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@types/react-table": "^7.7.20",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

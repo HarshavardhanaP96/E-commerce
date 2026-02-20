@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deploy
+  namespace: prod-env
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: DOCKERHUB_USERNAME/ecommerce-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: MONGO_URI
+        - name: RAZORPAY_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: RAZORPAY_KEY_ID
+        - name: RAZORPAY_KEY_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: RAZORPAY_KEY_SECRET
+        - name: CLIENT_URL
+          value: "https://shop.example.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: prod-env
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP

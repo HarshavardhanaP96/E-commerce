@@ -1,0 +1,218 @@
+// ===================================
+// 📦 ADMIN PRODUCTS STYLES
+// ===================================
+
+.dashboard-product-box {
+  @include glass-card(15px, 0.9);
+  padding: $spacing-xl;
+  overflow: auto;
+  min-height: 100%;
+  @include custom-scrollbar();
+}
+
+.create-product-btn {
+  position: fixed;
+  right: $spacing-xl;
+  bottom: $spacing-xl;
+  @include square(56px);
+  @include flex(row, center, center, 0);
+  border-radius: $radius-full;
+  background: $color-accent-gradient;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  border: none;
+  box-shadow: $shadow-glow;
+  transition: all $transition-normal;
+  z-index: 100;
+  
+  &:hover {
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: $shadow-lg, $shadow-glow;
+  }
+}
+
+.product-delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: $color-error;
+  font-size: 1rem;
+  @include square(36px);
+  @include flex;
+  border-radius: $radius-full;
+  cursor: pointer;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba(239, 68, 68, 0.25);
+    transform: scale(1.1);
+  }
+}
+
+.product-management {
+  @include flex(row, center, flex-start, $spacing-xl);
+  padding: $spacing-xl;
+  animation: fadeIn 0.5s ease;
+
+  > section {
+    overflow-y: auto;
+    width: 100%;
+    max-width: 480px;
+    @include glass-card(20px, 0.6);
+    padding: $spacing-2xl;
+    @include flex(column, flex-start, stretch, $spacing-lg);
+    position: relative;
+    @include custom-scrollbar();
+
+    > h2 {
+      @include heading(0.5px, 600);
+      font-size: 1.25rem;
+      text-align: center;
+      color: $color-text-primary;
+    }
+
+    > img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: $radius-md;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    > strong {
+      font-weight: 400;
+      color: $color-text-secondary;
+      font-size: 0.9rem;
+    }
+
+    > span {
+      position: absolute;
+      right: $spacing-lg;
+      top: $spacing-lg;
+      @include badge($color-success);
+    }
+
+    > p {
+      text-align: center;
+      letter-spacing: 0.5px;
+      color: $color-text-muted;
+      font-size: 0.9rem;
+    }
+    
+    > h3 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      @include text-gradient();
+    }
+  }
+
+  > article {
+    width: 100%;
+    max-width: 400px;
+    @include glass-card(20px, 0.6);
+    padding: $spacing-2xl;
+    position: relative;
+
+    > form {
+      @include flex(column, flex-start, stretch, $spacing-lg);
+      
+      > h2 {
+        @include heading(0.5px, 600);
+        font-size: 1.25rem;
+        text-align: center;
+        color: $color-text-primary;
+        margin-bottom: $spacing-sm;
+      }
+
+      > img {
+        @include square(80px);
+        object-fit: cover;
+        border-radius: $radius-md;
+        margin: 0 auto;
+        border: 1px solid $color-border;
+      }
+
+      > div {
+        width: 100%;
+        @include flex(column, flex-start, flex-start, $spacing-xs);
+        
+        > label {
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: $color-text-muted;
+        }
+
+        > input {
+          @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+          border-radius: $radius-md;
+        }
+      }
+
+      > button {
+        @include btn($spacing-md $spacing-xl);
+        @include btn-gradient();
+        width: 100%;
+        margin-top: $spacing-sm;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  // Shipping Info Card
+  .shipping-info-card {
+    > h1 {
+      @include heading(0.5px, 600);
+      font-size: 1.25rem;
+      text-align: center;
+      color: $color-text-primary;
+      margin-bottom: $spacing-lg;
+    }
+    
+    > h5 {
+      margin-top: $spacing-lg;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: $color-text-muted;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    > p {
+      margin-top: $spacing-xs;
+      color: $color-text-secondary;
+    }
+    
+    > .shipping-btn {
+      @include btn($spacing-md $spacing-xl);
+      @include btn-gradient();
+      width: 100%;
+      margin-top: $spacing-xl;
+      font-size: 1rem;
+    }
+  }
+}
+
+.transaction-product-card {
+  @include flex(row, flex-start, center, $spacing-md);
+  padding: $spacing-sm;
+  @include glass-card(10px, 0.3);
+  margin-bottom: $spacing-sm;
+
+  > img {
+    @include square(50px);
+    object-fit: cover;
+    border-radius: $radius-sm;
+  }
+  
+  > span {
+    margin-left: auto;
+    font-weight: 600;
+    @include text-gradient();
+  }
+}

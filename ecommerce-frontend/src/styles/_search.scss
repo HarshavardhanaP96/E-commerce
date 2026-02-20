@@ -1,0 +1,277 @@
+
+// ===================================
+// 🔍 SEARCH PAGE STYLES
+// ===================================
+
+.product-searcg-page {
+  padding: $spacing-xl;
+  @include flex(row, flex-start, flex-start, $spacing-xl);
+  min-height: calc(100vh - 80px);
+  animation: fadeIn 0.5s ease;
+
+  // Filters Sidebar
+  > aside {
+    min-width: 280px;
+    max-width: 320px;
+    position: sticky;
+    top: 100px;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    box-shadow: $shadow-sm;
+    border-radius: $radius-lg;
+    padding: $spacing-xl;
+    @include flex(column, flex-start, stretch, $spacing-lg);
+    animation: fadeInUp 0.5s ease;
+
+    > h2 {
+      @include heading(0.5px, 600);
+      font-size: 1.25rem;
+      color: $color-text-primary;
+      padding-bottom: $spacing-md;
+      border-bottom: 1px solid $color-border;
+      margin-bottom: $spacing-sm;
+    }
+
+    > div {
+      @include flex(column, flex-start, stretch, $spacing-sm);
+      
+      > h4 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: $color-text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      > input,
+      > select {
+        @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+        border-radius: $radius-md;
+        margin-top: $spacing-xs;
+        
+        &:hover {
+          border-color: $color-border-hover;
+        }
+      }
+      
+      // Range slider styling
+      > input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 6px;
+        background: $color-bg-tertiary;
+        border-radius: $radius-full;
+        outline: none;
+        margin-top: $spacing-md;
+        
+        &::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: $radius-full;
+          background: $color-accent-gradient;
+          cursor: pointer;
+          box-shadow: 0 0 10px $color-accent-glow;
+          transition: transform $transition-fast;
+          
+          &:hover {
+            transform: scale(1.1);
+          }
+        }
+        
+        &::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: $radius-full;
+          background: $color-accent-gradient;
+          cursor: pointer;
+          border: none;
+        }
+      }
+      
+      select {
+        cursor: pointer;
+        
+        option {
+          background: $color-bg-secondary;
+          color: $color-text-primary;
+        }
+      }
+    }
+  }
+
+  // Main Content Area
+  > main {
+    flex: 1;
+    padding: 0 $spacing-md;
+    
+    > h1 {
+      @include heading(0.5px, 600);
+      font-size: 1.75rem;
+      color: $color-text-primary;
+      margin-bottom: $spacing-lg;
+    }
+
+    > input {
+      @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+      border-radius: $radius-lg;
+      font-size: 1rem;
+      margin-bottom: $spacing-xl;
+      max-width: 500px;
+      
+      &::placeholder {
+        color: $color-text-muted;
+      }
+      
+      &:focus {
+        border-color: $color-accent-primary;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+    }
+
+    // Products Grid
+    .search-product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: $spacing-lg;
+      padding-bottom: $spacing-xl;
+      max-height: calc(100vh - 300px);
+      overflow-y: auto;
+      @include custom-scrollbar();
+      
+      // Empty state
+      &:empty::after {
+        content: 'No products found';
+        grid-column: 1 / -1;
+        text-align: center;
+        color: $color-text-muted;
+        padding: $spacing-3xl;
+        font-size: 1.1rem;
+      }
+    }
+
+    // Pagination
+    article {
+      @include flex(row, center, center, $spacing-lg);
+      padding: $spacing-xl 0;
+      margin-top: $spacing-lg;
+      border-top: 1px solid $color-border;
+      
+      > button {
+        @include btn($spacing-sm $spacing-xl);
+        @include btn-gradient();
+        border-radius: $radius-md;
+        font-weight: 500;
+        min-width: 100px;
+        
+        &:disabled {
+          background: $color-bg-tertiary;
+          color: $color-text-muted;
+          cursor: not-allowed;
+          box-shadow: none;
+          
+          &:hover {
+            transform: none;
+          }
+        }
+      }
+      
+      > span {
+        color: $color-text-secondary;
+        font-size: 0.95rem;
+        padding: $spacing-xl;
+        background: $color-bg-secondary;
+        border: 1px solid $color-border;
+        box-shadow: $shadow-lg;
+        border-radius: $radius-lg;
+      }
+    }
+  }
+}
+
+// ===================================
+// RESPONSIVE SEARCH
+// ===================================
+
+@media screen and (max-width: 1024px) {
+  .product-searcg-page {
+    padding: $spacing-lg;
+    gap: $spacing-lg;
+    
+    > aside {
+      min-width: 240px;
+      padding: $spacing-lg;
+    }
+    
+    > main {
+      .search-product-list {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .product-searcg-page {
+    flex-direction: column;
+    
+    > aside {
+      width: 100%;
+      max-width: none;
+      position: static;
+      
+      > h2 {
+        @include flex(row, space-between, center);
+        cursor: pointer;
+        
+        &::after {
+          content: '▼';
+          font-size: 0.7rem;
+          color: $color-text-muted;
+        }
+      }
+    }
+    
+    > main {
+      width: 100%;
+      padding: 0;
+      
+      > input {
+        max-width: none;
+      }
+      
+      .search-product-list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        max-height: none;
+      }
+      
+      article {
+        gap: $spacing-md;
+        
+        > button {
+          min-width: 80px;
+          padding: $spacing-sm $spacing-md;
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .product-searcg-page {
+    padding: $spacing-md;
+    
+    > aside {
+      padding: $spacing-md;
+    }
+    
+    > main {
+      .search-product-list {
+        grid-template-columns: 1fr 1fr;
+        gap: $spacing-sm;
+      }
+    }
+  }
+}

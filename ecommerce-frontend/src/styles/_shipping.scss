@@ -1,0 +1,244 @@
+// ===================================
+// 📦 SHIPPING PAGE STYLES
+// ===================================
+
+.shipping {
+  min-height: calc(100vh - 80px);
+  @include flex(column);
+  padding: $spacing-2xl;
+  animation: fadeIn 0.5s ease;
+
+  > main {
+    width: 100%;
+    max-width: 600px;
+    padding: $spacing-2xl;
+    @include glass-card(20px, 0.6);
+    animation: fadeInUp 0.5s ease;
+
+    > h1 {
+      font-family: $font-display;
+      font-size: 1.75rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: $spacing-xl;
+      color: $color-text-primary;
+    }
+
+    > form {
+      @include flex(column, flex-start, stretch, $spacing-lg);
+
+      > div {
+        @include flex(column, flex-start, stretch, $spacing-sm);
+
+        > label {
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: $color-text-secondary;
+        }
+
+        > input,
+        > select {
+          @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
+          border-radius: $radius-md;
+          font-size: 1rem;
+          
+          &:hover {
+            border-color: $color-border-hover;
+          }
+          
+          &:focus {
+            border-color: $color-accent-primary;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+          }
+          
+          option {
+            background: $color-bg-secondary;
+            color: $color-text-primary;
+          }
+        }
+      }
+
+      // Two column layout for city, state, pincode
+      .address-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: $spacing-md;
+      }
+
+      > button {
+        @include btn($spacing-md $spacing-xl);
+        @include btn-gradient();
+        margin-top: $spacing-md;
+        border-radius: $radius-md;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: $shadow-glow;
+        }
+      }
+    }
+  }
+}
+
+// ===================================
+// 📋 ORDERS PAGE STYLES
+// ===================================
+
+.orders {
+  padding: $spacing-2xl;
+  animation: fadeIn 0.5s ease;
+
+  > h1 {
+    @include heading(0.5px, 600);
+    font-size: 2rem;
+    margin-bottom: $spacing-xl;
+    color: $color-text-primary;
+  }
+  
+  .orders-list {
+    @include flex(column, flex-start, stretch, $spacing-md);
+  }
+  
+  .order-card {
+    @include glass-card(15px, 0.5);
+    padding: $spacing-lg;
+    @include flex(row, space-between, center, $spacing-lg);
+    transition: all $transition-normal;
+    
+    &:hover {
+      border-color: $color-border-hover;
+      transform: translateX(4px);
+    }
+    
+    .order-info {
+      @include flex(column, flex-start, flex-start, $spacing-xs);
+      
+      > span {
+        color: $color-text-muted;
+        font-size: 0.85rem;
+        
+        &.order-id {
+          font-family: monospace;
+          color: $color-accent-primary;
+        }
+      }
+      
+      > h3 {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: $color-text-primary;
+      }
+    }
+    
+    .order-status {
+      padding: $spacing-sm $spacing-md;
+      border-radius: $radius-full;
+      font-size: 0.85rem;
+      font-weight: 600;
+      
+      &.processing {
+        background: rgba(245, 158, 11, 0.15);
+        color: $color-warning;
+      }
+      
+      &.shipped {
+        background: rgba(99, 102, 241, 0.15);
+        color: $color-accent-primary;
+      }
+      
+      &.delivered {
+        background: rgba(16, 185, 129, 0.15);
+        color: $color-success;
+      }
+    }
+    
+    .order-total {
+      @include text-gradient();
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    
+    > a {
+      @include btn($spacing-sm $spacing-lg);
+      background: rgba(99, 102, 241, 0.15);
+      color: $color-accent-primary;
+      border-radius: $radius-md;
+      font-size: 0.9rem;
+      
+      &:hover {
+        background: rgba(99, 102, 241, 0.25);
+        transform: translateY(-2px);
+      }
+    }
+  }
+}
+
+// ===================================
+// CHECKOUT PAGE STYLES
+// ===================================
+
+.checkout {
+  padding: $spacing-2xl;
+  @include flex(row, flex-start, flex-start, $spacing-2xl);
+  min-height: calc(100vh - 80px);
+  
+  > main {
+    flex: 1;
+    @include glass-card(20px, 0.5);
+    padding: $spacing-xl;
+    
+    > h1 {
+      @include heading(0.5px, 600);
+      font-size: 1.5rem;
+      margin-bottom: $spacing-xl;
+      padding-bottom: $spacing-md;
+      border-bottom: 1px solid $color-border;
+    }
+  }
+  
+  > aside {
+    width: 400px;
+    @include glass-card(20px, 0.6);
+    padding: $spacing-xl;
+    position: sticky;
+    top: 100px;
+  }
+}
+
+// ===================================
+// RESPONSIVE SHIPPING & ORDERS
+// ===================================
+
+@media screen and (max-width: 768px) {
+  .shipping {
+    padding: $spacing-lg;
+    
+    > main {
+      padding: $spacing-xl;
+      
+      > form {
+        .address-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+  }
+  
+  .orders {
+    padding: $spacing-lg;
+    
+    .order-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-md;
+      
+      > a {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  }
+}

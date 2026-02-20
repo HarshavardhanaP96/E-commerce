@@ -1,0 +1,284 @@
+// ===================================
+// 🎨 MODERN DESIGN SYSTEM - MIXINS
+// ===================================
+
+// Color Palette - Professional Light Theme
+$color-bg-primary: #f3f4f6;
+$color-bg-secondary: #ffffff;
+$color-bg-tertiary: #f9fafb;
+$color-bg-card: #ffffff;
+
+$color-text-primary: #1f2937;
+$color-text-secondary: #4b5563;
+$color-text-muted: #9ca3af;
+
+$color-accent-primary: #6366f1;
+$color-accent-secondary: #8b5cf6;
+$color-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+$color-accent-glow: rgba(99, 102, 241, 0.4);
+
+$color-success: #10b981;
+$color-warning: #f59e0b;
+$color-error: #ef4444;
+
+$color-border: #e5e7eb;
+$color-border-hover: #d1d5db;
+
+// Typography
+$font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-display: 'Outfit', 'Inter', sans-serif;
+
+// Spacing Scale
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+$spacing-2xl: 3rem;
+$spacing-3xl: 4rem;
+
+// Border Radius Scale
+$radius-sm: 0.5rem;
+$radius-md: 0.75rem;
+$radius-lg: 1rem;
+$radius-xl: 1.5rem;
+$radius-full: 9999px;
+
+// Shadows
+$shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+$shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
+$shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.45);
+$shadow-glow: 0 0 30px $color-accent-glow;
+
+// Transitions
+$transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+// ===================================
+// UTILITY MIXINS
+// ===================================
+
+@mixin heading($spacing: 0.5px, $weight: 600, $case: none) {
+  font-family: $font-display;
+  letter-spacing: $spacing;
+  font-weight: $weight;
+  text-transform: $case;
+}
+
+@mixin flex($dir: row, $justifyContent: center, $alignItems: center, $gap: 1rem) {
+  display: flex;
+  flex-direction: $dir;
+  justify-content: $justifyContent;
+  align-items: $alignItems;
+  gap: $gap;
+}
+
+@mixin grid($col: 1fr, $gap: 1rem, $row: unset) {
+  display: grid;
+  grid-template-columns: $col;
+  grid-template-rows: $row;
+  gap: $gap;
+}
+
+@mixin inputStyle($w: 100%, $p: 1rem, $bgColor: $color-bg-tertiary, $border: 1px solid $color-border) {
+  padding: $p;
+  border: $border;
+  background-color: $bgColor;
+  width: $w;
+  outline: none;
+  color: $color-text-primary;
+  font-family: $font-primary;
+  font-size: 0.95rem;
+  transition: all $transition-normal;
+  
+  &::placeholder {
+    color: $color-text-muted;
+  }
+  
+  &:focus {
+    border-color: $color-accent-primary;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+}
+
+@mixin posCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@mixin square($s: 1rem) {
+  height: $s;
+  width: $s;
+}
+
+@mixin baseShadow() {
+  box-shadow: $shadow-md;
+}
+
+@mixin btn($p: 0.75rem 1.5rem, $bg: $color-accent-primary, $color: white) {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  padding: $p;
+  background: $bg;
+  color: $color;
+  font-family: $font-primary;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-radius: $radius-md;
+  transition: all $transition-normal;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: $shadow-glow;
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@mixin btn-gradient() {
+  background: $color-accent-gradient;
+  border: none;
+  color: white;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+}
+
+// Glassmorphism Card
+@mixin glass-card($blur: 20px, $opacity: 0.6) {
+  background: rgba(255, 255, 255, $opacity);
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+}
+
+// Text Gradient
+@mixin text-gradient() {
+  background: $color-accent-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// Hover Lift Effect
+@mixin hover-lift($distance: -5px) {
+  transition: transform $transition-normal, box-shadow $transition-normal;
+  
+  &:hover {
+    transform: translateY($distance);
+    box-shadow: $shadow-lg;
+  }
+}
+
+// Shimmer Animation
+@mixin shimmer() {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.08),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    left: 100%;
+  }
+}
+
+// Pulse Animation
+@mixin pulse($color: $color-accent-primary) {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba($color, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 15px rgba($color, 0);
+    }
+  }
+}
+
+// Scrollbar Styling
+@mixin custom-scrollbar() {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: $color-bg-secondary;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: $color-border-hover;
+    border-radius: 3px;
+    
+    &:hover {
+      background: $color-text-muted;
+    }
+  }
+}
+
+// Focus Ring
+@mixin focus-ring() {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Badge Style
+@mixin badge($bg: $color-accent-primary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  background: rgba($bg, 0.15);
+  color: $bg;
+  border-radius: $radius-full;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

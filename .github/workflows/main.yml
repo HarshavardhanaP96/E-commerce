@@ -1,0 +1,85 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ecommerce-backend/package-lock.json
+      - name: Install dependencies
+        run: cd ecommerce-backend && npm install
+      - name: Run tests
+        run: cd ecommerce-backend && npm test
+
+  build-and-push:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecommerce-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecommerce-frontend
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+
+      - name: Deploy to Test Environment
+        if: github.ref != 'refs/heads/main'
+        run: |
+          kubectl apply -f k8s/test/ -n test-env
+          kubectl set image deployment/backend-deploy backend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }} -n test-env
+          kubectl set image deployment/frontend-deploy frontend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }} -n test-env
+
+      - name: Deploy to Production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          kubectl apply -f k8s/prod/ -n prod-env
+          kubectl set image deployment/backend-deploy backend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }} -n prod-env
+          kubectl set image deployment/frontend-deploy frontend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }} -n prod-env

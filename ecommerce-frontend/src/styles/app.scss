@@ -1,0 +1,523 @@
+// ===================================
+// 🚀 6PACK E-COMMERCE - MAIN STYLES
+// ===================================
+
+@import "admin-styles/mixin";
+
+// ===================================
+// BASE RESET & DEFAULTS
+// ===================================
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: $font-primary;
+  line-height: 1.6;
+  font-weight: 400;
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background-color: $color-bg-primary;
+  color: $color-text-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  // Subtle background pattern
+  // Subtle background pattern
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+a {
+  text-decoration: none;
+  color: $color-text-primary;
+  &:hover {
+    color: $color-accent-primary;
+  }
+}
+
+.red { color: $color-error; }
+.purple { color: $color-accent-secondary; }
+.green { color: $color-success; }
+
+.container {
+  max-width: 1440px;
+  width: 100%;
+  margin: auto;
+  padding: 0 $spacing-lg;
+  overflow: auto;
+  
+  > h1 {
+    @include heading;
+    margin: $spacing-lg 0;
+    text-align: left;
+    font-size: 2rem;
+  }
+}
+
+.heading {
+  @include heading;
+  margin: $spacing-lg 0;
+  text-align: center;
+  font-size: 2rem;
+}
+
+// ===================================
+// HEADER NAVIGATION
+// ===================================
+
+.header {
+  @include flex(row, flex-end, center, $spacing-xl);
+  padding: $spacing-sm $spacing-xl; /* Reduced padding */
+  height: 4rem; /* Fixed height for calculations */
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid $color-border;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  
+  // Logo link
+  a:first-of-type {
+    margin-right: auto;
+    font-family: $font-display;
+    font-size: 1.5rem;
+    font-weight: 700;
+    @include text-gradient();
+  }
+  
+  a {
+    color: $color-text-secondary;
+    font-size: 1rem; /* Slightly smaller */
+    padding: $spacing-xs $spacing-sm; /* Reduced padding */
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+    @include flex(row, center, center, $spacing-sm);
+    
+    &:hover {
+      color: $color-text-primary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    svg {
+      font-size: 1.1rem;
+    }
+  }
+  
+  button {
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    background: transparent;
+    color: $color-text-secondary;
+    padding: $spacing-xs; /* Reduced padding */
+    border-radius: $radius-full;
+    transition: all $transition-fast;
+    @include flex;
+    
+    &:hover {
+      color: $color-accent-primary;
+      background: $color-bg-primary;
+    }
+  }
+  
+  dialog {
+    @include glass-card();
+    border: 1px solid $color-border;
+    padding: $spacing-sm; /* Reduced padding */
+    min-width: 160px;
+    position: absolute;
+    left: auto;
+    right: $spacing-xl;
+    top: calc(100% + $spacing-xs); /* Closer to element */
+    box-shadow: $shadow-lg;
+    
+    > div {
+      @include flex(column, flex-start, stretch, $spacing-xs);
+      
+      a, button {
+        @include flex(row, flex-start, center, $spacing-md);
+        padding: $spacing-sm $spacing-md;
+        border-radius: $radius-sm;
+        color: $color-text-secondary;
+        font-size: 0.95rem;
+        width: 100%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: all $transition-fast;
+        
+        svg {
+            font-size: 1.1rem;
+            min-width: 1.2rem; /* Ensure consistent icon width */
+        }
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: $color-text-primary;
+        }
+      }
+      
+      button {
+        color: $color-error;
+        
+        &:hover {
+          background: rgba(239, 68, 68, 0.1);
+        }
+      }
+    }
+  }
+}
+
+// ===================================
+// ADMIN CONTAINER
+// ===================================
+
+.admin-container {
+  @include grid(250px 1fr, 0); /* Reduced sidebar width */
+  min-height: calc(100vh - 4rem); /* Adjust based on header height */
+  background-color: $color-bg-primary;
+  
+  > aside {
+    width: 100%;
+    background: $color-bg-secondary;
+    padding: $spacing-md; /* Reduced padding */
+    position: sticky;
+    top: 4rem; /* Below header */
+    height: calc(100vh - 4rem); /* Full height minus header */
+    overflow-y: auto;
+    border-right: 1px solid $color-border;
+    @include custom-scrollbar();
+    
+    > div {
+      margin: $spacing-lg $spacing-xs; /* Reduced margins */
+      
+      > h5 {
+        @include heading(1px, 500, uppercase);
+        opacity: 0.5;
+        margin-bottom: $spacing-sm;
+        font-size: 0.7rem;
+        color: $color-text-muted;
+      }
+      
+      > ul {
+        @include flex(column, unset, unset, $spacing-xs);
+        list-style: none;
+        
+        > li {
+          padding: $spacing-sm $spacing-md;
+          border-radius: $radius-md;
+          transition: all $transition-fast;
+          
+          &:hover {
+            background: rgba(255, 255, 255, 0.05);
+          }
+          
+          &.active {
+            background: $color-accent-gradient;
+            
+            a {
+              color: white !important;
+            }
+          }
+          
+          a {
+            color: $color-text-secondary;
+            @include flex(row, flex-start, center, $spacing-sm);
+            font-size: 0.9rem;
+            
+            svg {
+              font-size: 1rem;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  > main {
+    padding: 0; /* Remove padding to allow full-height children */
+    height: calc(100vh - 4rem); /* constrained height */
+    overflow-y: auto; /* Internal scrolling */
+    @include custom-scrollbar();
+  }
+}
+
+// ===================================
+// TABLE STYLES
+// ===================================
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  @include glass-card(10px, 0.4);
+  overflow: hidden;
+  
+  th, td {
+    padding: $spacing-md;
+    text-align: left;
+    vertical-align: middle;
+  }
+  
+  th {
+    font-weight: 600;
+    color: $color-text-muted;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: $color-bg-tertiary;
+    border-bottom: 1px solid $color-border;
+  }
+  
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border;
+      transition: background $transition-fast;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+    
+    td {
+      color: $color-text-secondary;
+      font-size: 0.95rem;
+      
+      img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: $radius-md;
+        border: 1px solid $color-border;
+      }
+      
+      a {
+        display: inline-flex;
+        align-items: center;
+        gap: $spacing-xs;
+        padding: $spacing-xs $spacing-sm;
+        background: rgba(99, 102, 241, 0.15);
+        color: $color-accent-primary;
+        border-radius: $radius-sm;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all $transition-fast;
+        
+        &:hover {
+          background: rgba(99, 102, 241, 0.25);
+        }
+      }
+      
+      button {
+        @include square(36px);
+        font-size: 1rem;
+        border: none;
+        outline: none;
+        background: rgba(239, 68, 68, 0.1);
+        cursor: pointer;
+        color: $color-error;
+        border-radius: $radius-sm;
+        transition: all $transition-fast;
+        @include flex;
+        
+        &:hover {
+          background: rgba(239, 68, 68, 0.2);
+          transform: scale(1.05);
+        }
+      }
+    }
+  }
+}
+
+.table-pagination {
+  @include flex(row, center, center, $spacing-md);
+  padding: $spacing-xl;
+  
+  > button {
+    @include btn();
+    @include btn-gradient();
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $radius-md;
+    
+    &:disabled {
+      background: $color-bg-tertiary;
+      opacity: 0.4;
+    }
+  }
+  
+  > span {
+    color: $color-text-muted;
+    font-size: 0.9rem;
+  }
+}
+
+// ===================================
+// HAMBURGER & SIDEBAR CONTROLS
+// ===================================
+
+#hamburger {
+  display: none;
+  place-items: center;
+  @include square(48px);
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: $color-accent-primary;
+  position: fixed;
+  top: $spacing-md;
+  left: $spacing-md;
+  font-size: 1.5rem;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-full;
+  z-index: 200;
+  box-shadow: $shadow-md;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: $color-bg-tertiary;
+  }
+}
+
+#close-sidebar {
+  width: 80%;
+  margin: $spacing-md auto;
+  display: block;
+  padding: $spacing-sm $spacing-md;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  background: rgba(239, 68, 68, 0.15);
+  color: $color-error;
+  border-radius: $radius-md;
+  font-weight: 500;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+}
+
+// ===================================
+// LOADER
+// ===================================
+
+.loader {
+  width: 100%;
+  height: 100vh;
+  @include flex;
+  background: $color-bg-primary;
+  
+  > div {
+    @include square(80px);
+    border-radius: $radius-full;
+    border: 4px solid transparent;
+    border-top-color: $color-accent-primary;
+    border-bottom-color: $color-accent-secondary;
+    animation: loading-animation 0.8s linear infinite;
+    box-shadow: 0 0 30px $color-accent-glow;
+  }
+}
+
+@keyframes loading-animation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes up-and-down {
+  to {
+    transform: translate(-50%, -20%);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ===================================
+// IMPORTS
+// ===================================
+
+@import "home";
+@import "cart";
+@import "shipping";
+@import "login";
+@import "search";
+@import "admin-styles/dashboard";
+@import "admin-styles/products";
+@import "admin-styles/chart";
+@import "admin-styles/dashboardapp";
+@import "admin-styles/mediaquery";
+
+// ===================================
+// RESPONSIVE HEADER
+// ===================================
+
+@media screen and (max-width: 768px) {
+  .header {
+    padding: $spacing-md;
+    gap: $spacing-md;
+    
+    a:first-of-type {
+      font-size: 1.2rem;
+    }
+    
+    a, button {
+      font-size: 1rem;
+      padding: $spacing-xs;
+    }
+    
+    dialog {
+      right: $spacing-md;
+      left: auto;
+    }
+  }
+  
+  #hamburger {
+    display: grid;
+  }
+}
