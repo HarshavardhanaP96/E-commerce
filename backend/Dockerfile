@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q package -DskipTests \
  && java -Djarmode=tools -jar target/sixpack-backend-*.jar extract --layers --launcher --destination target/extracted
 
 # ---- runtime ----
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -S app && adduser -S -G app app \
  && mkdir -p /app/uploads && chown app:app /app/uploads
 WORKDIR /app
