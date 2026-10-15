@@ -12,7 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.1",
     "chart.js": "^4.4.3",
-    "react": "^18.2.0",
+    "react": "^19.3.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
@@ -23,7 +23,7 @@
     "sass": "^1.77.5"
   },
   "devDependencies": {
-    "@types/react": "^18.2.66",
+    "@types/react": "^19.3.0",
     "@types/react-dom": "^18.2.22",
     "@types/react-table": "^7.7.20",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
