@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { FaTrash } from "react-icons/fa";
+import { LuTrash2 } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import ProductForm from "../../../components/admin/ProductForm";
@@ -68,7 +68,7 @@ const ProductManagement = () => {
             {saving ? "Saving…" : "Save"}
           </button>
           <button className="btn btn--danger" onClick={remove} disabled={deleting}>
-            <FaTrash /> Delete
+            <LuTrash2 /> Delete
           </button>
         </>
       }

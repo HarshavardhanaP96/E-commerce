@@ -1,134 +1,61 @@
 import { useEffect, useState } from "react";
-import { AiFillFileText } from "react-icons/ai";
-import {
-
-} from "react-icons/fa";
-import { HiMenuAlt4 } from "react-icons/hi";
-import { IoIosPeople } from "react-icons/io";
-import {
-  RiCoupon3Fill,
-  RiDashboardFill,
-  RiShoppingBag3Fill,
-} from "react-icons/ri";
-import { Link, Location, useLocation } from "react-router-dom";
 import { IconType } from "react-icons";
+import {
+  LuBarChart3,
+  LuMenu,
+  LuPackage,
+  LuReceipt,
+  LuTicket,
+  LuUsers,
+  LuX,
+} from "react-icons/lu";
+import { NavLink, useLocation } from "react-router-dom";
 
+const NAV: { url: string; text: string; Icon: IconType }[] = [
+  { url: "/admin/analytics", text: "Analytics", Icon: LuBarChart3 },
+  { url: "/admin/product", text: "Products", Icon: LuPackage },
+  { url: "/admin/customer", text: "Customers", Icon: LuUsers },
+  { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
+  { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },
+];
+
+/** Fixed sidebar on desktop; an off-canvas drawer below 1100px (see .admin-sidebar in app.scss). */
 const AdminSidebar = () => {
-  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
 
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [phoneActive, setPhoneActive] = useState<boolean>(
-    window.innerWidth < 1100
-  );
-
-  const resizeHandler = () => {
-    setPhoneActive(window.innerWidth < 1100);
-  };
-
-  useEffect(() => {
-    window.addEventListener("resize", resizeHandler);
-
-    return () => {
-      window.removeEventListener("resize", resizeHandler);
-    };
-  }, []);
+  // Close the drawer after navigating.
+  useEffect(() => setOpen(false), [pathname]);
 
   return (
     <>
-      {phoneActive && (
-        <button id="hamburger" onClick={() => setShowModal(true)}>
-          <HiMenuAlt4 />
-        </button>
-      )}
+      <button id="hamburger" onClick={() => setOpen(true)} aria-label="Open menu">
+        <LuMenu />
+      </button>
+      {open && <div className="admin-sidebar__backdrop" onClick={() => setOpen(false)} />}
 
-      <aside
-        style={
-          phoneActive
-            ? {
-                width: "20rem",
-                height: "100vh",
-                position: "fixed",
-                top: 0,
-                left: showModal ? "0" : "-20rem",
-                transition: "all 0.5s",
-              }
-            : {}
-        }
-      >
-        <h2>6Pack Admin</h2>
-        
-        {/* Unified Main Navigation */}
-        <div>
-          <h5>Menu</h5>
-          <ul>
-             <Li
-              url="/admin/analytics"
-              text="Analytics"
-              Icon={RiDashboardFill}
-              location={location}
-            />
-            <Li
-              url="/admin/product"
-              text="Product"
-              Icon={RiShoppingBag3Fill}
-              location={location}
-            />
-            <Li
-              url="/admin/customer"
-              text="Customer"
-              Icon={IoIosPeople}
-              location={location}
-            />
-            <Li
-              url="/admin/transaction"
-              text="Transaction"
-              Icon={AiFillFileText}
-              location={location}
-            />
-            <Li
-              url="/admin/app/coupon"
-              text="Coupon"
-              Icon={RiCoupon3Fill}
-              location={location}
-            />
-
-          </ul>
+      <aside className={`admin-sidebar${open ? " admin-sidebar--open" : ""}`}>
+        <div className="admin-sidebar__top">
+          <strong>Menu</strong>
+          <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close menu">
+            <LuX />
+          </button>
         </div>
 
-        {phoneActive && (
-          <button id="close-sidebar" onClick={() => setShowModal(false)}>
-            Close
-          </button>
-        )}
+        <h5>Manage</h5>
+        <ul>
+          {NAV.map(({ url, text, Icon }) => (
+            <li key={url}>
+              <NavLink to={url}>
+                <Icon aria-hidden />
+                {text}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
       </aside>
     </>
   );
 };
-
-interface LiProps {
-  url: string;
-  text: string;
-  location: Location;
-  Icon: IconType;
-}
-const Li = ({ url, text, location, Icon }: LiProps) => (
-  <li
-    style={{
-      backgroundColor: location.pathname.includes(url)
-        ? "rgba(0,115,255,0.1)"
-        : "white",
-    }}
-  >
-    <Link
-      to={url}
-      style={{
-        color: location.pathname.includes(url) ? "rgb(0,115,255)" : "black",
-      }}
-    >
-      <Icon />
-      {text}
-    </Link>
-  </li>
-);
 
 export default AdminSidebar;

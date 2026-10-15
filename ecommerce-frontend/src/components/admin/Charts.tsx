@@ -28,6 +28,22 @@ ChartJS.register(
   Filler
 );
 
+ChartJS.defaults.font.family = "Inter, ui-sans-serif, system-ui, sans-serif";
+ChartJS.defaults.font.size = 12;
+ChartJS.defaults.color = "#64748b";
+ChartJS.defaults.borderColor = "#e2e8f0";
+ChartJS.defaults.plugins.tooltip.backgroundColor = "#0f172a";
+ChartJS.defaults.plugins.tooltip.padding = 10;
+ChartJS.defaults.plugins.tooltip.cornerRadius = 6;
+ChartJS.defaults.plugins.tooltip.titleFont = { weight: 600 };
+ChartJS.defaults.plugins.tooltip.boxPadding = 4;
+ChartJS.defaults.plugins.legend.labels.usePointStyle = true;
+ChartJS.defaults.plugins.legend.labels.pointStyle = "circle";
+
+/** Light horizontal gridlines only — enough to read values without visual noise. */
+const valueAxis = { beginAtZero: true, border: { display: false }, grid: { color: "#f1f5f9" } };
+const categoryAxis = { border: { display: false }, grid: { display: false } };
+
 const months = ["January", "February", "March", "April", "May", "June", "July"];
 
 interface BarChartProps {
@@ -57,26 +73,17 @@ export const BarChart = ({
     indexAxis: horizontal ? "y" : "x",
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: "top",
+        align: "end",
+        labels: { boxWidth: 8, boxHeight: 8 },
       },
       title: {
         display: false,
       },
     },
 
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          display: false,
-        },
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-      },
-    },
+    scales: horizontal ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
   };
 
   const data: ChartData<"bar", number[], string> = {
@@ -86,6 +93,7 @@ export const BarChart = ({
         label: title_1,
         data: data_1,
         backgroundColor: bgColor_1,
+        borderRadius: 4,
         barThickness: "flex",
         barPercentage: 1,
         categoryPercentage: 0.4,
@@ -94,6 +102,7 @@ export const BarChart = ({
         label: title_2,
         data: data_2,
         backgroundColor: bgColor_2,
+        borderRadius: 4,
         barThickness: "flex",
         barPercentage: 1,
         categoryPercentage: 0.4,
@@ -141,7 +150,7 @@ export const DoughnutChart = ({
         display: legends,
         position: "right",
         labels: {
-          padding: 8, boxWidth: 10, font: { size: 11 },
+          padding: 10, boxWidth: 8, boxHeight: 8,
         },
       },
     },
@@ -206,6 +215,7 @@ export const LineChart = ({
   const options: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
     plugins: {
       legend: {
         display: false,
@@ -215,19 +225,7 @@ export const LineChart = ({
       },
     },
 
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          display: false,
-        },
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-      },
-    },
+    scales: { x: categoryAxis, y: valueAxis },
   };
 
   const lineChartData: ChartData<"line", number[], string> = {
@@ -239,6 +237,10 @@ export const LineChart = ({
         data,
         backgroundColor,
         borderColor,
+        borderWidth: 2,
+        tension: 0.35,
+        pointRadius: 0,
+        pointHoverRadius: 4,
       },
     ],
   };

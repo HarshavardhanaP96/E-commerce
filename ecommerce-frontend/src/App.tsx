@@ -1,8 +1,9 @@
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Suspense, lazy, useEffect } from "react";
 import ProtectedRoute from "./components/protected-route";
 import Loader from "./components/loader";
 import Header from "./components/header";
+import BottomNav from "./components/bottomNav";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { userExist, userNotExist } from "./redux/reducer/userReducer";
@@ -39,6 +40,15 @@ const CustomerManagement = lazy(
   () => import("./pages/admin/management/customermanagement")
 );
 
+/** Tags <html> with the active surface so the store / admin token sets in _tokens.scss apply. */
+const SurfaceScope = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.documentElement.dataset.surface = pathname.startsWith("/admin") ? "admin" : "store";
+  }, [pathname]);
+  return null;
+};
+
 const App = () => {
   const dispatch = useDispatch();
   const { user, loading } = useSelector((state: RootState) => state.userReducer);
@@ -60,8 +70,23 @@ const App = () => {
 
   return (
     <Router>
+      <SurfaceScope />
       <Header />
-      <Toaster position="bottom-center" />
+      <Toaster
+        position="bottom-center"
+        // Lifted above the mobile bottom nav when it's shown (see .bottom-nav in app.scss).
+        containerStyle={{ bottom: "var(--toast-bottom, 16px)" }}
+        toastOptions={{
+          style: {
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-body-sm)",
+            color: "var(--text)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-md)",
+          },
+        }}
+      />
 
       {/* Header */}
       <Suspense fallback={<Loader />}>
@@ -130,6 +155,7 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <BottomNav />
     </Router>
   );
 };

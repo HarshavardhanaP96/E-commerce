@@ -1,6 +1,6 @@
-import { FaTrash, FaMinus, FaPlus } from "react-icons/fa";
+import { LuMinus, LuPlus, LuTrash2 } from "react-icons/lu";
 import { CartItem } from "../types/types";
-import { transformImage } from "../utils/features";
+import { formatINR, transformImage } from "../utils/features";
 
 type CartItemsProps = {
   cartItem: CartItem;
@@ -16,38 +16,39 @@ const CartItems = ({
   removeHandler,
 }: CartItemsProps) => {
   const { photo, name, productId, price, quantity } = cartItem;
-  
+
   return (
     <div className="CartItem">
       <img src={transformImage(photo)} alt={name} loading="lazy" />
       <article>
-        <p>{name}</p>
-        <span>₹{price.toLocaleString()}</span>
+        <p title={name}>{name}</p>
+        <span>{formatINR(price)} each</span>
       </article>
 
       <div>
-        <button 
+        <button
           onClick={() => decrementHandler(cartItem)}
           aria-label="Decrease quantity"
           disabled={quantity <= 1}
         >
-          <FaMinus />
+          <LuMinus />
         </button>
-        <span>{quantity}</span>
-        <button 
+        <span aria-live="polite">{quantity}</span>
+        <button
           onClick={() => incrementHandler(cartItem)}
           aria-label="Increase quantity"
           disabled={quantity >= cartItem.stock}
         >
-          <FaPlus />
+          <LuPlus />
         </button>
       </div>
 
-      <button 
+      <button
         onClick={() => removeHandler(productId)}
         aria-label={`Remove ${name} from cart`}
+        title="Remove"
       >
-        <FaTrash />
+        <LuTrash2 />
       </button>
     </div>
   );

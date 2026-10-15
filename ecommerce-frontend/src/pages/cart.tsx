@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { VscError } from "react-icons/vsc";
+import { LuAlertCircle, LuCheck, LuShoppingBag } from "react-icons/lu";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import CartItems from "../components/cartItems";
@@ -41,10 +41,14 @@ const Cart = () => {
     return () => clearTimeout(t);
   }, [couponCode, checkDiscount, dispatch]);
 
+  const itemCount = cartItems.reduce((n, i) => n + i.quantity, 0);
   const valid = !!coupon && coupon === couponCode.trim() && discount > 0;
 
   return (
     <div className="cart">
+      <h1>
+        Your cart{itemCount > 0 && <small>{itemCount} {itemCount === 1 ? "item" : "items"}</small>}
+      </h1>
       <main>
         {cartItems.length > 0 ? (
           cartItems.map((i) => (
@@ -57,18 +61,23 @@ const Cart = () => {
             />
           ))
         ) : (
-          <h1>No items added</h1>
+          <div className="empty-state">
+            <LuShoppingBag />
+            <p>Your cart is empty.</p>
+            <Link to="/search">Start shopping</Link>
+          </div>
         )}
       </main>
       <aside>
-        <p>Subtotal: {formatINR(subtotal)}</p>
-        <p>Shipping charges: {formatINR(shippingCharges)}</p>
-        <p>Tax (18%): {formatINR(tax)}</p>
+        <h2>Order summary</h2>
+        <p><span>Subtotal</span> <span>{formatINR(subtotal)}</span></p>
+        <p><span>Shipping</span> <span>{formatINR(shippingCharges)}</span></p>
+        <p><span>Tax (18%)</span> <span>{formatINR(tax)}</span></p>
         <p>
-          Discount: <em className="red">−{formatINR(Math.min(discount, subtotal))}</em>
+          <span>Discount</span> <em className="green">−{formatINR(Math.min(discount, subtotal))}</em>
         </p>
-        <p>
-          <b>Total: {formatINR(total)}</b>
+        <p className="cart__total">
+          <span>Total</span> <span>{formatINR(total)}</span>
         </p>
         <input
           type="text"
@@ -80,17 +89,17 @@ const Cart = () => {
         {couponCode.trim() && !isFetching &&
           (valid ? (
             <span className="green">
-              {formatINR(discount)} off using <code>{coupon}</code>
+              <LuCheck /> {formatINR(discount)} off with <code>{coupon}</code>
             </span>
           ) : (
             isError && (
               <span className="red">
-                Invalid coupon <VscError />
+                <LuAlertCircle /> Invalid coupon
               </span>
             )
           ))}
         <small>Final amount is confirmed at checkout.</small>
-        {cartItems.length > 0 && <Link to="/shipping">Check out</Link>}
+        {cartItems.length > 0 && <Link to="/shipping">Checkout</Link>}
       </aside>
     </div>
   );

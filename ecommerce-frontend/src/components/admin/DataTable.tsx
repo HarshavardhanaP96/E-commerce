@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- react-table v7 plugin hooks (sort/filter/pagination) are not reflected in its base typings */
 import { ReactNode, useEffect, useState } from "react";
-import { AiOutlineSearch, AiOutlineSortAscending, AiOutlineSortDescending } from "react-icons/ai";
+import { LuArrowDown, LuArrowUp, LuChevronLeft, LuChevronRight, LuSearch } from "react-icons/lu";
 import { Column, useGlobalFilter, usePagination, useSortBy, useTable } from "react-table";
 
 type DataTableProps<T extends object> = {
@@ -65,7 +65,7 @@ function DataTable<T extends object>({
     <section className="data-table">
       <div className="data-table__toolbar">
         <label className="data-table__search">
-          <AiOutlineSearch aria-hidden />
+          <LuSearch aria-hidden />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -80,8 +80,8 @@ function DataTable<T extends object>({
       <div className="data-table__scroll">
         <table {...getTableProps()}>
           <thead>
-            {headerGroups.map((group: any) => (
-              <tr {...group.getHeaderGroupProps()} key={group.id}>
+            {headerGroups.map((group: any, gi: number) => (
+              <tr {...group.getHeaderGroupProps()} key={gi}>
                 {group.headers.map((column: any) => (
                   <th
                     {...column.getHeaderProps(column.getSortByToggleProps())}
@@ -91,7 +91,7 @@ function DataTable<T extends object>({
                     <span>
                       {column.render("Header")}
                       {column.isSorted &&
-                        (column.isSortedDesc ? <AiOutlineSortDescending /> : <AiOutlineSortAscending />)}
+                        (column.isSortedDesc ? <LuArrowDown aria-label="sorted descending" /> : <LuArrowUp aria-label="sorted ascending" />)}
                     </span>
                   </th>
                 ))}
@@ -149,11 +149,11 @@ function DataTable<T extends object>({
           </select>
         </label>
         <div className="data-table__pager">
-          <button onClick={() => previousPage()} disabled={!canPreviousPage}>Prev</button>
+          <button onClick={() => previousPage()} disabled={!canPreviousPage} aria-label="Previous page"><LuChevronLeft /></button>
           <span>
             {pageCount === 0 ? 0 : pageIndex + 1} / {pageCount}
           </span>
-          <button onClick={() => nextPage()} disabled={!canNextPage}>Next</button>
+          <button onClick={() => nextPage()} disabled={!canNextPage} aria-label="Next page"><LuChevronRight /></button>
         </div>
       </footer>
     </section>

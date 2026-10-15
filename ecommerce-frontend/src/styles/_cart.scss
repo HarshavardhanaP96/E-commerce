@@ -1,317 +1,260 @@
 // ===================================
-// 🛒 CART PAGE STYLES
+// STORE — cart
 // ===================================
 
 .cart {
-  padding: $spacing-2xl $spacing-xl;
-  @include flex(row, flex-start, flex-start, $spacing-2xl);
-  min-height: calc(100vh - 80px);
-  animation: fadeIn 0.5s ease;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: $spacing-xl $spacing-lg $spacing-3xl;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  grid-template-areas:
+    "title title"
+    "items summary";
+  gap: $spacing-lg $spacing-xl;
+  align-items: start;
+  animation: fadeIn 0.3s ease;
 
-  // Cart Items Section
-  > main {
-    flex: 1;
-    max-width: 65%;
-    
-    > h1 {
-      @include heading(0.5px, 500);
-      text-align: center;
-      color: $color-text-secondary;
-      padding: $spacing-xl;
-      background: $color-bg-secondary;
-      border: 1px solid $color-border;
-      box-shadow: $shadow-sm;
-      border-radius: $radius-lg;
+  > h1 {
+    grid-area: title;
+    @include text(h2);
+
+    small {
+      margin-left: $spacing-sm;
+      font-family: $font-primary;
+      @include text(body);
+      letter-spacing: 0;
+      color: $color-text-muted;
     }
-    
-    overflow-y: auto;
-    max-height: calc(100vh - 150px);
-    @include custom-scrollbar();
-    padding-right: $spacing-md;
   }
 
-  // Order Summary Sidebar
+  > main {
+    grid-area: items;
+    @include flex(column, flex-start, stretch, 0.75rem);
+  }
+
+  // ---------- order summary ----------
   > aside {
-    width: 35%;
-    min-width: 320px;
-    max-width: 400px;
-    padding: $spacing-xl;
+    grid-area: summary;
+    position: sticky;
+    top: calc(var(--header-h) + #{$spacing-lg});
+    @include flex(column, flex-start, stretch, 0.75rem);
+    padding: $spacing-lg;
     background: $color-bg-secondary;
     border: 1px solid $color-border;
-    box-shadow: $shadow-lg;
     border-radius: $radius-lg;
-    @include flex(column, flex-start, stretch, $spacing-md);
-    position: sticky;
-    top: 100px;
-    animation: fadeInUp 0.5s ease;
-    
-    &::before {
-      content: 'Order Summary';
-      font-family: $font-display;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: $color-text-primary;
-      padding-bottom: $spacing-md;
-      border-bottom: 1px solid $color-border;
-      margin-bottom: $spacing-sm;
+
+    > h2 {
+      @include text(h4);
+      font-family: $font-primary;
+      letter-spacing: 0;
+      margin-bottom: $spacing-xs;
     }
 
     > p {
-      font-size: 0.95rem;
-      color: $color-text-secondary;
       @include flex(row, space-between, center);
-      
-      &:last-of-type {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: $color-text-primary;
-        padding-top: $spacing-md;
+      @include text(body);
+      @include tabular;
+      color: $color-text-secondary;
+
+      em {
+        font-style: normal;
+      }
+
+      &.cart__total {
+        padding-top: 0.75rem;
         border-top: 1px solid $color-border;
-        margin-top: $spacing-sm;
-        
-        b {
-          @include text-gradient();
-          font-size: 1.25rem;
-        }
+        color: $color-text-primary;
+        @include text(h4);
+        font-weight: 700;
       }
     }
 
     > input {
-      @include inputStyle(100%, $spacing-md, $color-bg-tertiary, 1px solid $color-border);
-      border-radius: $radius-md;
-      margin-top: $spacing-md;
-      
-      &::placeholder {
-        color: $color-text-secondary;
-        opacity: 0.7;
-      }
-      
-      &:focus {
-        border-color: $color-accent-primary;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-      }
-    }
-
-    > a {
-      @include btn($spacing-md $spacing-lg);
-      @include btn-gradient();
-      text-decoration: none;
-      @include flex;
+      @include field;
+      margin-top: $spacing-sm;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
-      border-radius: $radius-md;
-      margin-top: $spacing-md;
-      
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: $shadow-glow;
+      letter-spacing: 0.04em;
+      font-family: $font-primary;
+
+      &::placeholder {
+        text-transform: none;
+        letter-spacing: 0;
       }
     }
 
     > span {
-      margin-top: $spacing-sm;
-      @include flex(row, center, center, $spacing-sm);
-      font-size: 0.9rem;
-      padding: $spacing-sm $spacing-md;
-      border-radius: $radius-md;
-      
+      @include flex(row, flex-start, center, $spacing-sm);
+      @include text(body-sm);
+      padding: $spacing-sm 0.75rem;
+      border-radius: $radius-sm;
+
       &.green {
-        background: rgba(16, 185, 129, 0.1);
-        color: $color-success;
+        background: var(--success-subtle);
+        color: var(--success);
       }
-      
+
       &.red {
-        background: rgba(239, 68, 68, 0.1);
-        color: $color-error;
+        background: var(--danger-subtle);
+        color: var(--danger);
       }
-      
-      > code {
+
+      code {
+        font-family: var(--font-mono);
         font-weight: 700;
-        background: rgba(255, 255, 255, 0.1);
-        padding: $spacing-xs $spacing-sm;
-        border-radius: $radius-sm;
       }
+    }
+
+    > small {
+      @include text(caption);
+      font-weight: 400;
+      color: $color-text-muted;
+    }
+
+    > a {
+      @include button(primary);
+      height: 3rem;
+      margin-top: $spacing-xs;
     }
   }
 }
 
-// ===================================
-// 🛍️ CART ITEM
-// ===================================
-
+// ---------- cart line ----------
 .CartItem {
-  padding: $spacing-lg;
-  @include flex(row, flex-start, center, $spacing-lg);
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 0.75rem;
   background: $color-bg-secondary;
   border: 1px solid $color-border;
-  box-shadow: $shadow-sm;
   border-radius: $radius-lg;
-  margin-bottom: $spacing-md;
-  animation: fadeInUp 0.4s ease;
-  transition: all $transition-normal;
-  
-  &:hover {
-    border-color: $color-border-hover;
-    transform: translateX(4px);
-  }
-  
+
   > img {
-    @include square(100px);
+    @include square(5.5rem);
     object-fit: contain;
-    border-radius: $radius-md;
-    background: rgba(0, 0, 0, 0.2);
     padding: $spacing-sm;
+    border-radius: $radius-md;
+    background: $color-bg-tertiary;
+    mix-blend-mode: multiply;
   }
 
   > article {
-    flex: 1;
-    @include flex(column, center, flex-start, $spacing-xs);
-    
-    > a {
-      font-size: 1.1rem;
+    min-width: 0;
+
+    p {
+      @include text(body);
       font-weight: 500;
       color: $color-text-primary;
-      transition: all $transition-fast;
-      
-      &:hover {
-        color: $color-accent-primary;
-      }
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    
-    > span {
-      font-weight: 600;
-      font-size: 1rem;
-      @include text-gradient();
+
+    span {
+      @include text(body-sm);
+      @include tabular;
+      color: $color-text-muted;
     }
   }
 
-  // Quantity Controls
+  // quantity stepper
   > div {
-    @include flex(row, center, center, $spacing-sm);
-    
+    @include flex(row, center, center, 0);
+    height: 2.5rem;
+    border: 1px solid $color-border-hover;
+    border-radius: $radius-full;
+
     > button {
-      @include btn($spacing-xs);
-      @include square(36px);
-      border-radius: $radius-md;
       @include flex;
-      font-size: 1rem;
-      background: $color-bg-tertiary;
+      @include square(2.5rem);
+      border: none;
+      border-radius: $radius-full;
+      background: transparent;
       color: $color-text-primary;
-      border: 1px solid $color-border;
-      
-      &:hover {
-        background: $color-accent-primary;
-        border-color: $color-accent-primary;
-        transform: scale(1.05);
+      cursor: pointer;
+      @include focus-ring;
+
+      &:hover:not(:disabled) {
+        background: $color-bg-tertiary;
+      }
+
+      &:disabled {
+        color: $color-border-hover;
+        cursor: not-allowed;
       }
     }
-    
+
     > span {
-      font-weight: 600;
-      font-size: 1rem;
-      min-width: 40px;
+      min-width: 2rem;
       text-align: center;
-      color: $color-text-primary;
+      @include text(label);
+      @include tabular;
     }
   }
 
-  // Remove Button
+  // remove
   > button {
-    border: none;
-    background: rgba(239, 68, 68, 0.1);
     @include flex;
-    @include square(40px);
-    cursor: pointer;
+    @include square(2.5rem);
+    border: none;
+    border-radius: $radius-full;
+    background: transparent;
+    color: $color-text-muted;
     font-size: 1.1rem;
-    color: $color-error;
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-    
+    cursor: pointer;
+    @include focus-ring;
+
     &:hover {
-      background: rgba(239, 68, 68, 0.2);
-      color: lighten($color-error, 10%);
-      transform: scale(1.05);
+      background: var(--danger-subtle);
+      color: var(--danger);
     }
   }
 }
 
-// ===================================
-// RESPONSIVE CART
-// ===================================
-
-@media screen and (max-width: 1024px) {
+// ---------- responsive ----------
+@media (max-width: 900px) {
   .cart {
-    padding: $spacing-xl;
-    gap: $spacing-xl;
-    
-    > main {
-      max-width: 60%;
-    }
-    
-    > aside {
-      padding: $spacing-lg;
-    }
-  }
-  
-  .CartItem {
-    gap: $spacing-md;
-    
-    > img {
-      @include square(80px);
-    }
-  }
-}
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "items"
+      "summary";
 
-@media screen and (max-width: 768px) {
-  .cart {
-    flex-direction: column;
-    padding: $spacing-lg;
-    gap: $spacing-lg;
-    
-    > main {
-      width: 100%;
-      max-width: none;
-      max-height: none;
-      padding-right: 0;
-    }
-    
     > aside {
-      width: 100%;
-      max-width: none;
-      min-width: auto;
       position: static;
-      order: -1;
     }
   }
-  
+}
+
+@media (max-width: 520px) {
+  .cart {
+    padding: $spacing-lg $spacing-md $spacing-2xl;
+  }
+
   .CartItem {
-    flex-wrap: wrap;
-    padding: $spacing-md;
-    
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "img info remove"
+      "img qty qty";
+    gap: $spacing-sm 0.75rem;
+
     > img {
-      @include square(70px);
+      grid-area: img;
+      @include square(4rem);
     }
-    
+
     > article {
-      flex: 1;
-      min-width: 150px;
+      grid-area: info;
     }
-    
+
     > div {
-      width: 100%;
-      justify-content: flex-start;
-      margin-top: $spacing-sm;
-      padding-top: $spacing-sm;
-      border-top: 1px solid $color-border;
+      grid-area: qty;
+      justify-self: start;
     }
-    
+
     > button {
-      position: absolute;
-      top: $spacing-md;
-      right: $spacing-md;
+      grid-area: remove;
     }
-    
-    position: relative;
   }
 }

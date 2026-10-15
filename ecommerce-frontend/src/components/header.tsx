@@ -1,43 +1,36 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  FaSearch,
-  FaShoppingBag,
-  FaSignInAlt,
-  FaSignOutAlt,
-  FaUser,
-  FaTachometerAlt,
-  FaClipboardList,
-} from "react-icons/fa";
-import { useSelector, useDispatch } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
+import { LuLogIn, LuSearch, LuShoppingBag, LuUser } from "react-icons/lu";
+import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
-import { userNotExist } from "../redux/reducer/userReducer";
-import toast from "react-hot-toast";
 import { transformImage } from "../utils/features";
+import AccountMenu from "./accountMenu";
+import { showsBottomNav } from "../utils/routes";
 
 const Header = () => {
   const { user } = useSelector((state: RootState) => state.userReducer);
+  const cartCount = useSelector((state: RootState) =>
+    state.cartReducer.cartItems.reduce((n, i) => n + i.quantity, 0)
+  );
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith("/admin");
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const dispatch = useDispatch();
-
-  const logoutHandler = () => {
-    dispatch(userNotExist());
-    toast.success("Signed Out Successfully");
-    setIsOpen(false);
-  };
 
   return (
-    <nav className="header">
+    // --compact: on mobile the bottom nav carries these actions, so the header shows only the logo.
+    <nav className={`header${showsBottomNav(pathname) ? " header--compact" : ""}`} aria-label="Site">
       <Link className="header__logo" onClick={() => setIsOpen(false)} to={"/"}>
-        6PACK
+        6PACK<span>.</span>
+        {isAdmin && <small>Admin</small>}
       </Link>
 
-      <Link onClick={() => setIsOpen(false)} to={"/search"} aria-label="Search products">
-        <FaSearch />
+      <Link onClick={() => setIsOpen(false)} to={"/search"} aria-label="Search products" title="Search">
+        <LuSearch />
       </Link>
 
-      <Link onClick={() => setIsOpen(false)} to={"/cart"} aria-label="Shopping cart">
-        <FaShoppingBag />
+      <Link onClick={() => setIsOpen(false)} to={"/cart"} aria-label={`Cart, ${cartCount} items`} title="Cart">
+        <LuShoppingBag />
+        {cartCount > 0 && <span className="header__count">{cartCount > 99 ? "99+" : cartCount}</span>}
       </Link>
 
       {user?._id ? (
@@ -50,34 +43,17 @@ const Header = () => {
              {user?.photo ? (
                 <img className="header__avatar" src={transformImage(user.photo)} alt={user?.name || "User"} />
              ) : (
-                <FaUser />
+                <LuUser />
              )}
           </button>
 
           <dialog open={isOpen} className="header__menu">
-            <div>
-              {user?.role === "admin" && (
-                <Link onClick={() => setIsOpen(false)} to={"/admin/analytics"}>
-                  <FaTachometerAlt />
-                  Analytics
-                </Link>
-              )}
-
-              <Link onClick={() => setIsOpen(false)} to={"/orders"}>
-                <FaClipboardList />
-                Orders
-              </Link>
-
-              <button onClick={logoutHandler} aria-label="Sign out">
-                <FaSignOutAlt />
-                Sign Out
-              </button>
-            </div>
+            <AccountMenu user={user} onClose={() => setIsOpen(false)} />
           </dialog>
         </>
       ) : (
-        <Link to={"/login"} aria-label="Sign in">
-          <FaSignInAlt />
+        <Link to={"/login"} aria-label="Sign in" title="Sign in">
+          <LuLogIn />
         </Link>
       )}
     </nav>

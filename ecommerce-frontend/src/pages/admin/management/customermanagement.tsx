@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { FaTrash, FaUser } from "react-icons/fa";
+import { LuTrash2, LuUser } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import DetailLayout from "../../../components/admin/DetailLayout";
@@ -66,7 +66,7 @@ const CustomerManagement = () => {
           </button>
           <button className="btn btn--danger" onClick={remove} disabled={deleting || isSelf}
                   title={isSelf ? "You cannot delete your own account" : undefined}>
-            <FaTrash /> Delete
+            <LuTrash2 /> Delete
           </button>
         </>
       }
@@ -76,7 +76,7 @@ const CustomerManagement = () => {
           {user.photo ? (
             <img className="detail-photo detail-photo--round" src={transformImage(user.photo)} alt={user.name} />
           ) : (
-            <div className="detail-photo detail-photo--round placeholder"><FaUser /></div>
+            <div className="detail-photo detail-photo--round placeholder"><LuUser /></div>
           )}
           <h3>{user.name}</h3>
           <span>{user.email}</span>

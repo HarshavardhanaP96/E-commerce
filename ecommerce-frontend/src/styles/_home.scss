@@ -1,274 +1,307 @@
 // ===================================
-// 🏠 HOME PAGE STYLES
+// STORE — home, product grid & card, shared store bits
 // ===================================
 
 .home {
-  padding: $spacing-xl 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: $spacing-lg $spacing-lg $spacing-3xl;
+  animation: fadeIn 0.3s ease;
+}
+
+.eyebrow {
+  @include overline;
+  color: $color-accent-primary;
+}
+
+// ---------- hero ----------
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  min-height: 26rem;
+  margin-bottom: $spacing-3xl;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: #151515; // matches the photo's backdrop so the image bleeds in seamlessly
+  color: #fafaf9;
+
+  &__copy {
+    position: relative;
+    z-index: 1;
+    padding: $spacing-3xl;
+    @include flex(column, center, flex-start, $spacing-md);
+
+    h1 {
+      @include text(h1);
+      color: #fff;
+      max-width: 14ch;
+    }
+
+    > p:not(.eyebrow) {
+      @include text(body);
+      font-size: 1.125rem;
+      color: #d6d3d1;
+      max-width: 40ch;
+    }
+  }
+
+  &__cta {
+    @include button(primary);
+    margin-top: $spacing-sm;
+    height: 3rem;
+    padding: 0 1.5rem;
+    border-color: #fff;
+    background: #fff;
+    color: var(--text);
+
+    svg {
+      transition: transform $transition-fast;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+
+      svg {
+        transform: translateX(3px);
+      }
+    }
+  }
+
+  &__art {
+    width: 100%;
+    height: 100%;
+    max-height: 30rem;
+    object-fit: cover;
+    // Feather the photo's edges into the panel so there is no visible seam.
+    -webkit-mask-image: radial-gradient(ellipse 70% 75% at 55% 50%, #000 55%, transparent 100%);
+    mask-image: radial-gradient(ellipse 70% 75% at 55% 50%, #000 55%, transparent 100%);
+  }
+}
+
+// ---------- section heading ----------
+.section-head {
+  @include flex(row, space-between, baseline, $spacing-md);
+  margin-bottom: $spacing-lg;
+
+  h2 {
+    @include text(h2);
+  }
+}
+
+.link-arrow {
+  @include flex(row, flex-start, center, 0.375rem);
+  @include text(label);
+  color: $color-text-primary;
+  white-space: nowrap;
+
+  svg {
+    transition: transform $transition-fast;
+  }
+
+  &:hover {
+    color: $color-accent-text;
+
+    svg {
+      transform: translateX(3px);
+    }
+  }
+}
+
+// ---------- product grid ----------
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: $spacing-lg;
+}
+
+.product-card {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 80px);
-  width: 100%;
-  animation: fadeIn 0.5s ease;
-
-  // Hero Section
-  > section {
-    width: 100%;
-    height: 400px;
-    margin: 0 auto $spacing-2xl;
-    border-radius: $radius-xl;
-    position: relative;
-    overflow: hidden;
-    @include glass-card(10px, 0.3);
-    
-    // Gradient overlay
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.3) 0%,
-        rgba(139, 92, 246, 0.2) 50%,
-        rgba(168, 85, 247, 0.1) 100%
-      );
-      z-index: 1;
-    }
-    
-    // Background image with blur
-    background: url("../assets/cover.jpg") no-repeat center / cover;
-    
-    // Content container
-    &::after {
-      content: 'Premium Shopping Experience';
-      position: absolute;
-      bottom: $spacing-2xl;
-      left: $spacing-2xl;
-      font-family: $font-display;
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: white;
-      z-index: 2;
-      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-    }
-  }
-
-  // Section heading
-  > h1 {
-    @include heading(0.5px, 600);
-    margin: $spacing-xl 0 $spacing-lg;
-    @include flex(row, space-between, center);
-    font-size: 1.75rem;
-    color: $color-text-primary;
-    
-    &::before {
-      content: '';
-      display: none;
-    }
-  }
-
-  .findmore {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: $color-accent-primary;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-md;
-    background: rgba(99, 102, 241, 0.1);
-    transition: all $transition-fast;
-    
-    &:hover {
-      background: rgba(99, 102, 241, 0.2);
-      transform: translateX(4px);
-    }
-  }
-
-  // Products grid
-  > main {
-    width: 100%;
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: $spacing-lg;
-    padding-bottom: $spacing-2xl;
-    
-    > h1 {
-      grid-column: 1 / -1;
-      text-align: center;
-      color: $color-text-muted;
-      font-weight: 400;
-    }
-  }
-}
-
-// ===================================
-// 🛍️ PRODUCT CARD
-// ===================================
-
-.productCard {
-  width: 100%;
-  min-height: 380px;
-  padding: $spacing-lg;
-  @include flex(column, flex-start, center, $spacing-sm);
-  position: relative;
-  @include glass-card(15px, 0.5);
-  @include hover-lift(-8px);
+  min-width: 0;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
   overflow: hidden;
-  cursor: pointer;
-  animation: fadeInUp 0.5s ease forwards;
-  animation-delay: calc(var(--index, 0) * 0.1s);
-  
-  // Glow effect on hover
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 200px;
-    background: linear-gradient(
-      to bottom,
-      rgba(99, 102, 241, 0.1),
-      transparent
-    );
-    opacity: 0;
-    transition: opacity $transition-normal;
-    pointer-events: none;
-  }
-  
+  transition: box-shadow $transition-normal, border-color $transition-normal;
+
   &:hover {
     border-color: $color-border-hover;
-    box-shadow: $shadow-lg, 0 0 40px rgba(99, 102, 241, 0.15);
-    
-    &::before {
-      opacity: 1;
-    }
-    
-    > div {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    
+    box-shadow: $shadow-md;
+
     img {
-      transform: scale(1.05);
+      transform: scale(1.04);
     }
   }
 
-  img {
-    width: 100%;
-    height: 200px;
-    object-fit: contain;
-    margin-bottom: $spacing-md;
-    transition: transform $transition-normal;
-    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+  &__media {
+    position: relative;
+    aspect-ratio: 1;
+    background: $color-bg-tertiary;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: $spacing-lg;
+      mix-blend-mode: multiply; // white product shots sit on the tinted tile
+      transition: transform 400ms var(--ease);
+    }
   }
 
-  p {
-    font-weight: 500;
-    font-size: 1rem;
-    color: $color-text-primary;
-    text-align: center;
-    line-height: 1.4;
-    margin-bottom: $spacing-xs;
-  }
-
-  span {
-    font-weight: 700;
-    font-size: 1.25rem;
-    @include text-gradient();
-  }
-
-  // Add to cart overlay
-  > div {
-    opacity: 0;
-    transform: translateY(10px);
+  &__tag {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: $spacing-lg;
-    background: linear-gradient(
-      to top,
-      rgba(10, 10, 15, 0.95),
-      rgba(10, 10, 15, 0.8) 60%,
-      transparent
-    );
-    @include flex;
-    transition: all $transition-normal;
-    
-    button {
-      @include btn($spacing-md $spacing-xl);
-      @include btn-gradient();
-      border-radius: $radius-full;
-      font-size: 1rem;
-      @include flex(row, center, center, $spacing-sm);
-      
-      svg {
-        font-size: 0.9rem;
-      }
-      
-      &:hover {
-        transform: scale(1.05);
-      }
-      
-      &:active {
-        transform: scale(0.98);
-      }
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: $radius-full;
+    background: $color-accent-primary;
+    color: #fff;
+    @include text(caption);
+    font-weight: 600;
+
+    &--muted {
+      background: var(--text);
     }
   }
-}
 
-// ===================================
-// RESPONSIVE HOME
-// ===================================
-
-@media screen and (max-width: 768px) {
-  .home {
-    padding: $spacing-lg 4%;
-    
-    > section {
-      height: 250px;
-      border-radius: $radius-lg;
-      
-      &::after {
-        font-size: 1.5rem;
-        bottom: $spacing-lg;
-        left: $spacing-lg;
-      }
-    }
-    
-    > h1 {
-      font-size: 1.25rem;
-    }
-    
-    > main {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: $spacing-md;
-    }
-  }
-  
-  .productCard {
-    min-height: 340px;
+  &__body {
+    @include flex(row, space-between, flex-end, $spacing-md);
     padding: $spacing-md;
-    
-    img {
-      height: 160px;
+
+    > div {
+      min-width: 0;
+    }
+
+    h3 {
+      font-family: $font-primary;
+      @include text(body);
+      font-weight: 500;
+      letter-spacing: 0;
+      color: $color-text-secondary;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__price {
+    @include text(h4);
+    font-weight: 700;
+    color: $color-text-primary;
+    @include tabular;
+  }
+
+  &__add {
+    @include flex;
+    @include square(2.5rem);
+    flex: none;
+    border: none;
+    border-radius: $radius-full;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: background $transition-fast, transform $transition-fast;
+    @include focus-ring;
+
+    &:hover:not(:disabled) {
+      background: $color-accent-primary;
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.94);
+    }
+
+    &:disabled {
+      background: $color-bg-tertiary;
+      color: $color-text-muted;
+      cursor: not-allowed;
+    }
+  }
+
+  &--skeleton {
+    aspect-ratio: 0.8;
+    background: linear-gradient(100deg, var(--surface-2) 40%, var(--surface) 50%, var(--surface-2) 60%) 0 0 / 200% 100%;
+    animation: skeleton 1.2s linear infinite;
+  }
+}
+
+@keyframes skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  @include flex(column, center, center, $spacing-sm);
+  padding: $spacing-3xl $spacing-lg;
+  border: 1px dashed $color-border-hover;
+  border-radius: $radius-lg;
+  color: $color-text-muted;
+  text-align: center;
+
+  svg {
+    font-size: 2rem;
+  }
+
+  a {
+    @include button(primary);
+    margin-top: $spacing-sm;
+  }
+}
+
+// ---------- responsive ----------
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+
+    &__copy {
+      padding: $spacing-xl $spacing-lg;
+    }
+
+    &__art {
+      position: absolute;
+      inset: 0;
+      max-height: none;
+      opacity: 0.35;
     }
   }
 }
 
-@media screen and (max-width: 480px) {
+@media (max-width: 480px) {
   .home {
-    > section {
-      height: 200px;
-      
-      &::after {
-        font-size: 1.2rem;
-        bottom: $spacing-md;
-        left: $spacing-md;
-      }
+    padding: $spacing-md $spacing-md $spacing-2xl;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .product-card {
+    &__media img {
+      padding: 0.75rem;
     }
-    
-    > main {
-      grid-template-columns: 1fr;
+
+    &__body {
+      padding: 0.75rem;
+      gap: $spacing-sm;
+    }
+
+    &__price {
+      @include text(body);
+      font-weight: 700;
+    }
+
+    &__add {
+      @include square(2.25rem);
     }
   }
 }

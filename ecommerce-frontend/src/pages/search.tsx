@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LuChevronLeft, LuChevronRight, LuSearch, LuSearchX } from "react-icons/lu";
 import ProductCard from "../components/productCard";
 import {
   useCategoriesQuery,
@@ -8,6 +9,7 @@ import toast from "react-hot-toast";
 import { errorMessage } from "../redux/api/baseQuery";
 import { CartItem } from "../types/types";
 import { addToCart } from "../redux/reducer/cartReducer";
+import { formatINR } from "../utils/features";
 import { useDispatch } from "react-redux";
 
 const Search = () => {
@@ -56,7 +58,7 @@ const Search = () => {
   }, [isError, error]);
 
   return (
-    <div className="product-searcg-page">
+    <div className="search-page">
       <aside>
         <h2>Filters</h2>
 
@@ -70,7 +72,7 @@ const Search = () => {
         </div>
 
         <div>
-          <h4>Max Price: {maxPrice || ""}</h4>
+          <h4>Max price <b>{formatINR(maxPrice)}</b></h4>
           <input
             type="range"
             min={100}
@@ -86,7 +88,7 @@ const Search = () => {
             <option value="">All</option>
             {categoriesResponse?.categories.map((i) => (
               <option key={i} value={i}>
-                {i.toUpperCase()}
+                {i.charAt(0).toUpperCase() + i.slice(1)}
               </option>
             ))}
           </select>
@@ -94,19 +96,33 @@ const Search = () => {
       </aside>
 
       <main>
-        <h1>Products</h1>
-        <input
-          type="text"
-          placeholder="Search by name ..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
+        <header>
+          <h1>All products</h1>
+          {searchedData && <span>{searchedData.products.length} shown</span>}
+        </header>
+        <label className="search-page__box">
+          <LuSearch aria-hidden />
+          <input
+            type="search"
+            placeholder="Search products"
+            aria-label="Search products"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </label>
 
         {productsLoading ? (
-          <h1>Loading...</h1>
+          <div className="product-grid">
+            {Array.from({ length: 6 }, (_, i) => <div key={i} className="product-card product-card--skeleton" />)}
+          </div>
         ) : (
-          <div className="search-product-list">
-            {searchedData?.products.length === 0 && <p>No products match your filters.</p>}
+          <div className="product-grid">
+            {searchedData?.products.length === 0 && (
+              <div className="empty-state">
+                <LuSearchX />
+                <p>No products match your filters.</p>
+              </div>
+            )}
             {searchedData?.products.map((i) => (
               <ProductCard
                 key={i._id}
@@ -122,25 +138,27 @@ const Search = () => {
         )}
 
         {searchedData && searchedData.products.length > 0 && (
-          <article>
+          <nav className="search-page__pager" aria-label="Pagination">
             <button
               disabled={!isPreviousPage}
               onClick={() => setPage((prev) => prev - 1)}
+              aria-label="Previous page"
             >
-              Prev
+              <LuChevronLeft /> Prev
             </button>
 
             <span>
-              {page} of {searchedData.totalPage}
+              Page {page} of {searchedData.totalPage}
             </span>
 
             <button
               disabled={!isNextPage}
               onClick={() => setPage((prev) => prev + 1)}
+              aria-label="Next page"
             >
-              Next
+              Next <LuChevronRight />
             </button>
-          </article>
+          </nav>
         )}
       </main>
     </div>

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";
-import { FaTrash } from "react-icons/fa";
+import { LuTrash2 } from "react-icons/lu";
 import { CellProps, Column } from "react-table";
 import AdminLayout from "../../../components/admin/AdminLayout";
 import DataTable from "../../../components/admin/DataTable";
@@ -40,7 +40,7 @@ const Coupon = () => {
             else toast.success("Coupon deleted");
           }}
         >
-          <FaTrash />
+          <LuTrash2 />
         </button>
       ),
     } as Column<CouponType>,

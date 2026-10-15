@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CellProps, Column } from "react-table";
-import { FaUser } from "react-icons/fa";
+import { LuUser } from "react-icons/lu";
 import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import { useAllUsersQuery } from "../../redux/api/userAPI";
@@ -15,7 +15,7 @@ const columns: Column<User>[] = [
     width: 72,
     disableSortBy: true,
     Cell: ({ value, row }: CellProps<User>) =>
-      value ? <img className="avatar" src={transformImage(value)} alt={row.original.name} /> : <FaUser />,
+      value ? <img className="avatar" src={transformImage(value)} alt={row.original.name} /> : <LuUser />,
   } as Column<User>,
   { Header: "Name", accessor: "name", width: 200 },
   { Header: "Email", accessor: "email" },

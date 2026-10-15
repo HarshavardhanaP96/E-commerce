@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { HiTrendingDown, HiTrendingUp } from "react-icons/hi";
+import { LuTrendingDown, LuTrendingUp } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { BarChart, DoughnutChart, LineChart } from "../../components/admin/Charts";
+import { chartColors as c } from "../../components/admin/chartTheme";
 import Loader from "../../components/admin/Loader";
 import StatusBadge from "../../components/admin/StatusBadge";
 import {
@@ -19,8 +20,8 @@ const Widget = ({ label, value, change }: { label: string; value: string; change
     <span>{label}</span>
     <strong>{value}</strong>
     <small className={change >= 0 ? "green" : "red"}>
-      {change >= 0 ? <HiTrendingUp /> : <HiTrendingDown />} {change > 0 ? "+" : ""}
-      {change}% vs last month
+      {change >= 0 ? <LuTrendingUp /> : <LuTrendingDown />} {change > 0 ? "+" : ""}
+      {change}% <em>vs last month</em>
     </small>
   </article>
 );
@@ -75,7 +76,7 @@ const Analytics = () => {
           <div className="card chart-card chart-card--wide">
             <h4>Revenue & orders (6 months)</h4>
             <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders"
-                      bgColor_1="rgb(99,102,241)" bgColor_2="rgba(16,185,129,0.8)" labels={six} />
+                      bgColor_1={c.series[0]} bgColor_2={c.series[1]} labels={six} />
           </div>
           <div className="card chart-card">
             <h4>Inventory by category</h4>
@@ -93,47 +94,47 @@ const Analytics = () => {
           <div className="card chart-card">
             <h4>Gender ratio</h4>
             <DoughnutChart labels={["Female", "Male"]} data={[s.genderRatio.female, s.genderRatio.male]}
-                           backgroundColor={["hsl(340,82%,56%)", "rgba(53,162,235,0.8)"]} cutout={70} />
+                           backgroundColor={[c.series[4], c.series[1]]} cutout="72%" />
           </div>
           <div className="card chart-card">
             <h4>Order fulfilment</h4>
             <DoughnutChart labels={["Processing", "Shipped", "Delivered"]}
                            data={[p.orderFulfillment.processing, p.orderFulfillment.shipped, p.orderFulfillment.delivered]}
-                           backgroundColor={["#f59e0b", "#6366f1", "#10b981"]} cutout={70} />
+                           backgroundColor={[c.warning, c.info, c.success]} cutout="72%" />
           </div>
           <div className="card chart-card">
             <h4>Stock availability</h4>
             <DoughnutChart labels={["In stock", "Out of stock"]}
                            data={[p.stockAvailability.inStock, p.stockAvailability.outOfStock]}
-                           backgroundColor={["#10b981", "#ef4444"]} cutout={70} />
+                           backgroundColor={[c.success, c.danger]} cutout="72%" />
           </div>
           <div className="card chart-card">
             <h4>Revenue distribution</h4>
             <DoughnutChart labels={["Tax", "Shipping", "Discount", "Net"]}
                            data={[p.revenueDistribution.totalTax, p.revenueDistribution.totalShippingCharges,
                                   p.revenueDistribution.totalDiscount, p.revenueDistribution.totalIncome]}
-                           backgroundColor={["#8b5cf6", "#f59e0b", "#ef4444", "#10b981"]} cutout={70} />
+                           backgroundColor={[c.series[0], c.series[3], c.danger, c.success]} cutout="72%" />
           </div>
           <div className="card chart-card">
             <h4>Customers by age</h4>
             <DoughnutChart labels={["Under 20", "20–40", "Over 40"]}
                            data={[p.ageGroup.teen, p.ageGroup.adult, p.ageGroup.old]}
-                           backgroundColor={["#38bdf8", "#6366f1", "#a855f7"]} cutout={70} />
+                           backgroundColor={[c.series[1], c.series[0], c.series[4]]} cutout="72%" />
           </div>
           <div className="card chart-card chart-card--wide">
             <h4>New products & users (6 months)</h4>
             <BarChart data_1={b.products} data_2={b.users} title_1="Products" title_2="Users"
-                      bgColor_1="rgba(99,102,241,0.8)" bgColor_2="rgba(56,189,248,0.8)" labels={six} />
+                      bgColor_1={c.series[0]} bgColor_2={c.series[1]} labels={six} />
           </div>
           <div className="card chart-card chart-card--wide">
             <h4>Revenue (12 months)</h4>
             <LineChart data={l.revenue} label="Revenue" labels={twelve}
-                       backgroundColor="rgba(16,185,129,0.15)" borderColor="#10b981" />
+                       backgroundColor={c.fill(c.accent)} borderColor={c.accent} />
           </div>
           <div className="card chart-card chart-card--wide">
             <h4>Discount given (12 months)</h4>
             <LineChart data={l.discount} label="Discount" labels={twelve}
-                       backgroundColor="rgba(239,68,68,0.15)" borderColor="#ef4444" />
+                       backgroundColor={c.fill(c.series[3])} borderColor={c.series[3]} />
           </div>
           <div className="card chart-card chart-card--wide">
             <h4>Latest transactions</h4>

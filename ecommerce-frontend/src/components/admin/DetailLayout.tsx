@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { BiArrowBack } from "react-icons/bi";
+import { LuArrowLeft } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 
@@ -19,7 +19,7 @@ const DetailLayout = ({ title, subtitle, actions, children }: Props) => {
       <div className="detail-page">
         <header className="detail-page__header">
           <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Back">
-            <BiArrowBack />
+            <LuArrowLeft />
           </button>
           <div className="detail-page__title">
             <h2>{title}</h2>

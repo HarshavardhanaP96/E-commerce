@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
-import { FaTrash } from "react-icons/fa";
+import { LuTrash2 } from "react-icons/lu";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import Loader from "../../../components/admin/Loader";
@@ -56,7 +56,7 @@ const TransactionManagement = () => {
             </button>
           )}
           <button className="btn btn--danger" onClick={remove} disabled={deleting}>
-            <FaTrash /> Delete
+            <LuTrash2 /> Delete
           </button>
         </>
       }

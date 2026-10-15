@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { BiArrowBack } from "react-icons/bi";
+import { LuArrowLeft, LuLock } from "react-icons/lu";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { errorMessage } from "../redux/api/baseQuery";
@@ -72,25 +72,44 @@ const Shipping = () => {
 
   return (
     <div className="shipping">
-      <button className="back-btn" onClick={() => navigate("/cart")} aria-label="Back to cart">
-        <BiArrowBack />
+      <button className="back-btn" onClick={() => navigate("/cart")}>
+        <LuArrowLeft /> Back to cart
       </button>
 
       <form onSubmit={submitHandler}>
-        <h1>Shipping Address</h1>
-        <input type="text" name="address" placeholder="Address" value={shippingInfo.address}
-               onChange={changeHandler} maxLength={200} required />
-        <input type="text" name="city" placeholder="City" value={shippingInfo.city}
-               onChange={changeHandler} maxLength={80} required />
-        <input type="text" name="state" placeholder="State" value={shippingInfo.state}
-               onChange={changeHandler} maxLength={80} required />
-        <select name="country" required value={shippingInfo.country} onChange={changeHandler}>
-          <option value="">Choose a country</option>
-          <option value="India">India</option>
-        </select>
-        <input type="text" inputMode="numeric" pattern="\d{4,10}" title="4-10 digits" name="pinCode"
-               placeholder="Pin Code" value={shippingInfo.pinCode} onChange={changeHandler} required />
-        <button type="submit" disabled={busy}>{busy ? "Processing…" : "Pay & place order"}</button>
+        <h1>Shipping address</h1>
+        <p>Where should we deliver your order?</p>
+
+        <label className="span-2">
+          Address
+          <input type="text" name="address" placeholder="House no., street, area" value={shippingInfo.address}
+                 onChange={changeHandler} maxLength={200} required autoComplete="street-address" />
+        </label>
+        <label>
+          City
+          <input type="text" name="city" value={shippingInfo.city}
+                 onChange={changeHandler} maxLength={80} required autoComplete="address-level2" />
+        </label>
+        <label>
+          State
+          <input type="text" name="state" value={shippingInfo.state}
+                 onChange={changeHandler} maxLength={80} required autoComplete="address-level1" />
+        </label>
+        <label>
+          Country
+          <select name="country" required value={shippingInfo.country} onChange={changeHandler}>
+            <option value="">Choose a country</option>
+            <option value="India">India</option>
+          </select>
+        </label>
+        <label>
+          Pin code
+          <input type="text" inputMode="numeric" pattern="\d{4,10}" title="4-10 digits" name="pinCode"
+                 value={shippingInfo.pinCode} onChange={changeHandler} required autoComplete="postal-code" />
+        </label>
+        <button type="submit" className="span-2" disabled={busy}>
+          <LuLock /> {busy ? "Processing…" : "Pay & place order"}
+        </button>
       </form>
     </div>
   );

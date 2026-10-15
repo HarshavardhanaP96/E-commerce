@@ -1,0 +1,124 @@
+// ===================================
+// DESIGN TOKENS
+// Two surfaces share one vocabulary. <html data-surface="store|admin"> is set from the route
+// (see SurfaceScope in App.tsx); every component reads these custom properties, so the same
+// header / table / badge picks up the right look on either side.
+// ===================================
+
+:root {
+  // ---- type families ----
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  // ---- status (shared) ----
+  --success: #047857;
+  --success-subtle: #ecfdf5;
+  --warning: #b45309;
+  --warning-subtle: #fffbeb;
+  --danger: #b91c1c;
+  --danger-subtle: #fef2f2;
+  --info: #1d4ed8;
+  --info-subtle: #eff6ff;
+
+  // ---- motion ----
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+}
+
+// ---------- STORE: warm, editorial, generous ----------
+:root,
+[data-surface="store"] {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f5f5f4;
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+
+  --text: #0f172a;
+  --text-2: #57534e;
+  --text-muted: #78716c; // 4.8:1 on white
+
+  --accent: #e4572e; // coral: badges, counts, highlights (not small body text)
+  --accent-hover: #c2410c;
+  --accent-text: #c2410c; // accent for links / small text, passes AA
+  --accent-subtle: #fff1ec;
+
+  --primary: #0f172a; // main CTA is ink
+  --primary-hover: #1e293b;
+  --on-primary: #ffffff;
+  --ring: rgba(228, 87, 46, 0.35);
+
+  --font-display: "Bricolage Grotesque", var(--font-sans);
+  --weight-heading: 700;
+  --tracking-heading: -0.02em;
+
+  // type scale (16px base, fluid headings)
+  --fs-caption: 0.8125rem; // 13
+  --fs-body-sm: 0.875rem; // 14
+  --fs-body: 1rem; // 16
+  --fs-label: 0.9375rem; // 15
+  --fs-h4: 1.25rem; // 20
+  --fs-h3: 1.5rem; // 24
+  --fs-h2: clamp(1.75rem, 1.35rem + 1.2vw, 2.25rem); // 28 → 36
+  --fs-h1: clamp(2.25rem, 1.4rem + 3vw, 3.5rem); // 36 → 56
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 6px 20px -4px rgba(28, 25, 23, 0.1);
+  --shadow-lg: 0 18px 40px -12px rgba(28, 25, 23, 0.18);
+
+  --control-h: 2.75rem;
+  --header-h: 4rem;
+}
+
+// ---------- ADMIN: neutral slate, dense, flat ----------
+[data-surface="admin"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --text: #0f172a;
+  --text-2: #475569;
+  --text-muted: #64748b; // 4.8:1 on white
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-text: #4338ca;
+  --accent-subtle: #eef2ff;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --on-primary: #ffffff;
+  --ring: rgba(79, 70, 229, 0.3);
+
+  --font-display: var(--font-sans);
+  --weight-heading: 600;
+  --tracking-heading: -0.01em;
+
+  // type scale (14px body, fixed)
+  --fs-caption: 0.75rem; // 12
+  --fs-body-sm: 0.8125rem; // 13
+  --fs-body: 0.875rem; // 14
+  --fs-label: 0.8125rem; // 13
+  --fs-h4: 1rem; // 16
+  --fs-h3: 1.125rem; // 18
+  --fs-h2: 1.375rem; // 22
+  --fs-h1: 1.75rem; // 28
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  --control-h: 2.25rem;
+  --header-h: 3.5rem;
+}

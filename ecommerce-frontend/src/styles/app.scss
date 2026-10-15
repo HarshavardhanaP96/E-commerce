@@ -1,421 +1,544 @@
 // ===================================
-// 🚀 6PACK E-COMMERCE - MAIN STYLES
+// 6PACK — MAIN STYLES
 // ===================================
 
+@import "tokens";
 @import "admin-styles/mixin";
 
 // ===================================
-// BASE RESET & DEFAULTS
+// BASE
 // ===================================
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-:root {
-  --header-h: 3.25rem;
-  font-family: $font-primary;
-  line-height: 1.6;
-  font-weight: 400;
+html {
+  font-size: 16px;
   color-scheme: light;
   scroll-behavior: smooth;
 }
 
-html {
-  font-size: 16px;
-}
-
 body {
-  background-color: $color-bg-primary;
-  color: $color-text-primary;
+  min-width: 320px;
   min-height: 100vh;
   overflow-x: hidden;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  background: $color-bg-primary;
+  color: $color-text-primary;
+  font-family: $font-primary;
+  @include text(body);
+  font-feature-settings: "cv11", "ss01"; // Inter: single-storey a, open digits
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  // Subtle background pattern
-  // Subtle background pattern
-  background-image: 
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
-  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $font-display;
+  font-weight: var(--weight-heading);
+  letter-spacing: var(--tracking-heading);
+  color: $color-text-primary;
 }
 
 a {
+  color: $color-accent-text;
   text-decoration: none;
-  color: $color-text-primary;
+
   &:hover {
     color: $color-accent-primary;
   }
 }
 
-.red { color: $color-error; }
-.purple { color: $color-accent-secondary; }
-.green { color: $color-success; }
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid $color-accent-primary;
+  outline-offset: 2px;
+}
+
+img {
+  max-width: 100%;
+}
+
+.red {
+  color: $color-error;
+}
+
+.green {
+  color: $color-success;
+}
 
 .container {
-  max-width: 1440px;
+  max-width: 1200px;
   width: 100%;
-  margin: auto;
+  margin: 0 auto;
   padding: 0 $spacing-lg;
-  overflow: auto;
-  
+
   > h1 {
-    @include heading;
-    margin: $spacing-lg 0;
-    text-align: left;
-    font-size: 2rem;
+    @include text(h2);
+    margin: $spacing-xl 0 $spacing-lg;
   }
 }
 
 .heading {
-  @include heading;
-  margin: $spacing-lg 0;
+  @include text(h2);
   text-align: center;
-  font-size: 2rem;
 }
 
 // ===================================
-// HEADER NAVIGATION
+// HEADER (shared; sizes follow the active surface)
 // ===================================
 
 .header {
-  @include flex(row, flex-end, center, $spacing-xl);
-  padding: $spacing-sm $spacing-xl; /* Reduced padding */
-  height: var(--header-h);
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid $color-border;
+  @include flex(row, flex-end, center, $spacing-xs);
   position: sticky;
   top: 0;
   z-index: 100;
-  
-  // Logo link (class, not :first-of-type, so links inside the menu don't inherit it)
+  height: var(--header-h);
+  padding: 0 $spacing-lg;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid $color-border;
+
   .header__logo {
     margin-right: auto;
     font-family: $font-display;
-    font-size: 1.5rem;
-    font-weight: 700;
-    @include text-gradient();
-  }
-  
-  a {
-    color: $color-text-secondary;
-    font-size: 1rem; /* Slightly smaller */
-    padding: $spacing-xs $spacing-sm; /* Reduced padding */
-    border-radius: $radius-md;
-    transition: all $transition-fast;
-    @include flex(row, center, center, $spacing-sm);
-    
-    &:hover {
-      color: $color-text-primary;
-      background: rgba(255, 255, 255, 0.05);
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: $color-text-primary;
+
+    span {
+      color: $color-accent-primary;
     }
-    
-    svg {
-      font-size: 1.1rem;
+
+    small {
+      margin-left: $spacing-sm;
+      padding: 0.125rem 0.5rem;
+      border-radius: $radius-full;
+      background: $color-accent-subtle;
+      color: $color-accent-text;
+      font-family: $font-primary;
+      @include text(caption);
+      font-weight: 600;
+      letter-spacing: 0;
+      vertical-align: middle;
     }
   }
-  
-  button {
+
+  > a:not(.header__logo),
+  > button {
+    position: relative;
+    @include flex;
+    @include square(2.5rem);
     border: none;
-    font-size: 1.1rem;
-    cursor: pointer;
+    border-radius: $radius-full;
     background: transparent;
     color: $color-text-secondary;
-    padding: $spacing-xs; /* Reduced padding */
-    border-radius: $radius-full;
-    transition: all $transition-fast;
-    @include flex;
-    
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: background $transition-fast, color $transition-fast;
+    @include focus-ring;
+
     &:hover {
-      color: $color-accent-primary;
-      background: $color-bg-primary;
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
     }
   }
-  
-  dialog {
-    @include glass-card();
-    border: 1px solid $color-border;
-    padding: $spacing-sm; /* Reduced padding */
-    min-width: 160px;
+
+  .header__count {
     position: absolute;
+    top: 0.2rem;
+    right: 0.1rem;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: $radius-full;
+    background: $color-accent-primary;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.1rem;
+    text-align: center;
+    @include tabular;
+  }
+
+  .header__avatar {
+    @include square(2rem);
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid $color-border;
+  }
+
+  .header__menu {
+    position: absolute;
+    top: calc(100% + #{$spacing-xs});
+    right: $spacing-lg;
     left: auto;
-    right: $spacing-xl;
-    top: calc(100% + $spacing-xs); /* Closer to element */
+    min-width: 13rem;
+    padding: $spacing-xs;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    background: $color-bg-secondary;
     box-shadow: $shadow-lg;
-    
-    > div {
-      @include flex(column, flex-start, stretch, $spacing-xs);
-      
-      a, button {
-        @include flex(row, flex-start, center, $spacing-md);
-        padding: $spacing-sm $spacing-md;
-        border-radius: $radius-sm;
-        color: $color-text-secondary;
-        font-size: 0.95rem;
-        width: 100%;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        transition: all $transition-fast;
-        
-        svg {
-            font-size: 1.1rem;
-            min-width: 1.2rem; /* Ensure consistent icon width */
-        }
-        
-        &:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: $color-text-primary;
-        }
-      }
-      
-      button {
-        color: $color-error;
-        
-        &:hover {
-          background: rgba(239, 68, 68, 0.1);
-        }
-      }
-    }
   }
 }
 
 // ===================================
-// ADMIN CONTAINER
+// ADMIN SHELL
 // ===================================
 
 .admin-container {
-  @include grid(250px 1fr, 0); /* Reduced sidebar width */
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
   min-height: calc(100vh - var(--header-h));
-  background-color: $color-bg-primary;
-  
-  > aside {
-    width: 100%;
-    background: $color-bg-secondary;
-    padding: $spacing-md; /* Reduced padding */
-    position: sticky;
-    top: var(--header-h);
+  background: $color-bg-primary;
+
+  > main {
     height: calc(100vh - var(--header-h));
     overflow-y: auto;
-    border-right: 1px solid $color-border;
-    @include custom-scrollbar();
-    
-    > div {
-      margin: $spacing-lg $spacing-xs; /* Reduced margins */
-      
-      > h5 {
-        @include heading(1px, 500, uppercase);
-        opacity: 0.5;
-        margin-bottom: $spacing-sm;
-        font-size: 0.7rem;
-        color: $color-text-muted;
-      }
-      
-      > ul {
-        @include flex(column, unset, unset, $spacing-xs);
-        list-style: none;
-        
-        > li {
-          padding: $spacing-sm $spacing-md;
-          border-radius: $radius-md;
-          transition: all $transition-fast;
-          
-          &:hover {
-            background: rgba(255, 255, 255, 0.05);
-          }
-          
-          &.active {
-            background: $color-accent-gradient;
-            
-            a {
-              color: white !important;
-            }
-          }
-          
-          a {
-            color: $color-text-secondary;
-            @include flex(row, flex-start, center, $spacing-sm);
-            font-size: 0.9rem;
-            
-            svg {
-              font-size: 1rem;
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  > main {
-    padding: 0; /* Remove padding to allow full-height children */
-    height: calc(100vh - var(--header-h));
-    overflow-y: auto; /* Internal scrolling */
     @include custom-scrollbar();
   }
 }
 
-// ===================================
-// TABLE STYLES
-// ===================================
-
-.table {
-  border-collapse: collapse;
-  width: 100%;
-  @include glass-card(10px, 0.4);
-  overflow: hidden;
-  
-  th, td {
-    padding: $spacing-md;
-    text-align: left;
-    vertical-align: middle;
-  }
-  
-  th {
-    font-weight: 600;
-    color: $color-text-muted;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: $color-bg-tertiary;
-    border-bottom: 1px solid $color-border;
-  }
-  
-  tbody {
-    tr {
-      border-bottom: 1px solid $color-border;
-      transition: background $transition-fast;
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
-      
-      &:last-child {
-        border-bottom: none;
-      }
-    }
-    
-    td {
-      color: $color-text-secondary;
-      font-size: 0.95rem;
-      
-      img {
-        width: 50px;
-        height: 50px;
-        object-fit: cover;
-        border-radius: $radius-md;
-        border: 1px solid $color-border;
-      }
-      
-      a {
-        display: inline-flex;
-        align-items: center;
-        gap: $spacing-xs;
-        padding: $spacing-xs $spacing-sm;
-        background: rgba(99, 102, 241, 0.15);
-        color: $color-accent-primary;
-        border-radius: $radius-sm;
-        font-size: 0.85rem;
-        font-weight: 500;
-        transition: all $transition-fast;
-        
-        &:hover {
-          background: rgba(99, 102, 241, 0.25);
-        }
-      }
-      
-      button {
-        @include square(36px);
-        font-size: 1rem;
-        border: none;
-        outline: none;
-        background: rgba(239, 68, 68, 0.1);
-        cursor: pointer;
-        color: $color-error;
-        border-radius: $radius-sm;
-        transition: all $transition-fast;
-        @include flex;
-        
-        &:hover {
-          background: rgba(239, 68, 68, 0.2);
-          transform: scale(1.05);
-        }
-      }
-    }
-  }
-}
-
-.table-pagination {
-  @include flex(row, center, center, $spacing-md);
-  padding: $spacing-xl;
-  
-  > button {
-    @include btn();
-    @include btn-gradient();
-    padding: $spacing-sm $spacing-lg;
-    border-radius: $radius-md;
-    
-    &:disabled {
-      background: $color-bg-tertiary;
-      opacity: 0.4;
-    }
-  }
-  
-  > span {
-    color: $color-text-muted;
-    font-size: 0.9rem;
-  }
-}
-
-// ===================================
-// HAMBURGER & SIDEBAR CONTROLS
-// ===================================
-
-#hamburger {
-  display: none;
-  place-items: center;
-  @include square(48px);
-  border: none;
-  outline: none;
-  cursor: pointer;
-  color: $color-accent-primary;
-  position: fixed;
-  top: $spacing-md;
-  left: $spacing-md;
-  font-size: 1.5rem;
+.admin-sidebar {
+  position: sticky;
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  padding: $spacing-md 0.75rem;
   background: $color-bg-secondary;
-  border: 1px solid $color-border;
-  border-radius: $radius-full;
-  z-index: 200;
-  box-shadow: $shadow-md;
-  transition: all $transition-fast;
-  
-  &:hover {
-    background: $color-bg-tertiary;
+  border-right: 1px solid $color-border;
+  @include custom-scrollbar();
+
+  &__top {
+    display: none;
+  }
+
+  h5 {
+    @include overline;
+    padding: 0 0.75rem;
+    margin: $spacing-sm 0;
+  }
+
+  ul {
+    list-style: none;
+    @include flex(column, flex-start, stretch, 2px);
+  }
+
+  a {
+    @include flex(row, flex-start, center, 0.625rem);
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    @include text(body);
+    font-weight: 500;
+    transition: background $transition-fast, color $transition-fast;
+
+    svg {
+      font-size: 1.05rem;
+      flex: none;
+      color: $color-text-muted;
+    }
+
+    &:hover {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+
+    &.active {
+      background: $color-accent-subtle;
+      color: $color-accent-text;
+      font-weight: 600;
+
+      svg {
+        color: $color-accent-text;
+      }
+    }
   }
 }
 
-#close-sidebar {
-  width: 80%;
-  margin: $spacing-md auto;
-  display: block;
-  padding: $spacing-sm $spacing-md;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  background: rgba(239, 68, 68, 0.15);
-  color: $color-error;
-  border-radius: $radius-md;
-  font-weight: 500;
-  transition: all $transition-fast;
-  
-  &:hover {
-    background: rgba(239, 68, 68, 0.25);
+#hamburger,
+.admin-sidebar__backdrop {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .admin-container {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 160;
+    width: 17rem;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform $transition-normal;
+    box-shadow: $shadow-lg;
+
+    &--open {
+      transform: none;
+    }
+
+    &__top {
+      @include flex(row, space-between, center);
+      padding: 0 0.25rem 0 0.75rem;
+      margin-bottom: $spacing-md;
+
+      strong {
+        @include text(h4);
+      }
+    }
+  }
+
+  .admin-sidebar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: rgba(15, 23, 42, 0.4);
+  }
+
+  #hamburger {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    bottom: $spacing-md;
+    left: $spacing-md;
+    z-index: 140;
+    @include square(3rem);
+    border: 1px solid $color-border;
+    border-radius: $radius-full;
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+    font-size: 1.25rem;
+    box-shadow: $shadow-md;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 640px) {
+  .header--compact {
+    > a:not(.header__logo),
+    > button,
+    > .header__menu {
+      display: none;
+    }
+  }
+}
+
+// ===================================
+// ACCOUNT MENU (header dropdown + mobile sheet)
+// ===================================
+
+.account-menu {
+  &__who {
+    padding: $spacing-sm 0.75rem;
+    margin-bottom: $spacing-xs;
+    border-bottom: 1px solid $color-border;
+
+    strong {
+      display: block;
+      @include text(body-sm);
+      font-weight: 600;
+      color: $color-text-primary;
+    }
+
+    small {
+      @include text(caption);
+      font-weight: 400;
+      color: $color-text-muted;
+    }
+  }
+
+  > div {
+    @include flex(column, flex-start, stretch, 2px);
+  }
+
+  a,
+  button {
+    @include flex(row, flex-start, center, 0.625rem);
+    width: 100%;
+    padding: $spacing-sm 0.75rem;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-secondary;
+    @include text(body-sm);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    @include focus-ring;
+
+    svg {
+      font-size: 1rem;
+      flex: none;
+    }
+
+    &:hover {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+  }
+
+  button {
+    color: $color-error;
+
+    &:hover {
+      background: var(--danger-subtle);
+      color: $color-error;
+    }
+  }
+}
+
+// ===================================
+// BOTTOM NAV (mobile storefront)
+// ===================================
+
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  :root:has(.bottom-nav) {
+    --bottom-nav-h: 4rem;
+    --toast-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.75rem);
+  }
+
+  // Keep the last bit of every page clear of the fixed bar.
+  body:has(.bottom-nav) {
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-top: 1px solid $color-border;
+
+    > a,
+    > button {
+      position: relative;
+      @include flex(column, center, center, 0.2rem);
+      min-height: 3rem; // ≥ 48px touch target
+      border: none;
+      background: transparent;
+      color: $color-text-muted;
+      font-size: 1.375rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      @include focus-ring;
+
+      > span:last-child {
+        @include text(caption);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      // NavLink sets .active; the account button sets it for /login and /orders.
+      &.active {
+        color: $color-accent-text;
+      }
+    }
+  }
+
+  .bottom-nav__count {
+    position: absolute;
+    top: 0.45rem;
+    left: calc(50% + 0.35rem);
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: $radius-full;
+    background: $color-accent-primary;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.1rem;
+    text-align: center;
+    @include tabular;
+  }
+
+  .bottom-nav__avatar {
+    @include square(1.5rem);
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid $color-border;
+  }
+
+  .bottom-nav .active .bottom-nav__avatar {
+    border-color: $color-accent-primary;
+  }
+
+  // Modal sheet anchored to the bottom edge. Padding lives on the inner menu so a click
+  // whose target is the <dialog> itself is always a backdrop click.
+  .bottom-nav__sheet {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-top: 1px solid $color-border;
+    border-radius: $radius-lg $radius-lg 0 0;
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+    box-shadow: $shadow-lg;
+    animation: sheetUp $transition-normal;
+
+    &::backdrop {
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .account-menu {
+      padding: $spacing-sm $spacing-sm calc(#{$spacing-md} + env(safe-area-inset-bottom));
+
+      a,
+      button {
+        min-height: 3rem;
+        @include text(body);
+      }
+    }
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
   }
 }
 
@@ -425,57 +548,41 @@ a {
 
 .loader {
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - var(--header-h));
   @include flex;
-  background: $color-bg-primary;
-  
+
   > div {
-    @include square(80px);
+    @include square(2.5rem);
     border-radius: $radius-full;
-    border: 4px solid transparent;
+    border: 3px solid $color-border;
     border-top-color: $color-accent-primary;
-    border-bottom-color: $color-accent-secondary;
-    animation: loading-animation 0.8s linear infinite;
-    box-shadow: 0 0 30px $color-accent-glow;
+    animation: spin 0.7s linear infinite;
   }
 }
 
-@keyframes loading-animation {
+@keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes up-and-down {
-  to {
-    transform: translate(-50%, -20%);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -488,38 +595,4 @@ a {
 @import "shipping";
 @import "login";
 @import "search";
-@import "admin-styles/dashboard";
-@import "admin-styles/products";
-@import "admin-styles/chart";
-@import "admin-styles/dashboardapp";
-@import "admin-styles/mediaquery";
 @import "admin-styles/admin-ui";
-
-// ===================================
-// RESPONSIVE HEADER
-// ===================================
-
-@media screen and (max-width: 768px) {
-  .header {
-    padding: $spacing-md;
-    gap: $spacing-md;
-    
-    a:first-of-type {
-      font-size: 1.2rem;
-    }
-    
-    a, button {
-      font-size: 1rem;
-      padding: $spacing-xs;
-    }
-    
-    dialog {
-      right: $spacing-md;
-      left: auto;
-    }
-  }
-  
-  #hamburger {
-    display: grid;
-  }
-}

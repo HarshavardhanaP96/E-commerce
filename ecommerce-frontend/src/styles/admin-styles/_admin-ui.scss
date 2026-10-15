@@ -1,109 +1,47 @@
 // ===================================
 // ADMIN UI KIT — data tables, detail pages, analytics
 // Everything fits in (100vh - header); only inner regions scroll.
+// Also reused by the store's "My orders" pages, so it reads tokens rather than admin colours.
 // ===================================
-
-$control-h: 2.25rem;
-
-// ---------- header refinements ----------
-.header {
-  padding-block: 0;
-
-  .header__logo {
-    font-size: 1.35rem;
-  }
-
-  .header__avatar {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  // One size for every popup entry (prompt.txt #4).
-  .header__menu > div {
-    a,
-    button {
-      font-size: 0.9rem;
-      font-weight: 500;
-      line-height: 1.2;
-      background: transparent;
-      -webkit-text-fill-color: currentColor;
-
-      svg {
-        font-size: 1rem;
-      }
-    }
-  }
-}
 
 // ---------- controls ----------
 .btn {
-  @include flex(row, center, center, $spacing-xs);
-  height: $control-h;
-  padding: 0 $spacing-md;
-  border-radius: $radius-sm;
-  border: 1px solid $color-border-hover;
-  background: $color-bg-secondary;
-  color: $color-text-primary;
-  font-size: 0.875rem;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background $transition-fast, opacity $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
+  @include button(secondary);
+  height: var(--control-h);
+  padding: 0 0.875rem;
 
   &--primary {
-    background: $color-accent-primary;
-    border-color: $color-accent-primary;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background: darken($color-accent-primary, 6%);
-      color: white;
-    }
+    @include button(primary);
+    padding: 0 0.875rem;
   }
 
   &--danger {
-    background: #fee2e2;
-    border-color: #fecaca;
-    color: #991b1b;
-
-    &:hover:not(:disabled) {
-      background: #fecaca;
-      color: #991b1b;
-    }
+    @include button(danger);
+    padding: 0 0.875rem;
   }
 }
 
 .icon-btn {
   @include flex;
   @include square(2rem);
+  flex: none;
   border: none;
-  border-radius: 50%;
+  border-radius: $radius-sm;
   background: transparent;
   color: $color-text-secondary;
+  font-size: 1.1rem;
   cursor: pointer;
+  transition: background $transition-fast, color $transition-fast;
+  @include focus-ring;
 
   &:hover {
-    background: $color-bg-primary;
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
   }
 
-  &--danger {
+  &--danger:hover {
+    background: var(--danger-subtle);
     color: $color-error;
-
-    &:hover {
-      background: #fee2e2;
-    }
   }
 }
 
@@ -112,43 +50,49 @@ $control-h: 2.25rem;
 .detail-page,
 .analytics {
   select,
-  input:not([type="file"]) {
-    height: $control-h;
-    padding: 0 $spacing-sm;
-    border: 1px solid $color-border-hover;
-    border-radius: $radius-sm;
-    background: $color-bg-secondary;
-    color: $color-text-primary;
-    font-size: 0.875rem;
-    outline: none;
+  input:not([type="file"]):not([type="checkbox"]):not([type="radio"]) {
+    @include field;
+    width: auto;
+    padding: 0 0.625rem;
+  }
 
-    &:focus {
-      border-color: $color-accent-primary;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-    }
+  textarea {
+    @include field;
+    height: auto;
+    padding: 0.5rem 0.625rem;
   }
 }
 
 .badge {
-  display: inline-block;
-  padding: 0.125rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
   border-radius: $radius-full;
-  font-size: 0.75rem;
+  @include text(caption);
   font-weight: 600;
   text-transform: capitalize;
-  background: $color-bg-primary;
+  background: $color-bg-tertiary;
   color: $color-text-secondary;
+  vertical-align: middle;
 
-  &--processing { background: #fef3c7; color: #92400e; }
-  &--shipped { background: #e0e7ff; color: #3730a3; }
-  &--delivered { background: #d1fae5; color: #065f46; }
-  &--admin { background: #ede9fe; color: #5b21b6; }
-  &--user { background: #e0f2fe; color: #075985; }
+  &::before {
+    content: "";
+    @include square(0.375rem);
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--processing { background: var(--warning-subtle); color: var(--warning); }
+  &--shipped { background: var(--info-subtle); color: var(--info); }
+  &--delivered { background: var(--success-subtle); color: var(--success); }
+  &--admin { background: var(--accent-subtle); color: var(--accent-text); }
+  &--user { background: $color-bg-tertiary; color: $color-text-secondary; }
 }
 
 // ---------- layout ----------
 .admin-container > main.admin-main {
-  padding: $spacing-md;
+  padding: $spacing-lg;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -157,20 +101,25 @@ $control-h: 2.25rem;
 .card {
   background: $color-bg-secondary;
   border: 1px solid $color-border;
-  border-radius: $radius-md;
+  border-radius: $radius-lg;
   padding: $spacing-lg;
   min-height: 0;
 
   h4 {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: $color-text-muted;
-    margin: 0 0 $spacing-sm;
+    @include text(body);
+    font-family: $font-primary;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: $color-text-primary;
+    margin: 0 0 0.75rem;
 
     &:not(:first-child) {
-      margin-top: $spacing-md;
+      margin-top: $spacing-lg;
     }
+  }
+
+  p {
+    color: $color-text-secondary;
   }
 
   &--center {
@@ -192,13 +141,14 @@ $control-h: 2.25rem;
   flex-direction: column;
   background: $color-bg-secondary;
   border: 1px solid $color-border;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-  gap: $spacing-sm;
+  border-radius: $radius-lg;
+  overflow: hidden;
 
   &__toolbar {
     @include flex(row, flex-start, center, $spacing-sm);
     flex-wrap: wrap;
+    padding: 0.75rem $spacing-md;
+    border-bottom: 1px solid $color-border;
   }
 
   &__search {
@@ -211,10 +161,11 @@ $control-h: 2.25rem;
       top: 50%;
       transform: translateY(-50%);
       color: $color-text-muted;
+      pointer-events: none;
     }
 
     input {
-      width: 100%;
+      width: 100% !important;
       padding-left: 2.1rem !important;
     }
   }
@@ -233,8 +184,6 @@ $control-h: 2.25rem;
     flex: 1;
     min-height: 0;
     overflow: auto;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
     @include custom-scrollbar();
   }
 
@@ -246,7 +195,8 @@ $control-h: 2.25rem;
 
   th,
   td {
-    padding: 0.55rem $spacing-md;
+    padding: 0 $spacing-md;
+    height: 2.75rem;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
@@ -257,57 +207,80 @@ $control-h: 2.25rem;
     position: sticky;
     top: 0;
     z-index: 1;
+    height: 2.5rem;
     background: $color-bg-tertiary;
     border-bottom: 1px solid $color-border;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    @include text(caption);
+    font-weight: 600;
     color: $color-text-secondary;
     user-select: none;
+    cursor: pointer;
 
     span {
       @include flex(row, flex-start, center, $spacing-xs);
     }
+
+    svg {
+      color: $color-accent-text;
+    }
   }
 
   td {
-    font-size: 0.875rem;
+    @include text(body);
+    @include tabular;
     color: $color-text-primary;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid $color-border;
 
     img {
-      width: 2.5rem;
-      height: 2.5rem;
+      @include square(2rem);
       object-fit: cover;
       border-radius: $radius-sm;
       vertical-align: middle;
+      border: 1px solid $color-border;
     }
 
     img.avatar {
       border-radius: 50%;
     }
+
+    > svg {
+      vertical-align: middle;
+      color: $color-text-muted;
+    }
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
   }
 
   tr.clickable {
     cursor: pointer;
+    transition: background $transition-fast;
 
     &:hover,
     &:focus-visible {
-      background: rgba(99, 102, 241, 0.06);
+      background: $color-bg-primary;
       outline: none;
+    }
+
+    &:focus-visible {
+      box-shadow: inset 2px 0 0 $color-accent-primary;
     }
   }
 
   &__empty {
     text-align: center !important;
     color: $color-text-muted !important;
-    padding: $spacing-xl !important;
+    padding: $spacing-2xl !important;
+    height: auto !important;
   }
 
   &__footer {
     @include flex(row, flex-end, center, $spacing-lg);
-    font-size: 0.82rem;
+    padding: 0.625rem $spacing-md;
+    border-top: 1px solid $color-border;
+    @include text(body-sm);
+    @include tabular;
     color: $color-text-secondary;
 
     > span {
@@ -318,7 +291,7 @@ $control-h: 2.25rem;
       @include flex(row, center, center, $spacing-sm);
 
       select {
-        height: 1.9rem;
+        height: 2rem !important;
       }
     }
   }
@@ -327,19 +300,11 @@ $control-h: 2.25rem;
     @include flex(row, center, center, $spacing-sm);
 
     button {
-      height: 1.9rem;
-      padding: 0 $spacing-sm;
-      border: 1px solid $color-border-hover;
-      border-radius: $radius-sm;
-      background: $color-bg-secondary;
-      cursor: pointer;
-      font-size: 0.8rem;
-
-      &:disabled {
-        color: $color-text-muted;
-        background: $color-bg-primary;
-        cursor: not-allowed;
-      }
+      @include button(secondary);
+      height: 2rem;
+      padding: 0 0.625rem;
+      @include text(body-sm);
+      font-weight: 500;
     }
   }
 }
@@ -348,7 +313,7 @@ $control-h: 2.25rem;
   @include flex(row, flex-end, center, $spacing-sm);
 
   input {
-    width: 8.5rem;
+    width: 8.5rem !important;
   }
 }
 
@@ -361,23 +326,22 @@ $control-h: 2.25rem;
   gap: $spacing-md;
 
   &__header {
-    @include flex(row, flex-start, center, $spacing-sm);
+    @include flex(row, flex-start, center, 0.75rem);
   }
 
   &__title {
     min-width: 0;
 
     h2 {
-      font-size: 1.15rem;
-      font-weight: 700;
+      @include text(h3);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     small {
+      @include text(body-sm);
       color: $color-text-muted;
-      font-size: 0.78rem;
     }
   }
 
@@ -401,6 +365,7 @@ $control-h: 2.25rem;
 
   > .card {
     overflow: auto;
+    @include custom-scrollbar();
   }
 }
 
@@ -419,15 +384,20 @@ $control-h: 2.25rem;
 
   &.placeholder {
     @include flex;
-    background: $color-bg-primary;
+    background: $color-bg-tertiary;
     color: $color-text-muted;
     border-radius: $radius-md;
     font-size: 2rem;
   }
+
+  &--round.placeholder {
+    border-radius: 50%;
+  }
 }
 
 .detail-price {
-  font-size: 1.75rem;
+  @include text(h2);
+  @include tabular;
 }
 
 .form-grid {
@@ -437,10 +407,16 @@ $control-h: 2.25rem;
   align-content: start;
 
   label {
-    @include flex(column, flex-start, stretch, $spacing-xs);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: $color-text-secondary;
+    @include flex(column, flex-start, stretch, 0.375rem);
+    @include text(label);
+    color: $color-text-primary;
+
+    input,
+    select,
+    textarea {
+      width: 100% !important;
+      font-weight: 400;
+    }
   }
 
   .span-2 {
@@ -451,8 +427,9 @@ $control-h: 2.25rem;
 .facts {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: $spacing-sm $spacing-lg;
-  font-size: 0.9rem;
+  gap: 0.625rem $spacing-lg;
+  @include text(body);
+  @include tabular;
 
   dt {
     color: $color-text-muted;
@@ -460,6 +437,7 @@ $control-h: 2.25rem;
 
   dd {
     text-transform: none;
+    color: $color-text-primary;
   }
 }
 
@@ -472,13 +450,14 @@ $control-h: 2.25rem;
     display: grid;
     grid-template-columns: 1fr 1fr auto;
     align-items: center;
-    padding: $spacing-sm 0;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 0.85rem;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border;
+    @include text(body-sm);
+    @include tabular;
     cursor: pointer;
 
     &:hover {
-      background: $color-bg-tertiary;
+      background: $color-bg-primary;
     }
   }
 }
@@ -491,15 +470,20 @@ $control-h: 2.25rem;
     grid-template-columns: 3rem minmax(0, 1fr) auto;
     gap: $spacing-md;
     align-items: center;
-    padding: $spacing-sm 0;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 0.9rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid $color-border;
+    @include text(body);
+    @include tabular;
+
+    &:last-child {
+      border-bottom: none;
+    }
 
     img {
-      width: 3rem;
-      height: 3rem;
+      @include square(3rem);
       object-fit: cover;
       border-radius: $radius-sm;
+      border: 1px solid $color-border;
     }
 
     > a,
@@ -513,10 +497,15 @@ $control-h: 2.25rem;
 
 .order-details,
 .orders-page {
-  padding-bottom: $spacing-lg;
+  padding-bottom: $spacing-xl;
 
   > h1 {
     @include flex(row, flex-start, center, $spacing-md);
+  }
+
+  > p {
+    margin: -#{$spacing-md} 0 $spacing-lg;
+    color: $color-text-muted;
   }
 
   .detail-grid {
@@ -525,7 +514,7 @@ $control-h: 2.25rem;
 }
 
 .orders-page .data-table {
-  height: calc(100vh - var(--header-h) - 7rem);
+  height: calc(100vh - var(--header-h) - 9rem);
 }
 
 // ---------- analytics ----------
@@ -542,7 +531,7 @@ $control-h: 2.25rem;
     @include flex(row, space-between, center);
 
     h2 {
-      font-size: 1.15rem;
+      @include text(h2);
     }
   }
 
@@ -560,34 +549,41 @@ $control-h: 2.25rem;
 }
 
 .kpi {
-  @include flex(column, flex-start, flex-start, 0.15rem);
+  @include flex(column, flex-start, flex-start, $spacing-xs);
   background: $color-bg-secondary;
   border: 1px solid $color-border;
-  border-radius: $radius-md;
-  padding: $spacing-md;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-lg;
 
   > span {
-    font-size: 0.78rem;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    @include text(body-sm);
+    font-weight: 500;
+    color: $color-text-secondary;
   }
 
   > strong {
-    font-size: 1.4rem;
+    @include text(h1);
+    @include tabular;
   }
 
   > small {
     @include flex(row, flex-start, center, 0.25rem);
-    font-size: 0.78rem;
+    @include text(caption);
+    @include tabular;
+
+    em {
+      font-style: normal;
+      color: $color-text-muted;
+      font-weight: 400;
+    }
   }
 }
 
 .chart-card {
-  height: 260px;
+  height: 280px;
   display: flex;
   flex-direction: column;
-  padding: $spacing-md;
+  padding: $spacing-md $spacing-lg;
 
   > canvas,
   > div:not(.category-bars) {
@@ -610,13 +606,15 @@ $control-h: 2.25rem;
     grid-template-columns: 6rem 1fr 2.5rem;
     gap: $spacing-sm;
     align-items: center;
-    font-size: 0.82rem;
-    padding: 0.3rem 0;
+    @include text(body-sm);
+    @include tabular;
+    padding: 0.375rem 0;
     text-transform: capitalize;
+    color: $color-text-secondary;
 
     div {
-      height: 0.5rem;
-      background: $color-bg-primary;
+      height: 0.375rem;
+      background: $color-bg-tertiary;
       border-radius: $radius-full;
       overflow: hidden;
     }
@@ -624,7 +622,14 @@ $control-h: 2.25rem;
     i {
       display: block;
       height: 100%;
-      background: $color-accent-gradient;
+      border-radius: $radius-full;
+      background: $color-accent-primary;
+    }
+
+    b {
+      text-align: right;
+      font-weight: 600;
+      color: $color-text-primary;
     }
   }
 }
@@ -632,25 +637,27 @@ $control-h: 2.25rem;
 .mini-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  @include text(body-sm);
+  @include tabular;
 
   th,
   td {
     text-align: left;
-    padding: 0.35rem $spacing-sm;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 0.5rem $spacing-sm;
+    border-bottom: 1px solid $color-border;
   }
 
   th {
-    color: $color-text-muted;
+    @include text(caption);
     font-weight: 600;
+    color: $color-text-muted;
   }
 
   tr.clickable {
     cursor: pointer;
 
     &:hover {
-      background: $color-bg-tertiary;
+      background: $color-bg-primary;
     }
   }
 }
@@ -667,6 +674,10 @@ $control-h: 2.25rem;
 }
 
 @media (max-width: 800px) {
+  .admin-container > main.admin-main {
+    padding: $spacing-md;
+  }
+
   .detail-grid {
     grid-template-columns: 1fr;
     height: auto;
@@ -695,5 +706,9 @@ $control-h: 2.25rem;
 
   .data-table__actions {
     margin-left: 0;
+  }
+
+  .data-table__footer label {
+    display: none;
   }
 }

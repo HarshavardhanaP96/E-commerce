@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FaPlus } from "react-icons/fa";
+import { LuPlus } from "react-icons/lu";
 import { Link, useNavigate } from "react-router-dom";
 import { CellProps, Column } from "react-table";
 import AdminLayout from "../../components/admin/AdminLayout";
@@ -56,7 +56,7 @@ const Products = () => {
         }
         actions={
           <Link to="/admin/product/new" className="btn btn--primary">
-            <FaPlus /> Add product
+            <LuPlus /> Add product
           </Link>
         }
       />

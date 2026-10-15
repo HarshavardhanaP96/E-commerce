@@ -1,34 +1,37 @@
+@use "sass:list";
+@use "sass:map";
+
 // ===================================
-// 🎨 MODERN DESIGN SYSTEM - MIXINS
+// DESIGN SYSTEM — Sass aliases + mixins
+// Colours, radii and type sizes live in ../_tokens.scss as CSS custom properties; the Sass names
+// below are aliases so component files stay terse. Never hardcode a hex in a component file.
 // ===================================
 
-// Color Palette - Professional Light Theme
-$color-bg-primary: #f3f4f6;
-$color-bg-secondary: #ffffff;
-$color-bg-tertiary: #f9fafb;
-$color-bg-card: #ffffff;
+// Colour aliases
+$color-bg-primary: var(--bg);
+$color-bg-secondary: var(--surface);
+$color-bg-tertiary: var(--surface-2);
 
-$color-text-primary: #1f2937;
-$color-text-secondary: #4b5563;
-$color-text-muted: #9ca3af;
+$color-text-primary: var(--text);
+$color-text-secondary: var(--text-2);
+$color-text-muted: var(--text-muted);
 
-$color-accent-primary: #6366f1;
-$color-accent-secondary: #8b5cf6;
-$color-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-$color-accent-glow: rgba(99, 102, 241, 0.4);
+$color-accent-primary: var(--accent);
+$color-accent-text: var(--accent-text);
+$color-accent-subtle: var(--accent-subtle);
 
-$color-success: #10b981;
-$color-warning: #f59e0b;
-$color-error: #ef4444;
+$color-success: var(--success);
+$color-warning: var(--warning);
+$color-error: var(--danger);
 
-$color-border: #e5e7eb;
-$color-border-hover: #d1d5db;
+$color-border: var(--border);
+$color-border-hover: var(--border-strong);
 
 // Typography
-$font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-$font-display: 'Outfit', 'Inter', sans-serif;
+$font-primary: var(--font-sans);
+$font-display: var(--font-display);
 
-// Spacing Scale
+// Spacing scale (4px grid)
 $spacing-xs: 0.25rem;
 $spacing-sm: 0.5rem;
 $spacing-md: 1rem;
@@ -37,35 +40,69 @@ $spacing-xl: 2rem;
 $spacing-2xl: 3rem;
 $spacing-3xl: 4rem;
 
-// Border Radius Scale
-$radius-sm: 0.5rem;
-$radius-md: 0.75rem;
-$radius-lg: 1rem;
-$radius-xl: 1.5rem;
+// Radius aliases
+$radius-sm: var(--radius-sm);
+$radius-md: var(--radius-md);
+$radius-lg: var(--radius-lg);
 $radius-full: 9999px;
 
 // Shadows
-$shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-$shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
-$shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.45);
-$shadow-glow: 0 0 30px $color-accent-glow;
+$shadow-sm: var(--shadow-sm);
+$shadow-md: var(--shadow-md);
+$shadow-lg: var(--shadow-lg);
 
 // Transitions
-$transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-$transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-$transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-$transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+$transition-fast: var(--dur-fast) var(--ease);
+$transition-normal: var(--dur) var(--ease);
 
 // ===================================
-// UTILITY MIXINS
+// TYPE SCALE — the only way to set font-size in component files
 // ===================================
 
-@mixin heading($spacing: 0.5px, $weight: 600, $case: none) {
-  font-family: $font-display;
-  letter-spacing: $spacing;
-  font-weight: $weight;
-  text-transform: $case;
+$type-steps: (
+  caption: (size: var(--fs-caption), lh: 1.4, weight: 500),
+  body-sm: (size: var(--fs-body-sm), lh: 1.5, weight: 400),
+  body: (size: var(--fs-body), lh: 1.55, weight: 400),
+  label: (size: var(--fs-label), lh: 1.3, weight: 600),
+  h4: (size: var(--fs-h4), lh: 1.35, weight: 600),
+  h3: (size: var(--fs-h3), lh: 1.25, weight: var(--weight-heading)),
+  h2: (size: var(--fs-h2), lh: 1.2, weight: var(--weight-heading)),
+  h1: (size: var(--fs-h1), lh: 1.08, weight: var(--weight-heading)),
+);
+
+@mixin text($step) {
+  $s: map.get($type-steps, $step);
+  @if not $s {
+    @error "Unknown type step `#{$step}`. Use one of: #{map.keys($type-steps)}";
+  }
+  font-size: map.get($s, size);
+  line-height: map.get($s, lh);
+  font-weight: map.get($s, weight);
+
+  // h1–h3 use the display family (Bricolage on the store, Inter on admin).
+  @if list.index((h1, h2, h3), $step) {
+    font-family: $font-display;
+    letter-spacing: var(--tracking-heading);
+  }
 }
+
+// Small uppercase label above a group (sidebar sections, card titles, KPI labels).
+@mixin overline {
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $color-text-muted;
+}
+
+@mixin tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+// ===================================
+// LAYOUT
+// ===================================
 
 @mixin flex($dir: row, $justifyContent: center, $alignItems: center, $gap: 1rem) {
   display: flex;
@@ -82,27 +119,6 @@ $transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
   gap: $gap;
 }
 
-@mixin inputStyle($w: 100%, $p: 1rem, $bgColor: $color-bg-tertiary, $border: 1px solid $color-border) {
-  padding: $p;
-  border: $border;
-  background-color: $bgColor;
-  width: $w;
-  outline: none;
-  color: $color-text-primary;
-  font-family: $font-primary;
-  font-size: 0.95rem;
-  transition: all $transition-normal;
-  
-  &::placeholder {
-    color: $color-text-muted;
-  }
-  
-  &:focus {
-    border-color: $color-accent-primary;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  }
-}
-
 @mixin posCenter {
   position: absolute;
   top: 50%;
@@ -115,170 +131,120 @@ $transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
   width: $s;
 }
 
-@mixin baseShadow() {
-  box-shadow: $shadow-md;
+// ===================================
+// CONTROLS
+// ===================================
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
 }
 
-@mixin btn($p: 0.75rem 1.5rem, $bg: $color-accent-primary, $color: white) {
-  cursor: pointer;
-  border: none;
+// Text input / select.
+@mixin field {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 0.75rem;
+  border: 1px solid $color-border-hover;
+  border-radius: $radius-sm;
+  background: $color-bg-secondary;
+  color: $color-text-primary;
+  font: inherit;
+  @include text(body);
   outline: none;
-  padding: $p;
-  background: $bg;
-  color: $color;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:hover {
+    border-color: $color-text-muted;
+  }
+
+  &:focus {
+    border-color: $color-accent-primary;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+}
+
+// Button base; variants: primary (ink on store / indigo on admin), secondary (outlined), danger.
+@mixin button($variant: primary) {
+  @include flex(row, center, center, $spacing-sm);
+  height: var(--control-h);
+  padding: 0 1.25rem;
+  border-radius: $radius-sm;
   font-family: $font-primary;
-  font-weight: 500;
-  font-size: 0.95rem;
-  border-radius: $radius-md;
-  transition: all $transition-normal;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: $shadow-glow;
+  @include text(label);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background $transition-fast, border-color $transition-fast, color $transition-fast;
+  @include focus-ring;
+
+  svg {
+    font-size: 1.1em;
+    flex: none;
   }
-  
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-}
 
-@mixin btn-gradient() {
-  background: $color-accent-gradient;
-  border: none;
-  color: white;
-  font-weight: 600;
-  position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-  }
-  
-  &:hover::before {
-    left: 100%;
-  }
-}
+  @if $variant == primary {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--on-primary);
 
-// Glassmorphism Card
-@mixin glass-card($blur: 20px, $opacity: 0.6) {
-  background: rgba(255, 255, 255, $opacity);
-  backdrop-filter: blur($blur);
-  -webkit-backdrop-filter: blur($blur);
-  border: 1px solid $color-border;
-  border-radius: $radius-lg;
-}
-
-// Text Gradient
-@mixin text-gradient() {
-  background: $color-accent-gradient;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-// Hover Lift Effect
-@mixin hover-lift($distance: -5px) {
-  transition: transform $transition-normal, box-shadow $transition-normal;
-  
-  &:hover {
-    transform: translateY($distance);
-    box-shadow: $shadow-lg;
-  }
-}
-
-// Shimmer Animation
-@mixin shimmer() {
-  position: relative;
-  overflow: hidden;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.08),
-      transparent
-    );
-    animation: shimmer 2s infinite;
-  }
-}
-
-@keyframes shimmer {
-  100% {
-    left: 100%;
-  }
-}
-
-// Pulse Animation
-@mixin pulse($color: $color-accent-primary) {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  
-  @keyframes pulse {
-    0%, 100% {
-      box-shadow: 0 0 0 0 rgba($color, 0.4);
+    &:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      color: var(--on-primary);
     }
-    50% {
-      box-shadow: 0 0 0 15px rgba($color, 0);
+  } @else if $variant == secondary {
+    border: 1px solid $color-border-hover;
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+
+    &:hover:not(:disabled) {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+  } @else if $variant == danger {
+    border: 1px solid var(--danger-subtle);
+    background: var(--danger-subtle);
+    color: var(--danger);
+
+    &:hover:not(:disabled) {
+      border-color: var(--danger);
+      color: var(--danger);
     }
   }
 }
 
 // Scrollbar Styling
 @mixin custom-scrollbar() {
+  scrollbar-width: thin;
+  scrollbar-color: $color-border-hover transparent;
+
   &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
-  
+
   &::-webkit-scrollbar-track {
-    background: $color-bg-secondary;
-    border-radius: 3px;
+    background: transparent;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: $color-border-hover;
-    border-radius: 3px;
-    
+    border-radius: 4px;
+
     &:hover {
       background: $color-text-muted;
     }
   }
-}
-
-// Focus Ring
-@mixin focus-ring() {
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
-  }
-}
-
-// Badge Style
-@mixin badge($bg: $color-accent-primary) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem 0.75rem;
-  background: rgba($bg, 0.15);
-  color: $bg;
-  border-radius: $radius-full;
-  font-size: 0.75rem;
-  font-weight: 600;
 }

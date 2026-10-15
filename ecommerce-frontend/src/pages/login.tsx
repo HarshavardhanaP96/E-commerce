@@ -82,14 +82,15 @@ const Login = () => {
   return (
     <div className="login">
       <main>
-        <h1 className="heading">{isRegister ? "Register" : "Login"}</h1>
+        <h1 className="heading">{isRegister ? "Create account" : "Welcome back"}</h1>
+        <p className="login__sub">{isRegister ? "Join 6Pack in under a minute." : "Sign in to continue to 6Pack."}</p>
 
         <form onSubmit={isRegister ? handleRegister : handleLogin}>
           {isRegister && (
             <>
               <div>
-                <label>Name</label>
-                <input
+                <label htmlFor="reg-name">Name</label>
+                <input id="reg-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -97,16 +98,16 @@ const Login = () => {
                 />
               </div>
               <div>
-                <label>Gender</label>
-                <select value={gender} onChange={(e) => setGender(e.target.value)} required>
-                  <option value="">Select Gender</option>
+                <label htmlFor="reg-gender">Gender</label>
+                <select id="reg-gender" value={gender} onChange={(e) => setGender(e.target.value)} required>
+                  <option value="">Select gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
               </div>
               <div>
-                <label>Date Of Birth</label>
-                <input
+                <label htmlFor="reg-dob">Date of birth</label>
+                <input id="reg-dob"
                   type="date"
                   max={new Date().toISOString().slice(0, 10)}
                   value={date}
@@ -115,20 +116,20 @@ const Login = () => {
                 />
               </div>
               <div>
-                <label>Photo (optional)</label>
-                <input
+                <label htmlFor="reg-photo">Photo (optional)</label>
+                <input id="reg-photo"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={changeImageHandler}
                 />
               </div>
-              {photoPrev && <img src={photoPrev} alt="User" style={{width: 50, height: 50, borderRadius: "50%"}} />}
+              {photoPrev && <img src={photoPrev} alt="Profile preview" />}
             </>
           )}
 
           <div>
-            <label>Email Address</label>
-            <input
+            <label htmlFor="login-email">Email address</label>
+            <input id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -138,8 +139,8 @@ const Login = () => {
           </div>
 
           <div>
-            <label>Password</label>
-            <input
+            <label htmlFor="login-password">Password</label>
+            <input id="login-password"
               type="password"
               minLength={isRegister ? 8 : undefined}
               maxLength={72}
@@ -152,34 +153,25 @@ const Login = () => {
           </div>
 
           {!isRegister && (
-             <span 
+             <button
+              type="button"
+              className="text-link text-link--end"
               onClick={() => navigate("/forgot-password")}
-              style={{ 
-                cursor: "pointer", 
-                color: "#6366f1", 
-                fontSize: "0.85rem",
-                alignSelf: "flex-end",
-                marginTop: "-0.5rem",
-                fontWeight: 500
-              }}
              >
-               Forgot Password?
-             </span>
+               Forgot password?
+             </button>
           )}
 
           <button type="submit">
-            {isRegister ? "Sign Up" : "Sign In"}
+            {isRegister ? "Create account" : "Sign in"}
           </button>
         </form>
 
         <p>
           {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
-          <span
-            onClick={() => setIsRegister(!isRegister)}
-            style={{ cursor: "pointer", color: "blue", textDecoration: "underline" }}
-          >
-            {isRegister ? "Login" : "Register"}
-          </span>
+          <button type="button" className="text-link" onClick={() => setIsRegister(!isRegister)}>
+            {isRegister ? "Sign in" : "Create one"}
+          </button>
         </p>
       </main>
     </div>

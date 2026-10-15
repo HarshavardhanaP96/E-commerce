@@ -35,7 +35,7 @@ const ForgotPassword = () => {
   return (
     <div className="login">
       <main>
-        <h1 className="heading">Reset Password</h1>
+        <h1 className="heading">Reset password</h1>
         {token ? (
           <form onSubmit={reset}>
             <div>
@@ -51,7 +51,7 @@ const ForgotPassword = () => {
             <button type="submit" disabled={resetting}>{resetting ? "Updating…" : "Update password"}</button>
           </form>
         ) : sent ? (
-          <p>If an account exists for <b>{email}</b>, we have sent a reset link. It expires in 15 minutes.</p>
+          <p className="login__sub">If an account exists for <b>{email}</b>, we have sent a reset link. It expires in 15 minutes.</p>
         ) : (
           <form onSubmit={requestLink}>
             <div>
