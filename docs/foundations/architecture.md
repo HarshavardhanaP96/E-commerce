@@ -64,7 +64,30 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   p95 latency > 500 ms, readiness flapping, `checkout.failed{reason="paid_but_unfulfilled"}` > 0, no ready
   backend pods, scrape down, and memory near its limit. Severity is critical in prod-env and warning in test-env.
 
+### Frontend UI (`ecommerce-frontend/src/`)
+- **Design tokens** live in `styles/_tokens.scss` as CSS custom properties. There are two surfaces: the
+  **store** (warm and editorial: coral accent, ink CTAs, Bricolage Grotesque headings) and the **admin**
+  (neutral slate with an indigo accent, denser). `SurfaceScope` in `App.tsx` sets `<html data-surface>` from the
+  route, so shared components pick up the right look. Components read tokens and do not hard-code colours.
+  Chart.js can't read CSS variables, so `components/admin/chartTheme.ts` mirrors the admin palette.
+- **Mobile store:** `components/bottomNav.tsx` is a tab bar shown below 640 px on all routes except `/admin` and
+  `/shipping` (`utils/routes.ts#showsBottomNav`). The account menu (`components/accountMenu.tsx`) is shared
+  between the header dropdown and the bottom sheet, which is a native `<dialog>` for focus trapping and Escape.
+- **Admin conventions:** `DataTable` puts search, inline filters and the primary action (e.g. "Add product") in
+  one toolbar. It uses fixed column widths with ellipsis, puts pagination and page size at the bottom, and
+  scrolls the table body instead of the page. `DetailLayout` is the shell for product, user, order and
+  new-product pages: it fits the viewport and puts Save / Update / Delete top-right.
+
 ## Key decisions (append-only log, newest first)
+- 2026-10-15: ADR-013 **One token-driven design system with two surfaces (store and admin).** All styling is
+  driven by CSS custom properties in `_tokens.scss`, scoped by `data-surface`. This replaced the old
+  per-page SCSS (`_dashboard`, `_products`, `_chart`, `_mediaquery`, …) and the compile-time SCSS variables
+  in `_mixin.scss`, which couldn't switch per surface at runtime. Fonts are Inter
+  for UI and Bricolage Grotesque for store headlines. Text colours are checked for WCAG AA contrast, and
+  `prefers-reduced-motion` is respected. The mobile store uses a bottom tab bar instead of header icons.
+  Rejected: a component library such as MUI or Chakra (bundle weight, and harder to give the store its own
+  look) and Tailwind (a large rewrite of existing SCSS). Revisit if a dark mode is needed: add a third token
+  set and leave components unchanged. Still active.
 - 2026-10-15: ADR-012 **Self-hosted observability with the standard Helm charts, plus Sealed Secrets.** The
   stack is kube-prometheus-stack (Prometheus, Alertmanager, Grafana), Loki and Tempo on filesystem PVCs, and
   OpenTelemetry collectors for traces (a gateway) and logs (a DaemonSet). Chart versions are pinned in
