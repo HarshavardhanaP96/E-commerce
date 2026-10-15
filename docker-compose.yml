@@ -1,0 +1,71 @@
+# Local full stack:            docker compose up --build        → http://localhost:8081
+# With metrics/traces stack:   docker compose --profile observability up --build
+#   Grafana http://localhost:3001 (admin/admin) · Prometheus http://localhost:9090 · Jaeger http://localhost:16686
+name: sixpack
+
+services:
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:27017:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (cp .env.example .env)}
+      MONGO_URI: mongodb://mongo:27017/Ecommerce_2024
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT:-8081}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+    ports: ["127.0.0.1:${BACKEND_PORT:-8080}:8080"]
+    volumes: [uploads:/app/uploads]
+
+  frontend:
+    build: ./ecommerce-frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      BACKEND_UPSTREAM: http://backend:8080
+    ports: ["127.0.0.1:${FRONTEND_PORT:-8081}:8080"]
+
+  # ---- observability (opt-in) ----
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [observability]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    volumes: [./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+    ports: ["127.0.0.1:9090:9090"]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [prometheus, jaeger]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.71.0
+    profiles: [observability]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["127.0.0.1:16686:16686"]
+
+volumes:
+  mongo-data:
+  uploads:

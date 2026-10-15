@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: test-env
+resources:
+  - ../../base
+configMapGenerator:
+  - name: backend-config
+    literals:
+      - SPRING_PROFILES_ACTIVE=default
+      - PAYMENT_PROVIDER=razorpay
+      - FRONTEND_URL=https://test.shop.example.com
+      - CLIENT_URL=https://test.shop.example.com
+      - MAIL_LOG_LINKS=true
+      - LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs
+      - TRACING_EXPORT_ENABLED=true
+      - TRACING_SAMPLING_PROBABILITY=1.0
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector.observability:4318/v1/traces
+patches:
+  - target: { kind: Ingress, name: sixpack }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: test.shop.example.com

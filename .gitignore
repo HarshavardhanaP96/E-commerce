@@ -1,14 +1,24 @@
 node_modules/
+dist/
+build/
+target/
 
+# secrets (".env/" only matched a directory, so real .env files were not ignored)
+.env
+.env.*
+!.env.example
+
+# user uploads never belong in git
+uploads/
+
+# legacy duplicate frontend, kept locally only
 /admin
 
 /.vscode/*
 !.vscode/extensions.json
-.env/
-.vscode/
+.idea/
 .DS_Store
-dist/
-build/
+
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -16,6 +26,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-
 prompt.txt
-docs/
+graphify-out/
+docs/graphify-out/
+
+.playwright-mcp/

@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: sixpack
+    folder: 6Pack
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

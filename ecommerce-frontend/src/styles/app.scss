@@ -15,6 +15,7 @@
 }
 
 :root {
+  --header-h: 3.25rem;
   font-family: $font-primary;
   line-height: 1.6;
   font-weight: 400;
@@ -84,7 +85,7 @@ a {
 .header {
   @include flex(row, flex-end, center, $spacing-xl);
   padding: $spacing-sm $spacing-xl; /* Reduced padding */
-  height: 4rem; /* Fixed height for calculations */
+  height: var(--header-h);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -93,8 +94,8 @@ a {
   top: 0;
   z-index: 100;
   
-  // Logo link
-  a:first-of-type {
+  // Logo link (class, not :first-of-type, so links inside the menu don't inherit it)
+  .header__logo {
     margin-right: auto;
     font-family: $font-display;
     font-size: 1.5rem;
@@ -191,7 +192,7 @@ a {
 
 .admin-container {
   @include grid(250px 1fr, 0); /* Reduced sidebar width */
-  min-height: calc(100vh - 4rem); /* Adjust based on header height */
+  min-height: calc(100vh - var(--header-h));
   background-color: $color-bg-primary;
   
   > aside {
@@ -199,8 +200,8 @@ a {
     background: $color-bg-secondary;
     padding: $spacing-md; /* Reduced padding */
     position: sticky;
-    top: 4rem; /* Below header */
-    height: calc(100vh - 4rem); /* Full height minus header */
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
     overflow-y: auto;
     border-right: 1px solid $color-border;
     @include custom-scrollbar();
@@ -253,7 +254,7 @@ a {
   
   > main {
     padding: 0; /* Remove padding to allow full-height children */
-    height: calc(100vh - 4rem); /* constrained height */
+    height: calc(100vh - var(--header-h));
     overflow-y: auto; /* Internal scrolling */
     @include custom-scrollbar();
   }
@@ -492,6 +493,7 @@ a {
 @import "admin-styles/chart";
 @import "admin-styles/dashboardapp";
 @import "admin-styles/mediaquery";
+@import "admin-styles/admin-ui";
 
 // ===================================
 // RESPONSIVE HEADER

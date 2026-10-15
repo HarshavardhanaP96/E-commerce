@@ -53,6 +53,7 @@ export const BarChart = ({
 }: BarChartProps) => {
   const options: ChartOptions<"bar"> = {
     responsive: true,
+    maintainAspectRatio: false,
     indexAxis: horizontal ? "y" : "x",
     plugins: {
       legend: {
@@ -134,12 +135,13 @@ export const DoughnutChart = ({
 
   const doughnutOptions: ChartOptions<"doughnut"> = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: legends,
-        position: "bottom",
+        position: "right",
         labels: {
-          padding: 40,
+          padding: 8, boxWidth: 10, font: { size: 11 },
         },
       },
     },
@@ -175,6 +177,7 @@ export const PieChart = ({
 
   const pieChartOptions: ChartOptions<"pie"> = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
@@ -202,6 +205,7 @@ export const LineChart = ({
 }: LineChartProps) => {
   const options: ChartOptions<"line"> = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,

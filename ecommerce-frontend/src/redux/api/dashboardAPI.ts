@@ -1,63 +1,32 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { server } from "../config";
-import {
-  BarResponse,
-  LineResponse,
-  PieResponse,
-  StatsResponse,
-} from "../../types/api-types";
-
-// Helper to get token from localStorage
-const getToken = () => localStorage.getItem("token");
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { BarResponse, LineResponse, PieResponse, StatsResponse } from "../../types/api-types";
+import { DashboardScope } from "../../types/types";
+import { authedBaseQuery } from "./baseQuery";
+import { clean } from "./userAPI";
 
 export const dashboardAPI = createApi({
   reducerPath: "dashboardApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${server}/api/v1/dashboard/`,
-    prepareHeaders: (headers) => {
-        const token = getToken();
-        if (token) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-        return headers;
-    },
-  }),
-  tagTypes: ["stats"],
+  baseQuery: authedBaseQuery("dashboard/"),
+  keepUnusedDataFor: 0,
   endpoints: (builder) => ({
-    getDashboardStats: builder.query<StatsResponse, { productId?: string; category?: string; userId?: string }>({
-      query: (params) => ({
-        url: "stats",
-        params,
-      }),
-      keepUnusedDataFor: 0,
+    getDashboardStats: builder.query<StatsResponse, DashboardScope>({
+      query: (params) => ({ url: "stats", params: clean(params) }),
     }),
-    getPieChart: builder.query<PieResponse, { productId?: string; category?: string; userId?: string }>({
-      query: (params) => ({
-        url: "pie",
-        params,
-      }),
-      keepUnusedDataFor: 0,
+    getPieChart: builder.query<PieResponse, DashboardScope>({
+      query: (params) => ({ url: "pie", params: clean(params) }),
     }),
-    getBarChart: builder.query<BarResponse, { productId?: string; category?: string; userId?: string }>({
-      query: (params) => ({
-        url: "bar",
-        params,
-      }),
-      keepUnusedDataFor: 0,
+    getBarChart: builder.query<BarResponse, DashboardScope>({
+      query: (params) => ({ url: "bar", params: clean(params) }),
     }),
-    getLineChart: builder.query<LineResponse, { productId?: string; category?: string; userId?: string }>({
-      query: (params) => ({
-        url: "line",
-        params,
-      }),
-      keepUnusedDataFor: 0,
+    getLineChart: builder.query<LineResponse, DashboardScope>({
+      query: (params) => ({ url: "line", params: clean(params) }),
     }),
   }),
 });
 
 export const {
-  useGetBarChartQuery,
   useGetDashboardStatsQuery,
-  useGetLineChartQuery,
   useGetPieChartQuery,
+  useGetBarChartQuery,
+  useGetLineChartQuery,
 } = dashboardAPI;

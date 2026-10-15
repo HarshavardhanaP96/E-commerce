@@ -1,10 +1,9 @@
 import { ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
 import { useLoginMutation, useRegisterMutation } from "../redux/api/userAPI";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
-import { MessageResponse } from "../types/api-types";
+import { errorMessage } from "../redux/api/baseQuery";
 import { useDispatch } from "react-redux";
-import { userExist } from "../redux/reducer/userReducer";
+import { userLoggedIn } from "../redux/reducer/userReducer";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
@@ -44,14 +43,11 @@ const Login = () => {
       const res = await login({ email, password });
 
       if ("data" in res && res.data) {
-        localStorage.setItem("token", res.data.token);
-        dispatch(userExist(res.data.user));
+        dispatch(userLoggedIn({ user: res.data.user, token: res.data.token }));
         toast.success(res.data.message);
         navigate("/");
       } else {
-        const error = res.error as FetchBaseQueryError;
-        const message = (error.data as MessageResponse).message;
-        toast.error(message);
+        toast.error(errorMessage(res.error));
       }
     } catch (error) {
       toast.error("Login Failed");
@@ -72,14 +68,11 @@ const Login = () => {
       const res = await register(formData);
 
       if ("data" in res && res.data) {
-        localStorage.setItem("token", res.data.token);
-        dispatch(userExist(res.data.user));
+        dispatch(userLoggedIn({ user: res.data.user, token: res.data.token }));
         toast.success(res.data.message);
         navigate("/");
       } else {
-        const error = res.error as FetchBaseQueryError;
-        const message = (error.data as MessageResponse).message;
-        toast.error(message);
+        toast.error(errorMessage(res.error));
       }
     } catch (error) {
       toast.error("Registration Failed");
@@ -115,15 +108,17 @@ const Login = () => {
                 <label>Date Of Birth</label>
                 <input
                   type="date"
+                  max={new Date().toISOString().slice(0, 10)}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
                 />
               </div>
               <div>
-                <label>Photo</label>
+                <label>Photo (optional)</label>
                 <input
                   type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={changeImageHandler}
                 />
               </div>
@@ -146,6 +141,9 @@ const Login = () => {
             <label>Password</label>
             <input
               type="password"
+              minLength={isRegister ? 8 : undefined}
+              maxLength={72}
+              autoComplete={isRegister ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

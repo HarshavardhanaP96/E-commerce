@@ -28,7 +28,7 @@ const Header = () => {
 
   return (
     <nav className="header">
-      <Link onClick={() => setIsOpen(false)} to={"/"}>
+      <Link className="header__logo" onClick={() => setIsOpen(false)} to={"/"}>
         6PACK
       </Link>
 
@@ -48,17 +48,13 @@ const Header = () => {
             aria-expanded={isOpen}
           >
              {user?.photo ? (
-                <img 
-                  src={transformImage(user.photo)} 
-                  alt={user?.name || "User"} 
-                  style={{ width: "1.5rem", height: "1.5rem", borderRadius: "50%" }}
-                />
+                <img className="header__avatar" src={transformImage(user.photo)} alt={user?.name || "User"} />
              ) : (
                 <FaUser />
              )}
           </button>
 
-          <dialog open={isOpen}>
+          <dialog open={isOpen} className="header__menu">
             <div>
               {user?.role === "admin" && (
                 <Link onClick={() => setIsOpen(false)} to={"/admin/analytics"}>

@@ -1,0 +1,91 @@
+# All values can be overridden with environment variables (see ../.env.example).
+spring:
+  application:
+    name: sixpack-backend
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/Ecommerce_2024}
+      database: ${MONGO_DB:Ecommerce_2024}
+      auto-index-creation: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    problemdetails:
+      enabled: false
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-stacktrace: never
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    jwt-ttl: ${JWT_TTL:24h}
+    cors-allowed-origins: ${CLIENT_URL:http://localhost:5173}
+    auth-requests-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:10}
+  user:
+    frontend-url: ${FRONTEND_URL:${CLIENT_URL:http://localhost:5173}}
+    mail-log-links: ${MAIL_LOG_LINKS:true}
+    admin-email: ${ADMIN_EMAIL:}
+    admin-password: ${ADMIN_PASSWORD:}
+  storage:
+    local-dir: ${UPLOADS_DIR:uploads}
+  products:
+    page-size: ${PRODUCT_PER_PAGE:10}
+  payment:
+    provider: ${PAYMENT_PROVIDER:fake}
+    razorpay:
+      key-id: ${RAZORPAY_KEY_ID:}
+      key-secret: ${RAZORPAY_KEY_SECRET:}
+      base-url: ${RAZORPAY_BASE_URL:https://api.razorpay.com}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,mongo
+  info:
+    env:
+      enabled: false
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+      export:
+        enabled: ${TRACING_EXPORT_ENABLED:false}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:true}
+
+logging:
+  level:
+    root: INFO
+    com.sixpack: INFO

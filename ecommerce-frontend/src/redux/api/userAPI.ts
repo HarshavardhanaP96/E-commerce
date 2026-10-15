@@ -1,86 +1,68 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { server } from "../config";
-import { MessageResponse, UserResponse, DeleteUserRequest, AuthResponse } from "../../types/api-types";
-import axios from "axios";
-
-// Helper to get token from localStorage
-const getToken = () => localStorage.getItem("token");
+import { createApi } from "@reduxjs/toolkit/query/react";
+import {
+  AuthResponse,
+  MessageResponse,
+  UserResponse,
+  UsersResponse,
+} from "../../types/api-types";
+import { Role } from "../../types/types";
+import { authedBaseQuery } from "./baseQuery";
 
 export const userAPI = createApi({
   reducerPath: "userApi",
-  baseQuery: fetchBaseQuery({ 
-    baseUrl: `${server}/api/v1/user/`,
-    prepareHeaders: (headers) => {
-      const token = getToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
-    }
-  }),
+  baseQuery: authedBaseQuery("user/"),
   tagTypes: ["users"],
   endpoints: (builder) => ({
     register: builder.mutation<AuthResponse, FormData>({
-      query: (user) => ({
-        url: "register",
-        method: "POST",
-        body: user,
-      }),
+      query: (body) => ({ url: "register", method: "POST", body }),
       invalidatesTags: ["users"],
     }),
     login: builder.mutation<AuthResponse, { email: string; password: string }>({
-      query: (credentials) => ({
-        url: "login",
-        method: "POST",
-        body: credentials,
-      }),
+      query: (body) => ({ url: "login", method: "POST", body }),
       invalidatesTags: ["users"],
+    }),
+    forgotPassword: builder.mutation<MessageResponse, { email: string }>({
+      query: (body) => ({ url: "forgot-password", method: "POST", body }),
+    }),
+    resetPassword: builder.mutation<MessageResponse, { token: string; password: string }>({
+      query: (body) => ({ url: "reset-password", method: "POST", body }),
     }),
     getMyProfile: builder.query<UserResponse, void>({
       query: () => "me",
       providesTags: ["users"],
     }),
-    deleteUser: builder.mutation<MessageResponse, DeleteUserRequest>({
-      query: ({ userId }) => ({
-        url: `${userId}`,
-        method: "DELETE",
-      }),
-      invalidatesTags: ["users"],
-    }),
-    allUsers: builder.query<UserResponse, void>({
-      query: () => "all",
+    allUsers: builder.query<UsersResponse, { role?: string; gender?: string }>({
+      query: (params) => ({ url: "all", params: clean(params) }),
       providesTags: ["users"],
     }),
-    resetPassword: builder.mutation<MessageResponse, { email: string; password: string }>({
-      query: (data) => ({
-        url: "reset-password",
-        method: "POST",
-        body: data,
-      }),
+    userDetails: builder.query<UserResponse, string>({
+      query: (id) => id,
+      providesTags: ["users"],
+    }),
+    updateUserRole: builder.mutation<MessageResponse, { userId: string; role: Role }>({
+      query: ({ userId, role }) => ({ url: userId, method: "PUT", body: { role } }),
+      invalidatesTags: ["users"],
+    }),
+    deleteUser: builder.mutation<MessageResponse, string>({
+      query: (userId) => ({ url: userId, method: "DELETE" }),
+      invalidatesTags: ["users"],
     }),
   }),
 });
 
-export const getUser = async (token: string) => {
-  try {
-    const { data }: { data: UserResponse } = await axios.get(
-      `${server}/api/v1/user/me`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+/** Drops empty filter values so they are not sent as `?role=`. */
+export const clean = <T extends Record<string, unknown>>(params: T) =>
+  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "")) as Partial<T>;
 
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const { 
-  useRegisterMutation, 
-  useLoginMutation, 
+export const {
+  useRegisterMutation,
+  useLoginMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   useGetMyProfileQuery,
-  useAllUsersQuery, 
+  useLazyGetMyProfileQuery,
+  useAllUsersQuery,
+  useUserDetailsQuery,
+  useUpdateUserRoleMutation,
   useDeleteUserMutation,
-  useResetPasswordMutation
 } = userAPI;

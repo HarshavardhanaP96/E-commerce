@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/productCard";
 import { useLatestProductsQuery } from "../redux/api/productAPI";
@@ -7,7 +8,7 @@ import { useDispatch } from "react-redux";
 import { addToCart } from "../redux/reducer/cartReducer";
 
 const Home = () => {
-  const { data, isLoading, isError } = useLatestProductsQuery("");
+  const { data, isLoading, isError } = useLatestProductsQuery();
 
   const dispatch = useDispatch();
 
@@ -17,7 +18,9 @@ const Home = () => {
     toast.success("Added to Cart");
   };
 
-  if (isError) toast.error("Cannot Fetch the Products");
+  useEffect(() => {
+    if (isError) toast.error("Cannot fetch the products");
+  }, [isError]);
 
   return (
     <div className="home" style={{ fontFamily: '"Inter", sans-serif', backgroundColor: '#f9fafb', minHeight: '100vh' }}>

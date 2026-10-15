@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prod-env
+resources:
+  - ../../base
+  - hpa.yaml
+configMapGenerator:
+  - name: backend-config
+    literals:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PAYMENT_PROVIDER=razorpay
+      - FRONTEND_URL=https://shop.example.com
+      - CLIENT_URL=https://shop.example.com
+      - TRACING_EXPORT_ENABLED=true
+      - TRACING_SAMPLING_PROBABILITY=0.1
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector.observability:4318/v1/traces
+replicas:
+  - { name: frontend, count: 2 }
+  # Backend stays at 1 until uploads move to object storage or a ReadWriteMany volume (ADR-008);
+  # then raise this and the HPA minimum together.
+  - { name: backend, count: 1 }
+patches:
+  - target: { kind: Ingress, name: sixpack }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: shop.example.com
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts: [shop.example.com]
+            secretName: sixpack-tls
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-prod

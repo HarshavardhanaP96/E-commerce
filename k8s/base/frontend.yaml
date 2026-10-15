@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels: { app: frontend }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app: frontend }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: frontend }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: frontend
+          image: sixpack-frontend
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: BACKEND_UPSTREAM, value: "http://backend-service" }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: nginx-conf, mountPath: /etc/nginx/conf.d }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-conf
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  labels: { app: frontend }
+spec:
+  type: ClusterIP
+  selector: { app: frontend }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app: frontend }

@@ -1,124 +1,66 @@
-import { ReactElement, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FaPlus } from "react-icons/fa";
-import { Link } from "react-router-dom";
-import { Column } from "react-table";
-import AdminSidebar from "../../components/admin/AdminSidebar";
-import TableHOC from "../../components/admin/TableHOC";
+import { Link, useNavigate } from "react-router-dom";
+import { CellProps, Column } from "react-table";
+import AdminLayout from "../../components/admin/AdminLayout";
+import DataTable from "../../components/admin/DataTable";
+import { useAdminProductsQuery, useCategoriesQuery } from "../../redux/api/productAPI";
+import { Product } from "../../types/types";
+import { formatINR, transformImage } from "../../utils/features";
 
-interface DataType {
-  photo: ReactElement;
-  name: ReactElement; // Changed to ReactElement for Link
-  price: number;
-  stock: number;
-  category: string; // Added for filtering
-  // action: ReactElement; // Removed
-}
-
-const columns: Column<DataType>[] = [
+const columns: Column<Product>[] = [
   {
     Header: "Photo",
     accessor: "photo",
-  },
-  {
-    Header: "Name",
-    accessor: "name",
-  },
-  {
-    Header: "Price",
-    accessor: "price",
-  },
+    width: 72,
+    disableSortBy: true,
+    Cell: ({ value, row }: CellProps<Product>) => <img src={transformImage(value)} alt={row.original.name} />,
+  } as Column<Product>,
+  { Header: "Name", accessor: "name" },
+  { Header: "Category", accessor: "category", width: 160 },
+  { Header: "Price", accessor: "price", width: 130, Cell: ({ value }: CellProps<Product>) => formatINR(value) } as Column<Product>,
   {
     Header: "Stock",
     accessor: "stock",
-  },
-  {
-      Header: "Category",
-      accessor: "category",
-  }
-];
-
-const img =
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8c2hvZXN8ZW58MHx8MHx8&w=1000&q=804";
-
-const img2 = "https://m.media-amazon.com/images/I/514T0SvwkHL._SL1500_.jpg";
-
-const arr: Array<DataType> = [
-  {
-    photo: <img src={img} alt="Shoes" />,
-    name: <Link to="/admin/product/sajknaskd" style={{ fontWeight: 600, color: '#2563eb' }}>Puma Shoes Air Jordan Cook Nigga 2023</Link>,
-    price: 690,
-    stock: 3,
-    category: "Footwear",
-  },
-  {
-    photo: <img src={img2} alt="Shoes" />,
-    name: <Link to="/admin/product/sdaskdnkasjdn" style={{ fontWeight: 600, color: '#2563eb' }}>Macbook</Link>,
-    price: 232223,
-    stock: 213,
-    category: "Electronics",
-  },
+    width: 100,
+    Cell: ({ value }: CellProps<Product>) => <span className={value > 0 ? "" : "red"}>{value}</span>,
+  } as Column<Product>,
 ];
 
 const Products = () => {
-  const [rows] = useState<DataType[]>(arr);
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const navigate = useNavigate();
+  const [category, setCategory] = useState("");
+  const { data, isLoading } = useAdminProductsQuery();
+  const { data: categories } = useCategoriesQuery();
 
-  const filteredRows = useMemo(() => {
-      if (!categoryFilter) return rows;
-      return rows.filter(row => row.category === categoryFilter);
-  }, [rows, categoryFilter]);
-
-  const Table = TableHOC<DataType>(
-    columns,
-    filteredRows,
-    "dashboard-product-box",
-    "Products",
-    filteredRows.length > 6,
-    // Extra Controls (Filters + Add Button)
-    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, justifyContent: 'space-between' }}>
-        <select 
-            value={categoryFilter} 
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                outline: 'none',
-                fontSize: '0.9rem',
-                color: '#374151'
-            }}
-        >
-            <option value="">All Categories</option>
-            <option value="Footwear">Footwear</option>
-            <option value="Electronics">Electronics</option>
-        </select>
-
-        <Link to="/admin/product/new" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            borderRadius: '6px',
-            textDecoration: 'none',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            transition: 'background 0.2s'
-        }}>
-            <FaPlus />
-            Create
-        </Link>
-    </div>
-  )();
+  const rows = useMemo(
+    () => (data?.products ?? []).filter((p) => !category || p.category === category),
+    [data, category]
+  );
 
   return (
-    <div className="admin-container" style={{ display: 'grid', gridTemplateColumns: 'min-content 1fr', height: 'calc(100vh - 4rem)', backgroundColor: '#f3f4f6' }}>
-      <AdminSidebar />
-      <main style={{ padding: '1rem', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {Table}
-      </main>
-    </div>
+    <AdminLayout>
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={isLoading}
+        searchPlaceholder="Search products…"
+        onRowClick={(p) => navigate(`/admin/product/${p._id}`)}
+        filters={
+          <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
+            <option value="">All categories</option>
+            {categories?.categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        }
+        actions={
+          <Link to="/admin/product/new" className="btn btn--primary">
+            <FaPlus /> Add product
+          </Link>
+        }
+      />
+    </AdminLayout>
   );
 };
 

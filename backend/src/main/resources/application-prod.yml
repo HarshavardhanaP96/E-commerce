@@ -1,0 +1,22 @@
+# Activated with SPRING_PROFILES_ACTIVE=prod (k8s prod overlay).
+app:
+  user:
+    mail-log-links: false
+  payment:
+    provider: ${PAYMENT_PROVIDER:razorpay}
+
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:false}
+
+logging:
+  structured:
+    format:
+      console: ecs

@@ -1,85 +1,152 @@
-name: CI/CD Pipeline
+name: CI/CD
 
 on:
   push:
-    branches: [ "main", "*" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BACKEND_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/sixpack-backend
+  FRONTEND_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/sixpack-frontend
 
 jobs:
-  test-backend:
+  backend:
+    name: Backend · mvn verify
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-java@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ecommerce-backend/package-lock.json
-      - name: Install dependencies
-        run: cd ecommerce-backend && npm install
-      - name: Run tests
-        run: cd ecommerce-backend && npm test
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Unit + Testcontainers integration tests + Spring Modulith boundary verification
+      - run: mvn -B verify
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports
 
-  build-and-push:
-    needs: test-backend
+  frontend:
+    name: Frontend · lint & build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: ecommerce-frontend
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ecommerce-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+  images:
+    name: Build, scan & push images
+    needs: [backend, frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v5
+      - name: Build backend
+        uses: docker/build-push-action@v6
         with:
-          context: ./ecommerce-backend
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }}
-
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v5
+          context: ./backend
+          load: true
+          tags: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Build frontend
+        uses: docker/build-push-action@v6
         with:
           context: ./ecommerce-frontend
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }}
+          load: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push
+        run: |
+          docker push "$BACKEND_IMAGE:${{ github.sha }}"
+          docker push "$FRONTEND_IMAGE:${{ github.sha }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            docker tag "$BACKEND_IMAGE:${{ github.sha }}" "$BACKEND_IMAGE:latest"
+            docker tag "$FRONTEND_IMAGE:${{ github.sha }}" "$FRONTEND_IMAGE:latest"
+            docker push "$BACKEND_IMAGE:latest"
+            docker push "$FRONTEND_IMAGE:latest"
+          fi
 
   deploy:
-    needs: build-and-push
+    name: Deploy · ${{ github.ref == 'refs/heads/main' && 'prod' || 'test' }}
+    needs: images
     runs-on: ubuntu-latest
+    # GitHub Environments let you require approvals / restrict secrets for prod.
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'test' }}
+    concurrency:
+      group: deploy-${{ github.ref == 'refs/heads/main' && 'prod' || 'test' }}
+      cancel-in-progress: false
+    env:
+      OVERLAY: ${{ github.ref == 'refs/heads/main' && 'prod' || 'test' }}
+      NAMESPACE: ${{ github.ref == 'refs/heads/main' && 'prod-env' || 'test-env' }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Set up Kubeconfig
+      - uses: azure/setup-kubectl@v4
+      - uses: imranismail/setup-kustomize@v2
+      - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
-
-      - name: Deploy to Test Environment
-        if: github.ref != 'refs/heads/main'
+          chmod 600 ~/.kube/config
+      - name: Apply overlay with this commit's images
+        working-directory: k8s/overlays/${{ env.OVERLAY }}
         run: |
-          kubectl apply -f k8s/test/ -n test-env
-          kubectl set image deployment/backend-deploy backend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }} -n test-env
-          kubectl set image deployment/frontend-deploy frontend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }} -n test-env
-
-      - name: Deploy to Production
-        if: github.ref == 'refs/heads/main'
+          kustomize edit set image \
+            sixpack-backend=$BACKEND_IMAGE:${{ github.sha }} \
+            sixpack-frontend=$FRONTEND_IMAGE:${{ github.sha }}
+          kustomize build . | kubectl apply -f -
+      - name: Wait for rollout (readiness-gated)
         run: |
-          kubectl apply -f k8s/prod/ -n prod-env
-          kubectl set image deployment/backend-deploy backend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-backend:${{ github.sha }} -n prod-env
-          kubectl set image deployment/frontend-deploy frontend=${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ github.sha }} -n prod-env
+          kubectl -n "$NAMESPACE" rollout status deploy/backend --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deploy/frontend --timeout=3m
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          kubectl -n "$NAMESPACE" rollout undo deploy/backend || true
+          kubectl -n "$NAMESPACE" rollout undo deploy/frontend || true

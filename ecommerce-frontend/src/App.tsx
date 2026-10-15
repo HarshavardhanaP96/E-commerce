@@ -6,7 +6,8 @@ import Header from "./components/header";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { userExist, userNotExist } from "./redux/reducer/userReducer";
-import { getUser } from "./redux/api/userAPI";
+import { useLazyGetMyProfileQuery } from "./redux/api/userAPI";
+import { getToken } from "./redux/api/baseQuery";
 import { RootState } from "./redux/store";
 
 const Home = lazy(() => import("./pages/home"));
@@ -41,21 +42,19 @@ const CustomerManagement = lazy(
 const App = () => {
   const dispatch = useDispatch();
   const { user, loading } = useSelector((state: RootState) => state.userReducer);
+  const [fetchProfile] = useLazyGetMyProfileQuery();
 
+  // Restore the session from a stored token; an invalid/expired token signs the user out.
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      getUser(token)
-        .then((data) => {
-          dispatch(userExist(data.user));
-        })
-        .catch(() => {
-          dispatch(userNotExist());
-        });
-    } else {
+    if (!getToken()) {
       dispatch(userNotExist());
+      return;
     }
-  }, [dispatch]);
+    fetchProfile()
+      .unwrap()
+      .then((data) => dispatch(userExist(data.user)))
+      .catch(() => dispatch(userNotExist()));
+  }, [dispatch, fetchProfile]);
 
   if (loading) return <Loader />;
 
@@ -108,8 +107,7 @@ const App = () => {
               />
             }
           >
-             {/* Redirect /admin to /admin/transaction */}
-            <Route path="/admin" element={<Navigate to="/admin/transaction" />} />
+             <Route path="/admin" element={<Navigate to="/admin/analytics" replace />} />
             
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/product" element={<Products />} />
@@ -129,6 +127,7 @@ const App = () => {
             />
             <Route path="/admin/customer/:id" element={<CustomerManagement />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </Router>

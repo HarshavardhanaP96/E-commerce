@@ -1,5 +1,4 @@
 import { FaTrash, FaMinus, FaPlus } from "react-icons/fa";
-import { Link } from "react-router-dom";
 import { CartItem } from "../types/types";
 import { transformImage } from "../utils/features";
 
@@ -22,7 +21,7 @@ const CartItems = ({
     <div className="CartItem">
       <img src={transformImage(photo)} alt={name} loading="lazy" />
       <article>
-        <Link to={`/product/${productId}`}>{name}</Link>
+        <p>{name}</p>
         <span>₹{price.toLocaleString()}</span>
       </article>
 
@@ -38,6 +37,7 @@ const CartItems = ({
         <button 
           onClick={() => incrementHandler(cartItem)}
           aria-label="Increase quantity"
+          disabled={quantity >= cartItem.stock}
         >
           <FaPlus />
         </button>

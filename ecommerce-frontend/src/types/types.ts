@@ -1,21 +1,25 @@
+export type Role = "admin" | "user";
+
 export type User = {
+  _id: string;
   name: string;
   email: string;
   photo: string;
-  gender: string;
-  role: string;
+  gender: "male" | "female";
+  role: Role;
   dob: string;
-  _id: string;
-  password?: string;
+  age: number;
+  createdAt?: string;
 };
 
 export type Product = {
+  _id: string;
   name: string;
   price: number;
   stock: number;
   category: string;
   photo: string;
-  _id: string;
+  createdAt?: string;
 };
 
 export type ShippingInfo = {
@@ -35,9 +39,18 @@ export type CartItem = {
   stock: number;
 };
 
-export type OrderItem = Omit<CartItem, "stock"> & { _id: string };
+export type OrderItem = {
+  productId: string;
+  photo: string;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
+export type OrderStatus = "Processing" | "Shipped" | "Delivered";
 
 export type Order = {
+  _id: string;
   orderItems: OrderItem[];
   shippingInfo: ShippingInfo;
   subtotal: number;
@@ -45,12 +58,15 @@ export type Order = {
   shippingCharges: number;
   discount: number;
   total: number;
-  status: string;
-  user: {
-    name: string;
-    _id: string;
-  };
+  status: OrderStatus;
+  user: { _id: string; name: string };
+  createdAt: string;
+};
+
+export type Coupon = {
   _id: string;
+  coupon: string;
+  amount: number;
 };
 
 type CountAndChange = {
@@ -60,67 +76,41 @@ type CountAndChange = {
   order: number;
 };
 
-type LatestTransaction = {
-  _id: string;
+export type CategoryShare = { category: string; percent: number };
+
+export type LatestTransaction = {
+  id: string;
   amount: number;
   discount: number;
   quantity: number;
-  status: string;
+  status: OrderStatus;
 };
 
 export type Stats = {
-  categoryCount: Record<string, number>;
-  changePercent: CountAndChange;
   count: CountAndChange;
-  chart: {
-    order: number[];
-    revenue: number[];
-  };
-  userRatio: {
-    male: number;
-    female: number;
-  };
+  changePercent: CountAndChange;
+  chart: { order: number[]; revenue: number[] };
+  categoryCount: CategoryShare[];
+  genderRatio: { male: number; female: number };
   latestTransaction: LatestTransaction[];
 };
 
 export type Pie = {
-  orderFulfillment: {
-    processing: number;
-    shipped: number;
-    delivered: number;
-  };
-  productCategories: Record<string, number>[];
-  stockAvailability: {
-    inStock: number;
-    outOfStock: number;
-  };
+  orderFulfillment: { processing: number; shipped: number; delivered: number };
+  productCategories: CategoryShare[];
+  stockAvailability: { inStock: number; outOfStock: number };
   revenueDistribution: {
     totalTax: number;
     totalDiscount: number;
-    totalShippingCarges: number;
+    totalShippingCharges: number;
     totalIncome: number;
   };
-  adminCustomer: {
-    admin: number;
-    customer: number;
-  };
-  usersAgeGroup: {
-    teen: number;
-    adult: number;
-    old: number;
-  };
-  userCategory: Record<string, number>;
+  ageGroup: { teen: number; adult: number; old: number };
+  userCategory: { admin: number; customer: number };
 };
 
-export type Bar = {
-  user: number[];
-  product: number[];
-  order: number[];
-};
+export type Bar = { users: number[]; products: number[]; orders: number[] };
 
-export type Line = {
-  users: number[];
-  products: number[];
-  discount: number[];
-  revenue: number[];
-};
+export type Line = { users: number[]; products: number[]; discount: number[]; revenue: number[] };
+
+export type DashboardScope = { productId?: string; category?: string; userId?: string };

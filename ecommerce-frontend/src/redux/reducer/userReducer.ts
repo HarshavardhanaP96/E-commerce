@@ -1,11 +1,11 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { User } from "../../types/types";
 
+const TOKEN_KEY = "token";
 
-const initialState: { user: User | null; loading: boolean; token: string | null } = {
+const initialState: { user: User | null; loading: boolean } = {
   user: null,
   loading: true,
-  token: localStorage.getItem("token"),
 };
 
 export const userReducer = createSlice({
@@ -16,16 +16,17 @@ export const userReducer = createSlice({
       state.loading = false;
       state.user = action.payload;
     },
+    userLoggedIn: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      localStorage.setItem(TOKEN_KEY, action.payload.token);
+      state.loading = false;
+      state.user = action.payload.user;
+    },
     userNotExist: (state) => {
+      localStorage.removeItem(TOKEN_KEY);
       state.loading = false;
       state.user = null;
-      state.token = null;
-      localStorage.removeItem("token");
-    },
-    setToken: (state, action: PayloadAction<string>) => {
-      state.token = action.payload;
     },
   },
 });
 
-export const { userExist, userNotExist, setToken } = userReducer.actions;
+export const { userExist, userLoggedIn, userNotExist } = userReducer.actions;

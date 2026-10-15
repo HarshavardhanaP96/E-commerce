@@ -1,113 +1,54 @@
-import { ReactElement, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Column } from "react-table";
-import AdminSidebar from "../../components/admin/AdminSidebar";
-import TableHOC from "../../components/admin/TableHOC";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CellProps, Column } from "react-table";
+import AdminLayout from "../../components/admin/AdminLayout";
+import DataTable from "../../components/admin/DataTable";
+import StatusBadge from "../../components/admin/StatusBadge";
+import { useAllOrdersQuery } from "../../redux/api/orderAPI";
+import { Order } from "../../types/types";
+import { formatDate, formatINR } from "../../utils/features";
 
-interface DataType {
-  user: ReactElement; // Changed to ReactElement for Link
-  amount: number;
-  discount: number;
-  quantity: number;
-  status: ReactElement;
-  statusVal: string; // Helper for filtering
-  // action: ReactElement; // Removed
-}
+type Row = Order & { customer: string; items: number };
 
-const arr: Array<DataType> = [
-  {
-    user: <Link to="/admin/transaction/sajknaskd" style={{ fontWeight: 600, color: '#2563eb' }}>Charas</Link>,
-    amount: 4500,
-    discount: 400,
-    status: <span className="red">Processing</span>,
-    statusVal: "Processing",
-    quantity: 3,
-  },
-  {
-    user: <Link to="/admin/transaction/sajknaskd" style={{ fontWeight: 600, color: '#2563eb' }}>Xavirors</Link>,
-    amount: 6999,
-    discount: 400,
-    status: <span className="green">Shipped</span>,
-    statusVal: "Shipped",
-    quantity: 6,
-  },
-  {
-    user: <Link to="/admin/transaction/sajknaskd" style={{ fontWeight: 600, color: '#2563eb' }}>Xavirors</Link>,
-    amount: 6999,
-    discount: 400,
-    status: <span className="purple">Delivered</span>,
-    statusVal: "Delivered",
-    quantity: 6,
-  },
-];
-
-const columns: Column<DataType>[] = [
-  {
-    Header: "User",
-    accessor: "user",
-  },
-  {
-    Header: "Amount",
-    accessor: "amount",
-  },
-  {
-    Header: "Discount",
-    accessor: "discount",
-  },
-  {
-    Header: "Quantity",
-    accessor: "quantity",
-  },
-  {
-    Header: "Status",
-    accessor: "status",
-  },
+const columns: Column<Row>[] = [
+  { Header: "Order", accessor: "_id", width: 220 },
+  { Header: "Customer", accessor: "customer" },
+  { Header: "Items", accessor: "items", width: 80 },
+  { Header: "Discount", accessor: "discount", width: 110, Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
+  { Header: "Amount", accessor: "total", width: 120, Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
+  { Header: "Date", accessor: "createdAt", width: 130, Cell: ({ value }: CellProps<Row>) => formatDate(value) } as Column<Row>,
+  { Header: "Status", accessor: "status", width: 120, Cell: ({ value }: CellProps<Row>) => <StatusBadge status={value} /> } as Column<Row>,
 ];
 
 const Transaction = () => {
-  const [rows] = useState<DataType[]>(arr);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const navigate = useNavigate();
+  const [status, setStatus] = useState("");
+  const { data, isLoading } = useAllOrdersQuery({ status });
 
-  const filteredRows = useMemo(() => {
-    if (!statusFilter) return rows;
-    return rows.filter(row => row.statusVal === statusFilter);
-  }, [rows, statusFilter]);
-
-  const Table = TableHOC<DataType>(
-    columns,
-    filteredRows,
-    "dashboard-product-box",
-    "Transactions",
-    filteredRows.length > 6,
-    // Extra Controls
-     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <select 
-            value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                outline: 'none',
-                fontSize: '0.9rem',
-                color: '#374151'
-            }}
-        >
-            <option value="">All Status</option>
-            <option value="Processing">Processing</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Delivered">Delivered</option>
-        </select>
-    </div>
-  )();
+  const rows: Row[] = (data?.orders ?? []).map((o) => ({
+    ...o,
+    customer: o.user?.name ?? "—",
+    items: o.orderItems.reduce((n, i) => n + i.quantity, 0),
+  }));
 
   return (
-    <div className="admin-container" style={{ display: 'grid', gridTemplateColumns: 'min-content 1fr', height: 'calc(100vh - 4rem)', backgroundColor: '#f3f4f6' }}>
-      <AdminSidebar />
-      <main style={{ padding: '1rem', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {Table}
-      </main>
-    </div>
+    <AdminLayout>
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={isLoading}
+        searchPlaceholder="Search transactions…"
+        onRowClick={(o) => navigate(`/admin/transaction/${o._id}`)}
+        filters={
+          <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+            <option value="">All statuses</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+          </select>
+        }
+      />
+    </AdminLayout>
   );
 };
 

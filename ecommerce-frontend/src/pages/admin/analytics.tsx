@@ -1,339 +1,163 @@
-import { useState } from 'react';
-import { BsSearch } from 'react-icons/bs';
-import AdminSidebar from '../../components/admin/AdminSidebar';
-import { FaRegBell } from 'react-icons/fa';
-import { HiTrendingDown, HiTrendingUp } from 'react-icons/hi';
-import { BarChart, DoughnutChart, LineChart } from '../../components/admin/Charts';
-import { BiMaleFemale } from 'react-icons/bi';
+import { useState } from "react";
+import { HiTrendingDown, HiTrendingUp } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
+import AdminLayout from "../../components/admin/AdminLayout";
+import { BarChart, DoughnutChart, LineChart } from "../../components/admin/Charts";
+import Loader from "../../components/admin/Loader";
+import StatusBadge from "../../components/admin/StatusBadge";
+import {
+  useGetBarChartQuery,
+  useGetDashboardStatsQuery,
+  useGetLineChartQuery,
+  useGetPieChartQuery,
+} from "../../redux/api/dashboardAPI";
+import { useCategoriesQuery } from "../../redux/api/productAPI";
+import { formatINR, lastMonths } from "../../utils/features";
 
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const Analytics = () => {
-  const [activeTab, setActiveTab] = useState('orders');
-
-  return (
-    <div className='admin-container' style={{ display: 'grid', gridTemplateColumns: 'min-content 1fr', height: 'calc(100vh - 4rem)', backgroundColor: '#f3f4f6' }}>
-      <AdminSidebar />
-      <main className='dashboard' style={{ overflowY: 'auto', padding: '0', backgroundColor: '#f3f4f6', fontFamily: '"Inter", sans-serif' }}>
-        
-        {/* Header Section */}
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1.5rem 2rem',
-            backgroundColor: 'white',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10
-        }}>
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#f3f4f6', padding: '0.3rem', borderRadius: '12px' }}>
-                {['orders', 'users', 'products'].map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        style={{
-                            padding: '0.6rem 1.5rem',
-                            fontSize: '0.9rem',
-                            textTransform: 'capitalize',
-                            backgroundColor: activeTab === tab ? 'white' : 'transparent',
-                            color: activeTab === tab ? '#1f2937' : '#6b7280',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: activeTab === tab ? '600' : '500',
-                            transition: 'all 0.2s',
-                            boxShadow: activeTab === tab ? '0 2px 5px rgba(0,0,0,0.05)' : 'none'
-                        }}
-                    >
-                        {tab}
-                    </button>
-                ))}
-            </div>
-
-            {/* Profile & Notifications */}
-             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                <FaRegBell style={{ fontSize: '1.2rem', color: '#6b7280', cursor: 'pointer' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSqFzl9DjutlpVLcc83GGh8beynflxmbpu3TT31bk5N1hI2hssL" alt='User' style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#374151' }}>Admin</span>
-                </div>
-             </div>
-        </div>
-
-        {/* Content Area */}
-        <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-            {activeTab === 'orders' && <OrdersAnalytics />}
-            {activeTab === 'users' && <UsersAnalytics />}
-            {activeTab === 'products' && <ProductsAnalytics />}
-        </div>
-
-      </main>
-    </div>
-  );
-};
-
-// --- Sub-Components ---
-
-const SearchBar = ({ placeholder }: { placeholder: string }) => (
-    <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '1rem', 
-        backgroundColor: 'white', 
-        padding: '0.8rem 1.5rem', 
-        borderRadius: '10px', 
-        marginBottom: '2rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-        border: '1px solid #e5e7eb'
-    }}>
-        <BsSearch style={{ color: '#9ca3af' }} />
-        <input 
-            type='text' 
-            placeholder={placeholder} 
-            style={{ 
-                border: 'none', 
-                outline: 'none', 
-                width: '100%', 
-                backgroundColor: 'transparent',
-                fontSize: '1rem',
-                color: '#374151'
-            }} 
-        />
-    </div>
-);
-
-const SectionTitle = ({ title }: { title: string }) => (
-    <h3 style={{ 
-        fontSize: '1.1rem', 
-        fontWeight: '600', 
-        color: '#111827', 
-        marginBottom: '1rem',
-        marginTop: '2rem'
-    }}>
-        {title}
-    </h3>
-);
-
-const WidgetContainer = ({ children }: { children: React.ReactNode }) => (
-    <section style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '1.5rem',
-        marginBottom: '2rem'
-    }}>
-        {children}
-    </section>
-);
-
-const ChartContainer = ({ children, title }: { children: React.ReactNode, title: string }) => (
-    <div style={{ 
-        backgroundColor: 'white', 
-        padding: '1.5rem', 
-        borderRadius: '10px', 
-        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-        border: '1px solid #e5e7eb',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-        minHeight: '350px'
-    }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</h2>
-        {children}
-    </div>
-);
-
-const OrdersAnalytics = () => (
-  <>
-    <SearchBar placeholder='Search orders by ID, customer name...' />
-
-    <SectionTitle title='Monetary Aggregates' />
-    <WidgetContainer>
-       <WidgetItem percent={12} amount={true} value={145.50} heading='Avg Order Value' color='#3b82f6' />
-       <WidgetItem percent={5} amount={true} value={130.00} heading='Median Order Value' color='#f59e0b' />
-       <WidgetItem percent={-2} amount={true} value={45.20} heading='Revenue StdDev' color='#8b5cf6' />
-       <WidgetItem percent={25} amount={true} value={540000} heading='Gross Merchandise Value' color='#10b981' />
-    </WidgetContainer>
-
-    <SectionTitle title='Performance Metrics' />
-    <WidgetContainer>
-       <WidgetItem percent={2.4} amount={false} value={3.5} heading='Conversion Rate (%)' color='#ec4899' />
-       <WidgetItem percent={-0.5} amount={false} value={1.2} heading='Return Rate (%)' color='#ef4444' />
-       <WidgetItem percent={10} amount={true} value={12500} heading='Moving Avg Revenue' color='#f97316' />
-       <WidgetItem percent={15} amount={false} value={450} heading='Velocity (Orders/Day)' color='#06b6d4' />
-    </WidgetContainer>
-
-    <SectionTitle title='Trends & Volume' />
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-      <ChartContainer title='Revenue Trend'>
-        <LineChart
-            data={[24000, 14400, 24100, 34300, 90000, 20000, 25600, 44700, 99000, 144400, 100000, 120000]}
-            backgroundColor='rgba(16, 185, 129, 0.2)'
-            borderColor='#10b981'
-            label='Revenue'
-            labels={months}
-        />
-      </ChartContainer>
-      
-      <ChartContainer title='Order Volume'>
-         <BarChart
-            horizontal={false}
-            data_2={[]}
-            data_1={[200, 444, 343, 556, 778, 455, 990, 444, 122, 334, 890, 909]}
-            title_1='Orders'
-            title_2=''
-            bgColor_1='#3b82f6'
-            bgColor_2=''
-            labels={months}
-          />
-      </ChartContainer>
-    </div>
-  </>
-);
-
-const UsersAnalytics = () => (
-  <>
-    <SearchBar placeholder='Search users by email, name...' />
-
-    <SectionTitle title='Customer Value' />
-    <WidgetContainer>
-      <WidgetItem percent={8} amount={true} value={850} heading='Customer Lifetime Value' color='#3b82f6' />
-      <WidgetItem percent={-5} amount={true} value={45} heading='Acquisition Cost (CAC)' color='#ef4444' />
-      <WidgetItem percent={12} amount={false} value={4.2} heading='Avg Order Frequency' color='#10b981' />
-    </WidgetContainer>
-
-     <SectionTitle title='Engagement & Churn' />
-    <WidgetContainer>
-      <WidgetItem percent={-15} amount={false} value={12} heading='Recency (Days)' color='#f59e0b' />
-      <WidgetItem percent={-2} amount={false} value={5.4} heading='Churn Rate (%)' color='#ef4444' />
-       <WidgetItem percent={5} amount={false} value={420} heading='Avg RFM Score' color='#8b5cf6' />
-    </WidgetContainer>
-
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-        <ChartContainer title='User Growth'>
-            <LineChart
-                data={[200, 444, 444, 556, 778, 455, 990, 1444, 256, 447, 1000, 1200]}
-                label='Users'
-                borderColor='#3b82f6'
-                backgroundColor='rgba(59, 130, 246, 0.2)'
-                labels={months}
-            />
-        </ChartContainer>
-        
-         <ChartContainer title='Demographics (Gender)'>
-             <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                <DoughnutChart
-                    labels={['Female', 'Male']}
-                    data={[12, 19]}
-                    backgroundColor={['#ec4899', '#3b82f6']}
-                    cutout={90}
-                 />
-             </div>
-             <div style={{ textAlign: 'center', marginTop: '-40px' }}><BiMaleFemale style={{fontSize: '2rem', color: '#6b7280'}} /></div>
-        </ChartContainer>
-    </div>
-  </>
-);
-
-const ProductsAnalytics = () => (
-  <>
-    <SearchBar placeholder='Search products by SKU, name...' />
-
-    <SectionTitle title='Inventory Health & Profitability' />
-     <WidgetContainer>
-        <WidgetItem percent={10} amount={false} value={65} heading='Sell-Through Rate (%)' color='#8b5cf6' />
-        <WidgetItem percent={-5} amount={false} value={32} heading='Days Inventory Outstanding' color='#f97316' />
-        <WidgetItem percent={2} amount={false} value={45} heading='Avg Product Margin (%)' color='#10b981' />
-         <WidgetItem percent={0} amount={false} value={0.75} heading='Concentration (Gini)' color='#ec4899' />
-    </WidgetContainer>
-
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginTop: '2rem' }}>
-        <ChartContainer title='Top Products Sales'>
-             <BarChart
-                data_1={[200, 444, 343, 556, 778, 455, 990]}
-                data_2={[]}
-                title_1='Sales'
-                title_2=''
-                bgColor_1='#8b5cf6'
-                bgColor_2=''
-            />
-        </ChartContainer>
-        <ChartContainer title='Stock Distribution'>
-             <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                <DoughnutChart
-                  labels={['In Stock', 'Out of Stock', 'Low Stock']}
-                  data={[40, 20, 5]}
-                  backgroundColor={['#10b981', '#3b82f6', '#ef4444']}
-                  legends={true}
-                  offset={[0, 10, 20]}
-                  cutout='70%'
-                />
-             </div>
-        </ChartContainer>
-    </div>
-  </>
-);
-
-interface WidgetItemProps {
-  heading: string;
-  value: number;
-  percent: number;
-  color: string;
-  amount?: boolean;
-}
-
-const WidgetItem = ({ heading, value, percent, color, amount }: WidgetItemProps) => (
-  <article style={{
-      backgroundColor: 'white',
-      padding: '1.5rem',
-      borderRadius: '10px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-      border: '1px solid #e5e7eb',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-  }}>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-      <p style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>{heading}</p>
-      <h4 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>{amount ? `$${value}` : value}</h4>
-      
-      {percent > 0 ? (
-        <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem', fontWeight: '600' }}>
-          <HiTrendingUp /> +{percent}%
-        </span>
-      ) : (
-        <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem', fontWeight: '600' }}>
-          <HiTrendingDown /> {percent}%
-        </span>
-      )}
-    </div>
-
-    <div style={{
-        position: 'relative',
-        width: '4rem',
-        height: '4rem',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `conic-gradient(${color} ${(Math.abs(percent) / 100) * 360}deg, #f3f4f6 0)`
-    }}>
-      <div style={{
-          position: 'absolute',
-          width: '3.2rem',
-          height: '3.2rem',
-          backgroundColor: 'white',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-      }}>
-         <span style={{ color: color, fontSize: '0.8rem', fontWeight: '700' }}>{percent}%</span>
-      </div>
-    </div>
+const Widget = ({ label, value, change }: { label: string; value: string; change: number }) => (
+  <article className="kpi">
+    <span>{label}</span>
+    <strong>{value}</strong>
+    <small className={change >= 0 ? "green" : "red"}>
+      {change >= 0 ? <HiTrendingUp /> : <HiTrendingDown />} {change > 0 ? "+" : ""}
+      {change}% vs last month
+    </small>
   </article>
 );
+
+const Analytics = () => {
+  const navigate = useNavigate();
+  const [category, setCategory] = useState("");
+  const scope = { category };
+  const { data: categories } = useCategoriesQuery();
+  const stats = useGetDashboardStatsQuery(scope);
+  const pie = useGetPieChartQuery(scope);
+  const bar = useGetBarChartQuery(scope);
+  const line = useGetLineChartQuery(scope);
+
+  if (stats.isLoading || pie.isLoading || bar.isLoading || line.isLoading) return <Loader />;
+  if (stats.isError || !stats.data || !pie.data || !bar.data || !line.data) {
+    return (
+      <AdminLayout>
+        <p className="data-table__empty">Could not load analytics. Please retry.</p>
+      </AdminLayout>
+    );
+  }
+
+  const s = stats.data.stats;
+  const p = pie.data.charts;
+  const b = bar.data.charts;
+  const l = line.data.charts;
+  const six = lastMonths(6);
+  const twelve = lastMonths(12);
+
+  return (
+    <AdminLayout>
+      <div className="analytics">
+        <header className="analytics__toolbar">
+          <h2>Analytics</h2>
+          <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Scope by category">
+            <option value="">All categories</option>
+            {categories?.categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </header>
+
+        <section className="kpi-row">
+          <Widget label="Revenue" value={formatINR(s.count.revenue)} change={s.changePercent.revenue} />
+          <Widget label="Customers" value={String(s.count.user)} change={s.changePercent.user} />
+          <Widget label="Products" value={String(s.count.product)} change={s.changePercent.product} />
+          <Widget label="Orders" value={String(s.count.order)} change={s.changePercent.order} />
+        </section>
+
+        <section className="analytics__grid">
+          <div className="card chart-card chart-card--wide">
+            <h4>Revenue & orders (6 months)</h4>
+            <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders"
+                      bgColor_1="rgb(99,102,241)" bgColor_2="rgba(16,185,129,0.8)" labels={six} />
+          </div>
+          <div className="card chart-card">
+            <h4>Inventory by category</h4>
+            <ul className="category-bars">
+              {s.categoryCount.map((c) => (
+                <li key={c.category}>
+                  <span>{c.category}</span>
+                  <div><i style={{ width: `${c.percent}%` }} /></div>
+                  <b>{c.percent}%</b>
+                </li>
+              ))}
+              {s.categoryCount.length === 0 && <li>No products yet</li>}
+            </ul>
+          </div>
+          <div className="card chart-card">
+            <h4>Gender ratio</h4>
+            <DoughnutChart labels={["Female", "Male"]} data={[s.genderRatio.female, s.genderRatio.male]}
+                           backgroundColor={["hsl(340,82%,56%)", "rgba(53,162,235,0.8)"]} cutout={70} />
+          </div>
+          <div className="card chart-card">
+            <h4>Order fulfilment</h4>
+            <DoughnutChart labels={["Processing", "Shipped", "Delivered"]}
+                           data={[p.orderFulfillment.processing, p.orderFulfillment.shipped, p.orderFulfillment.delivered]}
+                           backgroundColor={["#f59e0b", "#6366f1", "#10b981"]} cutout={70} />
+          </div>
+          <div className="card chart-card">
+            <h4>Stock availability</h4>
+            <DoughnutChart labels={["In stock", "Out of stock"]}
+                           data={[p.stockAvailability.inStock, p.stockAvailability.outOfStock]}
+                           backgroundColor={["#10b981", "#ef4444"]} cutout={70} />
+          </div>
+          <div className="card chart-card">
+            <h4>Revenue distribution</h4>
+            <DoughnutChart labels={["Tax", "Shipping", "Discount", "Net"]}
+                           data={[p.revenueDistribution.totalTax, p.revenueDistribution.totalShippingCharges,
+                                  p.revenueDistribution.totalDiscount, p.revenueDistribution.totalIncome]}
+                           backgroundColor={["#8b5cf6", "#f59e0b", "#ef4444", "#10b981"]} cutout={70} />
+          </div>
+          <div className="card chart-card">
+            <h4>Customers by age</h4>
+            <DoughnutChart labels={["Under 20", "20–40", "Over 40"]}
+                           data={[p.ageGroup.teen, p.ageGroup.adult, p.ageGroup.old]}
+                           backgroundColor={["#38bdf8", "#6366f1", "#a855f7"]} cutout={70} />
+          </div>
+          <div className="card chart-card chart-card--wide">
+            <h4>New products & users (6 months)</h4>
+            <BarChart data_1={b.products} data_2={b.users} title_1="Products" title_2="Users"
+                      bgColor_1="rgba(99,102,241,0.8)" bgColor_2="rgba(56,189,248,0.8)" labels={six} />
+          </div>
+          <div className="card chart-card chart-card--wide">
+            <h4>Revenue (12 months)</h4>
+            <LineChart data={l.revenue} label="Revenue" labels={twelve}
+                       backgroundColor="rgba(16,185,129,0.15)" borderColor="#10b981" />
+          </div>
+          <div className="card chart-card chart-card--wide">
+            <h4>Discount given (12 months)</h4>
+            <LineChart data={l.discount} label="Discount" labels={twelve}
+                       backgroundColor="rgba(239,68,68,0.15)" borderColor="#ef4444" />
+          </div>
+          <div className="card chart-card chart-card--wide">
+            <h4>Latest transactions</h4>
+            <table className="mini-table">
+              <thead>
+                <tr><th>Order</th><th>Items</th><th>Discount</th><th>Amount</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                {s.latestTransaction.map((t) => (
+                  <tr key={t.id} className="clickable" onClick={() => navigate(`/admin/transaction/${t.id}`)}>
+                    <td>{t.id.slice(-8).toUpperCase()}</td>
+                    <td>{t.quantity}</td>
+                    <td>{formatINR(t.discount)}</td>
+                    <td>{formatINR(t.amount)}</td>
+                    <td><StatusBadge status={t.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </AdminLayout>
+  );
+};
 
 export default Analytics;

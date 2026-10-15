@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels: { app: backend }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app: backend }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: backend }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: backend
+          image: sixpack-backend
+          ports:
+            - { name: http, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: backend-config }
+            - secretRef: { name: backend-secrets }   # JWT_SECRET, MONGO_URI, RAZORPAY_*, ADMIN_* (see k8s/README.md)
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 768Mi }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              sleep: { seconds: 5 }   # let endpoints deregister before graceful shutdown
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: uploads, mountPath: /app/uploads }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: uploads
+          persistentVolumeClaim: { claimName: backend-uploads }
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  labels: { app: backend }
+spec:
+  type: ClusterIP
+  selector: { app: backend }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+# Uploads live on a shared volume until the S3 storage adapter lands (ADR-008).
+# With >1 replica this MUST be ReadWriteMany (e.g. EFS/Filestore/NFS storage class).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-uploads
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: { storage: 5Gi }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app: backend }

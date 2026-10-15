@@ -1,0 +1,68 @@
+# Rendered by the nginx image's envsubst entrypoint; ${BACKEND_UPSTREAM} comes from the environment.
+# Preserve what the outermost proxy (k8s ingress) saw, falling back to this hop's values locally.
+# Spring uses these to recognise same-origin requests (CORS) and the client IP (login rate limit).
+map $http_x_forwarded_proto $fwd_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+map $http_x_real_ip $client_ip {
+    default $http_x_real_ip;
+    ""      $remote_addr;
+}
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+    client_max_body_size 6m;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Security headers (Razorpay Checkout needs its script/frame origins).
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://checkout.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    # Same-origin API + images (ADR-010). X-Forwarded-For is replaced (not appended) with a single
+    # client IP, so clients cannot prepend fake addresses to dodge the backend's login rate limiter.
+    location /api/ {
+        proxy_pass ${BACKEND_UPSTREAM};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_set_header X-Forwarded-For $client_ip;
+        proxy_read_timeout 30s;
+    }
+
+    location /uploads/ {
+        proxy_pass ${BACKEND_UPSTREAM};
+        proxy_set_header Host $http_host;
+        expires 30d;
+    }
+
+    # Hashed build assets can be cached forever.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://checkout.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

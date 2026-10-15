@@ -1,156 +1,116 @@
-import { FormEvent, useState } from "react";
-import { FaTrash } from "react-icons/fa";
-import AdminSidebar from "../../../components/admin/AdminSidebar";
-// import { useSelector } from "react-redux";
-// import { RootState } from "../../../redux/store";
-import { useNavigate } from "react-router-dom";
-// import { useDeleteUserMutation, useUserDetailsQuery, useUpdateUserMutation } from "../../../redux/api/userAPI";
-// import { MessageResponse, UserResponse } from "../../../types/api-types";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { FaTrash, FaUser } from "react-icons/fa";
+import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import DetailLayout from "../../../components/admin/DetailLayout";
+import Loader from "../../../components/admin/Loader";
+import StatusBadge from "../../../components/admin/StatusBadge";
+import { errorMessage } from "../../../redux/api/baseQuery";
+import { useAllOrdersQuery } from "../../../redux/api/orderAPI";
+import { useDeleteUserMutation, useUpdateUserRoleMutation, useUserDetailsQuery } from "../../../redux/api/userAPI";
+import { RootState } from "../../../redux/store";
+import { Role } from "../../../types/types";
+import { formatDate, formatINR, transformImage } from "../../../utils/features";
 
 const CustomerManagement = () => {
-  // const { user } = useSelector((state: RootState) => state.userReducer);
-  // const params = useParams();
+  const { id = "" } = useParams();
   const navigate = useNavigate();
+  const me = useSelector((s: RootState) => s.userReducer.user);
+  const { data, isLoading, isError } = useUserDetailsQuery(id);
+  const { data: orders } = useAllOrdersQuery({});
+  const [updateRole, { isLoading: saving }] = useUpdateUserRoleMutation();
+  const [deleteUser, { isLoading: deleting }] = useDeleteUserMutation();
+  const [role, setRole] = useState<Role>("user");
 
-  // Mock Data & Handlers (Replace with actual API hooks)
-  // const { data, isError, error } = useUserDetailsQuery(params.id!);
-  // const [deleteUser] = useDeleteUserMutation();
-  // const [updateUser] = useUpdateUserMutation();
+  const user = data?.user;
+  useEffect(() => {
+    if (user) setRole(user.role);
+  }, [user]);
 
-  const [name, setName] = useState<string>("Emily Palmer");
-  const [email] = useState<string>("emily.palmer@example.com");
-  const [gender, setGender] = useState<string>("female");
-  const [role, setRole] = useState<string>("user");
-  const [avatar] = useState<string>("https://randomuser.me/api/portraits/women/54.jpg");
+  useEffect(() => {
+    if (isError) {
+      toast.error("User not found");
+      navigate("/admin/customer", { replace: true });
+    }
+  }, [isError, navigate]);
 
-  // Load Data
-  // useEffect(() => {
-  //   if (data) {
-  //     setName(data.user.name);
-  //     setEmail(data.user.email);
-  //     setGender(data.user.gender);
-  //     setRole(data.user.role);
-  //     setAvatar(data.user.photo);
-  //   }
-  // }, [data]);
+  if (isLoading || !user) return <Loader />;
 
-  const deleteHandler = async () => {
-    // const res = await deleteUser({ userId: user?._id!, adminUserId: params.id! });
-    // response handling...
-    toast.success("User Deleted");
-    navigate("/admin/customer");
+  const isSelf = me?._id === user._id;
+  const userOrders = (orders?.orders ?? []).filter((o) => o.user?._id === user._id);
+  const spent = userOrders.reduce((sum, o) => sum + o.total, 0);
+
+  const save = async () => {
+    const res = await updateRole({ userId: id, role });
+    if ("error" in res) return toast.error(errorMessage(res.error));
+    toast.success(res.data.message);
   };
 
-  const submitHandler = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    // Update logic
-    toast.success("User Updated");
+  const remove = async () => {
+    if (!confirm(`Delete ${user.name}'s account? This cannot be undone.`)) return;
+    const res = await deleteUser(id);
+    if ("error" in res) return toast.error(errorMessage(res.error));
+    toast.success(res.data.message);
     navigate("/admin/customer");
   };
 
   return (
-    <div className="admin-container" style={{ display: 'grid', gridTemplateColumns: 'min-content 1fr', height: 'calc(100vh - 4rem)', backgroundColor: '#f3f4f6', overflow: 'hidden' }}>
-      <AdminSidebar />
-      <main className="product-management" style={{ padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <article style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '12px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            width: '100%',
-            maxWidth: '600px',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.5rem'
-        }}>
-            {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>Manage User</h2>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button type="submit" form="update-user-form" style={{
-                         padding: '0.4rem 1rem',
-                         backgroundColor: '#3b82f6',
-                         color: 'white',
-                         border: 'none',
-                         borderRadius: '6px',
-                         fontWeight: '600',
-                         cursor: 'pointer',
-                         transition: 'background 0.2s',
-                         fontSize: '0.9rem'
-                    }}>
-                        Update
-                    </button>
-                    <button className="product-delete-btn" onClick={deleteHandler} style={{
-                        backgroundColor: '#fee2e2',
-                        color: '#991b1b',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '0.4rem 0.6rem',
-                        fontSize: '1rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <FaTrash />
-                    </button>
-                </div>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                <img src={avatar} alt={name} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
-            </div>
+    <DetailLayout
+      title={user.name}
+      subtitle={`ID ${user._id}`}
+      actions={
+        <>
+          <button className="btn btn--primary" onClick={save} disabled={saving || role === user.role}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button className="btn btn--danger" onClick={remove} disabled={deleting || isSelf}
+                  title={isSelf ? "You cannot delete your own account" : undefined}>
+            <FaTrash /> Delete
+          </button>
+        </>
+      }
+    >
+      <div className="detail-grid">
+        <section className="card card--center">
+          {user.photo ? (
+            <img className="detail-photo detail-photo--round" src={transformImage(user.photo)} alt={user.name} />
+          ) : (
+            <div className="detail-photo detail-photo--round placeholder"><FaUser /></div>
+          )}
+          <h3>{user.name}</h3>
+          <span>{user.email}</span>
+          <span className={`badge badge--${user.role}`}>{user.role}</span>
+        </section>
 
-            <form id="update-user-form" onSubmit={submitHandler} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#4b5563' }}>Name</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none' }}
-                    />
-                </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#4b5563' }}>Email</label>
-                    <input
-                        type="email"
-                        value={email}
-                        readOnly // Usually email isn't editable easily or requires specific flow
-                        style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#f9fafb', color: '#6b7280' }}
-                    />
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#4b5563' }}>Gender</label>
-                        <select
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none' }}
-                        >
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#4b5563' }}>Role</label>
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d1d5db', outline: 'none' }}
-                        >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                </div>
-            </form>
-        </article>
-      </main>
-    </div>
+        <section className="card">
+          <dl className="facts">
+            <dt>Gender</dt><dd>{user.gender}</dd>
+            <dt>Date of birth</dt><dd>{formatDate(user.dob)} ({user.age} yrs)</dd>
+            <dt>Joined</dt><dd>{formatDate(user.createdAt)}</dd>
+            <dt>Orders</dt><dd>{userOrders.length} · {formatINR(spent)} spent</dd>
+            <dt>Role</dt>
+            <dd>
+              <select value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={isSelf}>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </dd>
+          </dl>
+          {userOrders.length > 0 && (
+            <ul className="mini-list">
+              {userOrders.slice(0, 5).map((o) => (
+                <li key={o._id} onClick={() => navigate(`/admin/transaction/${o._id}`)}>
+                  <span>{formatDate(o.createdAt)}</span>
+                  <span>{formatINR(o.total)}</span>
+                  <StatusBadge status={o.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </DetailLayout>
   );
 };
 

@@ -1,14 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { userAPI } from "./api/userAPI";
 import { productAPI } from "./api/productAPI";
+import { orderAPI } from "./api/orderAPI";
+import { couponAPI } from "./api/couponAPI";
 import { dashboardAPI } from "./api/dashboardAPI";
 import { userReducer } from "./reducer/userReducer";
-import { cartReducer } from "./reducer/cartReducer";
+import { cartReducer, persistCart } from "./reducer/cartReducer";
 
 export const store = configureStore({
   reducer: {
     [userAPI.reducerPath]: userAPI.reducer,
     [productAPI.reducerPath]: productAPI.reducer,
+    [orderAPI.reducerPath]: orderAPI.reducer,
+    [couponAPI.reducerPath]: couponAPI.reducer,
     [dashboardAPI.reducerPath]: dashboardAPI.reducer,
     [userReducer.name]: userReducer.reducer,
     [cartReducer.name]: cartReducer.reducer,
@@ -17,9 +21,13 @@ export const store = configureStore({
     getDefaultMiddleware().concat(
       userAPI.middleware,
       productAPI.middleware,
+      orderAPI.middleware,
+      couponAPI.middleware,
       dashboardAPI.middleware
     ),
 });
 
+store.subscribe(() => persistCart(store.getState().cartReducer));
 
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProductCard from "../components/productCard";
 import {
   useCategoriesQuery,
   useSearchProductsQuery,
 } from "../redux/api/productAPI";
 import toast from "react-hot-toast";
-import { CustomError } from "../types/api-types";
+import { errorMessage } from "../redux/api/baseQuery";
 import { CartItem } from "../types/types";
 import { addToCart } from "../redux/reducer/cartReducer";
 import { useDispatch } from "react-redux";
 
 const Search = () => {
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
   const [maxPrice, setMaxPrice] = useState(100000);
@@ -18,6 +19,13 @@ const Search = () => {
   const [page, setPage] = useState(1);
 
   const dispatch = useDispatch();
+
+  // Debounce typing so we query once the user pauses, and reset to page 1 on any filter change.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+  useEffect(() => setPage(1), [search, sort, category, maxPrice]);
 
   const {
     isLoading: productsLoading,
@@ -32,7 +40,7 @@ const Search = () => {
     price: maxPrice,
   });
 
-  const { data: categoriesResponse } = useCategoriesQuery("");
+  const { data: categoriesResponse } = useCategoriesQuery();
 
   const addToCartHandler = (cartItem: CartItem) => {
     if (cartItem.stock < 1) return toast.error("Out of Stock");
@@ -43,10 +51,9 @@ const Search = () => {
   const isPreviousPage = page > 1;
   const isNextPage = page < (searchedData?.totalPage || 1);
 
-  if (isError) {
-    const err = error as CustomError;
-    toast.error(err.data.message);
-  }
+  useEffect(() => {
+    if (isError) toast.error(errorMessage(error));
+  }, [isError, error]);
 
   return (
     <div className="product-searcg-page">
@@ -91,14 +98,15 @@ const Search = () => {
         <input
           type="text"
           placeholder="Search by name ..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
 
         {productsLoading ? (
           <h1>Loading...</h1>
         ) : (
           <div className="search-product-list">
+            {searchedData?.products.length === 0 && <p>No products match your filters.</p>}
             {searchedData?.products.map((i) => (
               <ProductCard
                 key={i._id}

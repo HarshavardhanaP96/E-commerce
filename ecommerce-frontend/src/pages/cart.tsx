@@ -1,103 +1,95 @@
 import { useEffect, useState } from "react";
 import { VscError } from "react-icons/vsc";
-import CartItems from "../components/cartItems";
-import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import CartItems from "../components/cartItems";
+import { useLazyDiscountQuery } from "../redux/api/couponAPI";
+import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { CartItem } from "../types/types";
-import { addToCart, calculatePrice, discountApplied, removeCartItem } from "../redux/reducer/cartReducer";
+import { formatINR } from "../utils/features";
 
 const Cart = () => {
-  const { cartItems, subtotal, tax, total, shippingCharges, discount } =
-    useSelector((state: RootState) => state.cartReducer);
-
+  const { cartItems, subtotal, tax, total, shippingCharges, discount, coupon } = useSelector(
+    (state: RootState) => state.cartReducer
+  );
   const dispatch = useDispatch();
+  const [couponCode, setCouponCode] = useState(coupon);
+  const [checkDiscount, { isFetching, isError }] = useLazyDiscountQuery();
 
-  const [couponCode, setCouponCode] = useState<string>("");
-  const [isValidCouponCode, setIsValidCouponCode] = useState<boolean>(false);
-
-  const incrementHandler = (cartItem: CartItem) => {
-    if (cartItem.quantity >= cartItem.stock) return;
-
-    dispatch(addToCart({ ...cartItem, quantity: cartItem.quantity + 1 }));
+  const incrementHandler = (item: CartItem) => {
+    if (item.quantity >= item.stock) return;
+    dispatch(addToCart({ ...item, quantity: item.quantity + 1 }));
   };
-
-  const decrementHandler = (cartItem: CartItem) => {
-    if (cartItem.quantity <= 1) return;
-
-    dispatch(addToCart({ ...cartItem, quantity: cartItem.quantity - 1 }));
+  const decrementHandler = (item: CartItem) => {
+    if (item.quantity <= 1) return;
+    dispatch(addToCart({ ...item, quantity: item.quantity - 1 }));
   };
+  const removeHandler = (productId: string) => dispatch(removeCartItem(productId));
 
-  const removeHandler = (productId: string) => {
-    dispatch(removeCartItem(productId));
-  };
-
+  // Validate the coupon with the server after the user stops typing.
   useEffect(() => {
-    const timeOutID = setTimeout(() => {
-      if (Math.random() > 0.5) {
-        setIsValidCouponCode(true);
-        dispatch(discountApplied(discount));
-      } else {
-        setIsValidCouponCode(false);
-        dispatch(discountApplied(0));
-      }
-    }, 1000);
+    const code = couponCode.trim();
+    if (!code) {
+      dispatch(applyCoupon({ coupon: "", discount: 0 }));
+      return;
+    }
+    const t = setTimeout(async () => {
+      const res = await checkDiscount(code);
+      dispatch(applyCoupon(res.data ? { coupon: code, discount: res.data.discount } : { coupon: "", discount: 0 }));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [couponCode, checkDiscount, dispatch]);
 
-    return () => {
-      clearTimeout(timeOutID);
-      setIsValidCouponCode(false);
-    };
-  }, [couponCode]);
-
-  useEffect(() => {
-    dispatch(calculatePrice());
-  }, [cartItems]);
+  const valid = !!coupon && coupon === couponCode.trim() && discount > 0;
 
   return (
     <div className="cart">
       <main>
         {cartItems.length > 0 ? (
-          cartItems.map((i, idx) => (
+          cartItems.map((i) => (
             <CartItems
               incrementHandler={incrementHandler}
               decrementHandler={decrementHandler}
               removeHandler={removeHandler}
-              key={idx}
+              key={i.productId}
               cartItem={i}
             />
           ))
         ) : (
-          <h1>NO Items Added</h1>
+          <h1>No items added</h1>
         )}
       </main>
       <aside>
-        <p>Subtotal:₹{subtotal}</p>
-        <p>Shipping Charges:₹{shippingCharges}</p>
-        <p>tax:₹{tax}</p>
+        <p>Subtotal: {formatINR(subtotal)}</p>
+        <p>Shipping charges: {formatINR(shippingCharges)}</p>
+        <p>Tax (18%): {formatINR(tax)}</p>
         <p>
-          Discount:<em className="red">-₹{discount}</em>{" "}
+          Discount: <em className="red">−{formatINR(Math.min(discount, subtotal))}</em>
         </p>
         <p>
-          <b>Total: ₹{total}</b>
+          <b>Total: {formatINR(total)}</b>
         </p>
         <input
           type="text"
-          placeholder="Coupon Code"
+          placeholder="Coupon code"
           value={couponCode}
-          onChange={(e) => setCouponCode(e.target.value)}
+          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+          maxLength={32}
         />
-
-        {couponCode &&
-          (isValidCouponCode ? (
+        {couponCode.trim() && !isFetching &&
+          (valid ? (
             <span className="green">
-              ₹{discount} off using the <code>{couponCode}</code>
+              {formatINR(discount)} off using <code>{coupon}</code>
             </span>
           ) : (
-            <span className="red">
-              Invalid Coupon <VscError />{" "}
-            </span>
+            isError && (
+              <span className="red">
+                Invalid coupon <VscError />
+              </span>
+            )
           ))}
-
+        <small>Final amount is confirmed at checkout.</small>
         {cartItems.length > 0 && <Link to="/shipping">Check out</Link>}
       </aside>
     </div>

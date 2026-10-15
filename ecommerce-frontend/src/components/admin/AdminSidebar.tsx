@@ -55,7 +55,7 @@ const AdminSidebar = () => {
             : {}
         }
       >
-        <h2>Logo.</h2>
+        <h2>6Pack Admin</h2>
         
         {/* Unified Main Navigation */}
         <div>
