@@ -8,7 +8,7 @@ Admins manage products, customers, orders and coupons, and see analytics.
 | `backend/` | Java 21, Spring Boot 3.5, Spring Modulith (modular monolith, hexagonal per module), MongoDB, Spring Security (JWT), Caffeine, Micrometer + OpenTelemetry |
 | `ecommerce-frontend/` | React 18, TypeScript, Vite, Redux Toolkit / RTK Query, SCSS, Chart.js, served by unprivileged nginx |
 | `k8s/` | Kustomize base + `test` / `prod` overlays |
-| `infra/observability/` | Prometheus, Grafana (provisioned dashboard), Jaeger |
+| `infra/observability/` | Local Prometheus/Grafana/Jaeger, plus the cluster stack (kube-prometheus-stack, Loki, Tempo, OTel collectors, Sealed Secrets) — see its [README](infra/observability/README.md) |
 
 The standing project docs live in [`docs/foundations/`](docs/foundations/): vision, requirements,
 architecture and decision log, API contracts, and test/rollout. The October 2026 security and architecture
@@ -61,6 +61,6 @@ private, and `ModularityTests` enforces this. Swapping MongoDB, local disk or Ra
 CI (`.github/workflows/main.yml`) runs tests, then builds and scans the images (Trivy), pushes them to Docker
 Hub, and deploys with kustomize. Non-main branches go to `test-env`; `main` goes to `prod-env`, with a
 readiness-gated rollout and automatic rollback. See [`k8s/README.md`](k8s/README.md) for one-time
-cluster setup (secrets, ingress, TLS).
+cluster setup (observability stack, sealed secrets, ingress, TLS).
 
 Required GitHub secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `KUBE_CONFIG`.

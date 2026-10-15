@@ -3,26 +3,42 @@
 `base/` holds the environment-agnostic manifests. `overlays/test` and `overlays/prod` set the namespace,
 config, host, and replica counts. CI renders an overlay with `kustomize edit set image` and applies it.
 
-## One-time setup per environment
+## One-time cluster setup (before the first deploy)
 
-```bash
-kubectl create namespace prod-env
-kubectl -n prod-env create secret generic backend-secrets \
-  --from-literal=JWT_SECRET="$(openssl rand -base64 48)" \
-  --from-literal=MONGO_URI='mongodb+srv://USER:PASS@cluster/Ecommerce_2024' \
-  --from-literal=RAZORPAY_KEY_ID='rzp_live_xxx' \
-  --from-literal=RAZORPAY_KEY_SECRET='xxx' \
-  --from-literal=ADMIN_EMAIL='admin@yourdomain.com' \
-  --from-literal=ADMIN_PASSWORD='a-long-unique-password'
-```
+1. **Platform add-ons:** an nginx ingress controller (namespace `ingress-nginx`, which the NetworkPolicies
+   allow), and cert-manager with a `letsencrypt-prod` ClusterIssuer (prod TLS).
+2. **Observability + Sealed Secrets:** run [`infra/observability/k8s/install.sh`](../infra/observability/k8s/install.sh).
+   It installs Prometheus/Alertmanager/Grafana, Loki, Tempo, the OTel trace collector and log agent, and the
+   Sealed Secrets controller. The overlays include a `ServiceMonitor`, so **deploys fail until this has run**
+   (the CRD doesn't exist yet). See [`infra/observability/README.md`](../infra/observability/README.md).
+3. **App secrets, per environment** (`test`, then `prod`), with `kubectl` and `kubeseal` pointed at the cluster:
 
-Prefer an external secret manager (External Secrets Operator, Sealed Secrets, or your cloud's CSI driver)
-over hand-made secrets once that infrastructure exists.
+   ```bash
+   kubectl create namespace prod-env
+   cat > /tmp/prod.secret.env <<'ENV'
+   JWT_SECRET=<openssl rand -base64 48>
+   MONGO_URI=mongodb+srv://USER:PASS@cluster/Ecommerce_2024
+   RAZORPAY_KEY_ID=rzp_live_xxx
+   RAZORPAY_KEY_SECRET=xxx
+   ADMIN_EMAIL=admin@yourdomain.com
+   ADMIN_PASSWORD=a-long-unique-password
+   ENV
+   k8s/scripts/seal-backend-secrets.sh prod /tmp/prod.secret.env && rm /tmp/prod.secret.env
+   ```
 
-Requirements: an nginx ingress controller, and cert-manager with a `letsencrypt-prod` ClusterIssuer (prod TLS).
-An OTLP collector at `otel-collector.observability:4318` is optional. Without one, set
-`TRACING_EXPORT_ENABLED=false`. Prometheus scrapes pods through the `prometheus.io/*` annotations; if you
-run the Prometheus Operator, add a `ServiceMonitor` instead.
+   This writes `k8s/overlays/prod/backend-secrets.sealed.yaml` (encrypted; safe to commit). Add it to that
+   overlay's `resources:` and commit; CI then deploys the secret with the app. Only the controller in that
+   cluster can decrypt it, so re-seal if the cluster (or its sealing key) is ever replaced. Back up the key:
+   `kubectl -n kube-system get secret -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml`
+   (store it somewhere safe, never in git).
+
+## What the overlays contain
+
+- `base/`: Deployments, Services, PDBs, Ingress, and NetworkPolicies (ingress deny-by-default; frontend
+  accepts only the ingress controller, backend only the frontend and Prometheus). Egress is open.
+  NetworkPolicies need a CNI that enforces them (Calico, Cilium, GKE Dataplane V2, EKS network policy agent).
+- `components/monitoring/`: the backend `ServiceMonitor`. Both overlays include it.
+- `overlays/test`: 100% trace sampling, mail links logged. `overlays/prod`: 10% sampling, TLS, frontend HPA.
 
 ## Preview / apply by hand
 

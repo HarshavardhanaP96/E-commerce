@@ -42,6 +42,8 @@ service therefore means writing a new adapter, not rewriting the module.
 ### DevOps pipeline (`.github/workflows/main.yml`)
 `backend: mvn verify (Testcontainers)` ∥ `frontend: lint + build` → `docker build & push (sha tag)` →
 `kustomize set image + kubectl apply -k` to test (branches) or prod (main), then `kubectl rollout status`.
+A `manifests` job renders every overlay and Helm chart and validates them (kubeconform with CRD schemas,
+promtool for alert rules) before images are built.
 The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see `test-rollout.md`).
 
 ### Observability plan
@@ -50,15 +52,27 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   `sixpack.auth.login{result}`).
 - **Traces:** Micrometer Tracing + OpenTelemetry bridge, OTLP HTTP export to `OTEL_EXPORTER_OTLP_ENDPOINT`.
   Sampling is 100% in local and test and 10% in prod (`MANAGEMENT_TRACING_SAMPLING_PROBABILITY`).
-- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` in MDC. Logs are
-  collected by the cluster agent (Loki/Promtail, or a cloud logging agent; the platform's choice).
+- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` in MDC. In k8s an
+  OTel collector DaemonSet (`otel-logs`) ships them to Loki. Grafana links trace ids in logs to Tempo.
 - **Health:** liveness and readiness groups (readiness includes Mongo), used by k8s probes.
 - **Local stack:** `docker compose --profile observability up` adds Prometheus, Grafana (Prometheus
   datasource provisioned) and Jaeger.
-- **Alerts to add in prod (TBD, wire up when Alertmanager or a hosted alerting tool is picked):** 5xx rate
-  > 2% for 5 min, p95 latency > 500 ms, readiness flapping, `checkout.failed{reason="paid_but_unfulfilled"}` > 0.
+- **Cluster stack (ADR-012):** `infra/observability/k8s/install.sh` installs kube-prometheus-stack, Loki,
+  Tempo and two OTel collectors into `observability`. The backend `ServiceMonitor` comes from
+  `k8s/components/monitoring`.
+- **Alerts** (`infra/observability/k8s/alerts.yaml`, through Alertmanager to Slack): 5xx rate > 2% for 5 min,
+  p95 latency > 500 ms, readiness flapping, `checkout.failed{reason="paid_but_unfulfilled"}` > 0, no ready
+  backend pods, scrape down, and memory near its limit. Severity is critical in prod-env and warning in test-env.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-15: ADR-012 **Self-hosted observability with the standard Helm charts, plus Sealed Secrets.** The
+  stack is kube-prometheus-stack (Prometheus, Alertmanager, Grafana), Loki and Tempo on filesystem PVCs, and
+  OpenTelemetry collectors for traces (a gateway) and logs (a DaemonSet). Chart versions are pinned in
+  `install.sh`. It runs once per cluster and is shared by test-env and prod-env, which are told apart by the
+  `namespace` label. App secrets are committed as SealedSecrets instead of being created by hand. Ingress
+  NetworkPolicies are deny-by-default; egress is open. Rejected: plain manifests (no alerting, not
+  production-grade) and a hosted vendor (cost, plus another account). Revisit by moving Loki and Tempo to
+  object storage when volume grows. Still active.
 - 2026-10-14: ADR-011 **The SPA's nginx forwards `Host`/`X-Forwarded-Host` with the port, plus `X-Forwarded-Proto`
   from the ingress.** Spring (`forward-headers-strategy: framework`) then recognises same-origin requests.
   Without this, browser POSTs were rejected as cross-origin (403). `X-Forwarded-For` is replaced with one
