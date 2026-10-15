@@ -1,0 +1,10 @@
+# Tempo single binary: trace storage for Grafana. Receives OTLP from the otel-collector.
+tempo:
+  retention: 72h
+  reportingEnabled: false
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 1Gi }
+persistence:
+  enabled: true
+  size: 10Gi

@@ -1,0 +1,75 @@
+# kube-prometheus-stack: Prometheus Operator, Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics.
+# Ships the standard Kubernetes alert rules; the 6Pack rules live in ../alerts.yaml.
+
+# Managed control planes (EKS/GKE/AKS) don't expose these to scrape; left on they fire TargetDown forever.
+# Turn them back on for self-managed clusters (kubeadm, k3s with flags, ...).
+kubeEtcd: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeProxy: { enabled: false }
+
+prometheus:
+  prometheusSpec:
+    # Pick up ServiceMonitors / PrometheusRules from every namespace, not only ones labelled for this release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 15d
+    retentionSize: 18GB
+    resources:
+      requests: { cpu: 200m, memory: 1Gi }
+      limits: { memory: 2Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources: { requests: { storage: 20Gi } }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 64Mi }
+      limits: { memory: 128Mi }
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources: { requests: { storage: 2Gi } }
+  # Receivers: alerts are visible in the Alertmanager UI by default. install.sh layers
+  # alertmanager-slack.yaml on top when SLACK_WEBHOOK_URL is set.
+
+grafana:
+  admin:
+    existingSecret: grafana-admin   # created by install.sh with a random password
+  persistence:
+    enabled: false                  # everything is provisioned; nothing to lose
+  sidecar:
+    dashboards:
+      # ConfigMaps labelled grafana_dashboard=1 in any namespace (see ../../kustomization.yaml)
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      url: http://loki.observability:3100
+      jsonData:
+        derivedFields:
+          - name: TraceID
+            datasourceUid: tempo
+            matcherType: regex
+            matcherRegex: '"(?:trace\.id|traceId)":"(\w+)"'
+            url: "$${__value.raw}"
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      url: http://tempo.observability:3200
+      jsonData:
+        serviceMap: { datasourceUid: prometheus }
+        tracesToLogsV2:
+          datasourceUid: loki
+          filterByTraceID: true
+          spanStartTimeShift: -5m
+          spanEndTimeShift: 5m

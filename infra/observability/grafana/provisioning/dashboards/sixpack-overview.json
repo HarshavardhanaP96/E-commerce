@@ -2,43 +2,174 @@
   "uid": "sixpack-overview",
   "title": "6Pack backend overview",
   "schemaVersion": 39,
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "refresh": "30s",
   "panels": [
     {
-      "type": "timeseries", "title": "Requests / s by status", "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[1m]))", "legendFormat": "{{status}}" }]
+      "type": "timeseries",
+      "title": "Requests / s by status",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\", namespace=~\"$namespace\"}[1m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
     },
     {
-      "type": "timeseries", "title": "p95 latency by endpoint (s)", "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[5m])))", "legendFormat": "{{uri}}" }]
+      "type": "timeseries",
+      "title": "p95 latency by endpoint (s)",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\", namespace=~\"$namespace\"}[5m])))",
+          "legendFormat": "{{uri}}"
+        }
+      ]
     },
     {
-      "type": "stat", "title": "Orders placed (1h)", "gridPos": { "x": 0, "y": 8, "w": 6, "h": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(increase(sixpack_orders_placed_total[1h]))" }]
+      "type": "stat",
+      "title": "Orders placed (1h)",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sixpack_orders_placed_total{namespace=~\"$namespace\"}[1h]))"
+        }
+      ]
     },
     {
-      "type": "stat", "title": "Checkout failures (1h)", "gridPos": { "x": 6, "y": 8, "w": 6, "h": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum by (reason) (increase(sixpack_checkout_failed_total[1h]))", "legendFormat": "{{reason}}" }]
+      "type": "stat",
+      "title": "Checkout failures (1h)",
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (reason) (increase(sixpack_checkout_failed_total{namespace=~\"$namespace\"}[1h]))",
+          "legendFormat": "{{reason}}"
+        }
+      ]
     },
     {
-      "type": "timeseries", "title": "Logins by result", "gridPos": { "x": 12, "y": 8, "w": 12, "h": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum by (result) (rate(sixpack_auth_login_total[5m]))", "legendFormat": "{{result}}" }]
+      "type": "timeseries",
+      "title": "Logins by result",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(sixpack_auth_login_total{namespace=~\"$namespace\"}[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
     },
     {
-      "type": "timeseries", "title": "JVM heap used (bytes)", "gridPos": { "x": 0, "y": 13, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})" }]
+      "type": "timeseries",
+      "title": "JVM heap used (bytes)",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\", namespace=~\"$namespace\"})"
+        }
+      ]
     },
     {
-      "type": "timeseries", "title": "Cache hit ratio", "gridPos": { "x": 12, "y": 13, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum by (cache) (rate(cache_gets_total{result=\"hit\"}[5m])) / sum by (cache) (rate(cache_gets_total[5m]))", "legendFormat": "{{cache}}" }]
+      "type": "timeseries",
+      "title": "Cache hit ratio",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (cache) (rate(cache_gets_total{result=\"hit\", namespace=~\"$namespace\"}[5m])) / sum by (cache) (rate(cache_gets_total{namespace=~\"$namespace\"}[5m]))",
+          "legendFormat": "{{cache}}"
+        }
+      ]
     }
-  ]
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count, namespace)",
+          "refId": "ns"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
 }

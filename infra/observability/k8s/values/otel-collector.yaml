@@ -1,0 +1,34 @@
+# Trace gateway. The backend exports OTLP to otel-collector.observability:4318 (see k8s/overlays/*);
+# this forwards to Tempo. Swapping the trace backend means changing only this exporter.
+mode: deployment
+fullnameOverride: otel-collector
+image:
+  repository: otel/opentelemetry-collector-contrib
+replicaCount: 1
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }
+
+ports:
+  jaeger-compact: { enabled: false }
+  jaeger-thrift: { enabled: false }
+  jaeger-grpc: { enabled: false }
+  zipkin: { enabled: false }
+
+config:
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  exporters:
+    otlp/tempo:
+      endpoint: tempo.observability:4317
+      tls: { insecure: true }
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp/tempo]
+      metrics: null
+      logs: null

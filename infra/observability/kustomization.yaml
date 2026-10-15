@@ -1,0 +1,18 @@
+# Cluster-wide 6Pack observability objects (alert rules + Grafana dashboard), applied by
+# ./k8s/install.sh after the Helm charts. Lives here so the dashboard JSON is shared with the
+# local docker-compose Grafana (grafana/provisioning/dashboards/).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+resources:
+  - k8s/alerts.yaml
+configMapGenerator:
+  - name: sixpack-dashboards
+    files:
+      - grafana/provisioning/dashboards/sixpack-overview.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+      annotations:
+        grafana_folder: 6Pack

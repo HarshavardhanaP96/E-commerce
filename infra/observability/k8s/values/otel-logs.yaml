@@ -1,0 +1,41 @@
+# Log agent: a DaemonSet that tails every pod's stdout, adds k8s metadata and ships to Loki over OTLP.
+mode: daemonset
+fullnameOverride: otel-logs
+image:
+  repository: otel/opentelemetry-collector-contrib
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }
+
+presets:
+  logsCollection:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+
+# Nothing is pushed to this agent, so no host ports.
+ports:
+  otlp: { enabled: false }
+  otlp-http: { enabled: false }
+  jaeger-compact: { enabled: false }
+  jaeger-thrift: { enabled: false }
+  jaeger-grpc: { enabled: false }
+  zipkin: { enabled: false }
+
+config:
+  receivers:
+    otlp: null
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  exporters:
+    otlphttp/loki:
+      endpoint: http://loki.observability:3100/otlp
+  service:
+    pipelines:
+      logs:
+        receivers: [filelog]
+        processors: [k8sattributes, memory_limiter, batch]
+        exporters: [otlphttp/loki]
+      traces: null
+      metrics: null
