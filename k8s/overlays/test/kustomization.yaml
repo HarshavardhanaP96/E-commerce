@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: test-env
 resources:
   - ../../base
+components:
+  - ../../components/monitoring
 configMapGenerator:
   - name: backend-config
     literals:

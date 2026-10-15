@@ -4,6 +4,8 @@ namespace: prod-env
 resources:
   - ../../base
   - hpa.yaml
+components:
+  - ../../components/monitoring
 configMapGenerator:
   - name: backend-config
     literals:

@@ -1,0 +1,6 @@
+# Opt-in for overlays on clusters running kube-prometheus-stack (infra/observability/k8s/install.sh).
+# Kept out of base because ServiceMonitor is a CRD that a bare cluster doesn't have.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - servicemonitor.yaml
