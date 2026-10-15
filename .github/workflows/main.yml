@@ -57,9 +57,52 @@ jobs:
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
 
+  manifests:
+    name: K8s manifests · render & validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imranismail/setup-kustomize@v2
+      - uses: azure/setup-helm@v4
+      - name: Render app overlays and cluster observability objects
+        run: |
+          mkdir -p rendered
+          kustomize build k8s/overlays/test   > rendered/app-test.yaml
+          kustomize build k8s/overlays/prod   > rendered/app-prod.yaml
+          kustomize build infra/observability > rendered/observability.yaml
+      - name: Render Helm charts with our values (versions from install.sh)
+        run: |
+          eval "$(grep -E '^[A-Z_]+_VERSION=' infra/observability/k8s/install.sh)"
+          V=infra/observability/k8s/values
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add grafana-community https://grafana-community.github.io/helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets
+          helm template kps prometheus-community/kube-prometheus-stack --version "$KPS_VERSION" -n observability \
+            -f $V/kube-prometheus-stack.yaml -f $V/alertmanager-slack.yaml > rendered/kps.yaml
+          helm template loki grafana/loki --version "$LOKI_VERSION" -n observability -f $V/loki.yaml > rendered/loki.yaml
+          helm template tempo grafana-community/tempo --version "$TEMPO_VERSION" -n observability -f $V/tempo.yaml > rendered/tempo.yaml
+          helm template otel-collector open-telemetry/opentelemetry-collector --version "$OTEL_VERSION" -n observability \
+            -f $V/otel-collector.yaml > rendered/otel-collector.yaml
+          helm template otel-logs open-telemetry/opentelemetry-collector --version "$OTEL_VERSION" -n observability \
+            -f $V/otel-logs.yaml > rendered/otel-logs.yaml
+          helm template sealed-secrets sealed-secrets/sealed-secrets --version "$SEALED_SECRETS_VERSION" -n kube-system \
+            -f $V/sealed-secrets.yaml > rendered/sealed-secrets.yaml
+      - name: Validate schemas (incl. CRDs)
+        run: |
+          docker run --rm -v "$PWD/rendered:/r:ro" ghcr.io/yannh/kubeconform:v0.7.0 -summary -strict \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            /r
+      - name: Check alert rules (promtool)
+        run: |
+          yq '{"groups": .spec.groups}' infra/observability/k8s/alerts.yaml > rendered/rules.yaml
+          docker run --rm -v "$PWD/rendered:/r:ro" --entrypoint promtool prom/prometheus:v3.5.0 check rules /r/rules.yaml
+
   images:
     name: Build, scan & push images
-    needs: [backend, frontend]
+    needs: [backend, frontend, manifests]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
