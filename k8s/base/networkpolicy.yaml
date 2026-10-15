@@ -1,0 +1,47 @@
+# Ingress is deny-by-default; each pod only accepts traffic from what actually calls it.
+# Egress stays open (DNS, MongoDB Atlas, Razorpay, the OTLP collector all live outside the namespace).
+# Needs a CNI that enforces NetworkPolicy (Calico, Cilium, GKE Dataplane V2, EKS with the VPC CNI policy agent).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend
+spec:
+  podSelector:
+    matchLabels: { app: frontend }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # Namespace of the nginx ingress controller; change if yours differs.
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+      ports:
+        - { port: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend
+spec:
+  podSelector:
+    matchLabels: { app: backend }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: frontend }
+      ports:
+        - { port: http }
+    # Prometheus scraping /actuator/prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports:
+        - { port: http }

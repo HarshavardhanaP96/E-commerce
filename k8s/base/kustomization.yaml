@@ -8,6 +8,7 @@ resources:
   - backend.yaml
   - frontend.yaml
   - ingress.yaml
+  - networkpolicy.yaml
 images:
   - name: sixpack-backend
     newName: docker.io/DOCKERHUB_USERNAME/sixpack-backend
