@@ -7,6 +7,7 @@ target/
 .env
 .env.*
 !.env.example
+*.secret.env
 
 # user uploads never belong in git
 uploads/
