@@ -64,7 +64,7 @@ public abstract class IntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",
-                "password_reset_tokens", "consents", "categories"}) {
+                "password_reset_tokens", "consents", "categories", "coupon_redemptions"}) {
             mongo.getCollection(c).deleteMany(new org.bson.Document());
         }
     }
