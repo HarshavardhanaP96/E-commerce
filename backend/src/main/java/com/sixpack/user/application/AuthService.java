@@ -3,6 +3,8 @@ package com.sixpack.user.application;
 import com.sixpack.consent.ConsentEvidence;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.shared.ApiException;
+import com.sixpack.user.domain.UserStatus;
+import java.time.Instant;
 import com.sixpack.shared.security.TokenService;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.user.domain.Gender;
@@ -69,12 +71,22 @@ public class AuthService {
             meters.counter("sixpack.auth.login", "result", "failure").increment();
             throw ApiException.unauthorized("Invalid Email or Password");
         }
+        if (user.details().status() == UserStatus.SUSPENDED) {
+            meters.counter("sixpack.auth.login", "result", "suspended").increment();
+            throw ApiException.forbidden("Your account is suspended");
+        }
+        users.touchLastLogin(user.id(), Instant.now());
+        User fresh = users.findById(user.id()).orElse(user);
         meters.counter("sixpack.auth.login", "result", "success").increment();
-        return new AuthResult(issue(user), user);
+        return new AuthResult(issue(fresh), fresh);
     }
 
     public User me(String userId) {
-        return users.findById(userId).orElseThrow(() -> ApiException.unauthorized("Account no longer exists"));
+        User user = users.findById(userId).orElseThrow(() -> ApiException.unauthorized("Account no longer exists"));
+        if (user.details().status() == UserStatus.SUSPENDED) {
+            throw ApiException.forbidden("Your account is suspended");
+        }
+        return user;
     }
 
     private String issue(User user) {

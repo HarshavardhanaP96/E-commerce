@@ -1,10 +1,12 @@
 package com.sixpack.user.web;
 
+import com.sixpack.shared.ApiException;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.user.application.UserAdminService;
 import com.sixpack.user.domain.Gender;
 import com.sixpack.user.domain.Role;
+import com.sixpack.user.domain.UserStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -26,7 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/user")
 class UserAdminController {
 
-    record UpdateRoleRequest(@NotBlank @Pattern(regexp = "(?i)admin|user", message = "must be admin or user") String role) {
+    record UpdateUserRequest(
+            @Pattern(regexp = "(?i)admin|user|", message = "must be admin or user") String role,
+            @Pattern(regexp = "(?i)active|suspended|", message = "must be active or suspended") String status) {
     }
 
     private final UserAdminService service;
@@ -50,9 +54,20 @@ class UserAdminController {
     }
 
     @PutMapping("/{id}")
-    Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateRoleRequest request,
+    Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateUserRequest request,
                                @AuthenticationPrincipal Jwt jwt) {
-        service.changeRole(id, Role.fromWire(request.role()), AuthUser.from(jwt).id());
+        boolean hasRole = request.role() != null && !request.role().isBlank();
+        boolean hasStatus = request.status() != null && !request.status().isBlank();
+        if (!hasRole && !hasStatus) {
+            throw ApiException.badRequest("role or status: at least one is required");
+        }
+        String actingAdminId = AuthUser.from(jwt).id();
+        if (hasRole) {
+            service.changeRole(id, Role.fromWire(request.role()), actingAdminId);
+        }
+        if (hasStatus) {
+            service.changeStatus(id, UserStatus.parse(request.status()), actingAdminId);
+        }
         return ApiResponse.message("User updated successfully");
     }
 
