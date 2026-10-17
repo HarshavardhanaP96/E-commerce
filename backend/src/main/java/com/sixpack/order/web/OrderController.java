@@ -2,6 +2,7 @@ package com.sixpack.order.web;
 
 import com.sixpack.order.application.CheckoutService;
 import com.sixpack.order.application.CheckoutService.CartLine;
+import com.sixpack.order.application.CheckoutService.ConfirmDetails;
 import com.sixpack.order.application.CheckoutService.CheckoutResult;
 import com.sixpack.order.application.OrderService;
 import com.sixpack.order.domain.Order;
@@ -54,14 +55,19 @@ class OrderController {
             @NotBlank @Size(max = 80) String city,
             @NotBlank @Size(max = 80) String state,
             @NotBlank @Size(max = 80) String country,
-            @NotBlank @Pattern(regexp = "\\d{4,10}", message = "must be 4-10 digits") String pinCode) {
+            @NotBlank @Pattern(regexp = "\\d{4,10}", message = "must be 4-10 digits") String pinCode,
+            @Size(max = 80) String name,
+            @Pattern(regexp = "^\\+?[0-9]{10,13}$|", message = "must be 10-13 digits, optionally starting with +")
+            String phone) {
     }
 
     record ConfirmRequest(
             @NotBlank @Size(max = 100) String providerOrderId,
             @NotBlank @Size(max = 100) String paymentId,
             @NotBlank @Size(max = 256) String signature,
-            @NotNull @Valid ShippingRequest shippingInfo) {
+            @NotNull @Valid ShippingRequest shippingInfo,
+            @Valid ShippingRequest billingInfo,
+            @Size(max = 500) String notes) {
     }
 
     private final CheckoutService checkout;
@@ -97,10 +103,9 @@ class OrderController {
     @PostMapping("/new")
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, Object> confirm(@Valid @RequestBody ConfirmRequest request, @AuthenticationPrincipal Jwt jwt) {
-        ShippingRequest s = request.shippingInfo();
         String orderId = checkout.confirm(AuthUser.from(jwt).id(), request.providerOrderId(), request.paymentId(),
-                request.signature(), new ShippingInfo(s.address().trim(), s.city().trim(), s.state().trim(),
-                        s.country().trim(), s.pinCode()));
+                request.signature(), new ConfirmDetails(toDomain(request.shippingInfo()),
+                        toDomain(request.billingInfo()), blankToNull(request.notes())));
         return ApiResponse.of("message", "Order placed successfully", "orderId", orderId);
     }
 
@@ -132,6 +137,18 @@ class OrderController {
     Map<String, Object> delete(@PathVariable String id) {
         orders.delete(id);
         return ApiResponse.message("Order deleted successfully");
+    }
+
+    private static ShippingInfo toDomain(ShippingRequest s) {
+        if (s == null) {
+            return null;
+        }
+        return new ShippingInfo(s.address().trim(), s.city().trim(), s.state().trim(), s.country().trim(),
+                s.pinCode(), blankToNull(s.name()), blankToNull(s.phone()));
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
     }
 
     private List<OrderView> views(List<Order> list) {

@@ -1,10 +1,12 @@
 package com.sixpack.user.application;
 
+import com.sixpack.user.UserContact;
 import com.sixpack.user.UserDirectory;
 import com.sixpack.user.domain.User;
 import com.sixpack.user.domain.UserRepository;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,12 @@ class UserDirectoryService implements UserDirectory {
 
     UserDirectoryService(UserRepository users) {
         this.users = users;
+    }
+
+    @Override
+    public Optional<UserContact> contactById(String id) {
+        return users.findById(id)
+                .map(u -> new UserContact(u.id(), u.name(), u.email(), u.details().phone()));
     }
 
     @Override

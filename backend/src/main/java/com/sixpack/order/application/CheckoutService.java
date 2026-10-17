@@ -4,6 +4,12 @@ import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
 import com.sixpack.coupon.CouponLookup;
 import com.sixpack.order.OrderChangedEvent;
+import com.sixpack.order.domain.Customer;
+import com.sixpack.order.domain.OrderDetails;
+import com.sixpack.order.domain.OrderNumbers;
+import com.sixpack.order.domain.StatusEntry;
+import com.sixpack.user.UserContact;
+import com.sixpack.user.UserDirectory;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderItem;
 import com.sixpack.order.domain.OrderRepository;
@@ -22,6 +28,8 @@ import com.sixpack.shared.ApiException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.time.Instant;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,6 +52,9 @@ public class CheckoutService {
     public record CartLine(String productId, int quantity) {
     }
 
+    public record ConfirmDetails(ShippingInfo shipping, ShippingInfo billing, String notes) {
+    }
+
     public record CheckoutResult(String provider, String key, String providerOrderId, long amountPaise,
                                  String currency, Quote quote) {
     }
@@ -58,10 +69,11 @@ public class CheckoutService {
     private final ConsentLedger consents;
     private final ApplicationEventPublisher events;
     private final MeterRegistry meters;
+    private final UserDirectory users;
 
     CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateway gateway,
                     PaymentIntentRepository intents, OrderRepository orders, ConsentLedger consents,
-                    ApplicationEventPublisher events, MeterRegistry meters) {
+                    ApplicationEventPublisher events, MeterRegistry meters, UserDirectory users) {
         this.catalog = catalog;
         this.coupons = coupons;
         this.gateway = gateway;
@@ -70,6 +82,7 @@ public class CheckoutService {
         this.consents = consents;
         this.events = events;
         this.meters = meters;
+        this.users = users;
     }
 
     public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
@@ -89,7 +102,7 @@ public class CheckoutService {
             if (p.stock() < line.getValue()) {
                 throw ApiException.conflict("Only " + p.stock() + " left in stock for " + p.name());
             }
-            return new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue());
+            return new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue(), p.sku(), p.taxRate());
         }).toList();
 
         double discount = 0;
@@ -111,7 +124,7 @@ public class CheckoutService {
     }
 
     public String confirm(String userId, String providerOrderId, String paymentId, String signature,
-                          ShippingInfo shipping) {
+                          ConfirmDetails details) {
         PaymentIntent intent = intents.findByProviderOrderId(providerOrderId)
                 .filter(i -> i.userId().equals(userId))
                 .orElseThrow(() -> ApiException.notFound("Checkout session not found"));
@@ -119,6 +132,8 @@ public class CheckoutService {
             meters.counter("sixpack.checkout.failed", "reason", "bad_signature").increment();
             throw ApiException.badRequest("Payment verification failed");
         }
+        UserContact contact = users.contactById(userId)
+                .orElseThrow(() -> ApiException.unauthorized("Account no longer exists"));
         if (!intents.markConsumed(providerOrderId)) {
             throw ApiException.conflict("This payment has already been used for an order");
         }
@@ -135,11 +150,18 @@ public class CheckoutService {
             throw e;
         }
 
+        Instant now = Instant.now();
         Order order;
         try {
-            order = orders.save(new Order(null, userId, shipping, intent.items(), intent.quote(),
-                    OrderStatus.PROCESSING, new PaymentInfo(intent.provider(), providerOrderId, paymentId),
-                    consents.currentVersion(Purpose.TERMS), null));
+            order = orders.save(new Order(null, userId, details.shipping(), intent.items(), intent.quote(),
+                    OrderStatus.PROCESSING,
+                    new PaymentInfo(intent.provider(), providerOrderId, paymentId, "PAID", intent.quote().total(),
+                            intent.currency() == null ? "INR" : intent.currency(), now),
+                    consents.currentVersion(Purpose.TERMS), null,
+                    new OrderDetails(OrderNumbers.generate(now, ThreadLocalRandom.current()), details.billing(),
+                            new Customer(contact.name(), contact.email(), contact.phone()),
+                            List.of(new StatusEntry(OrderStatus.PROCESSING, now, userId)), intent.coupon(),
+                            details.notes())));
         } catch (RuntimeException e) {
             catalog.releaseStock(quantities);
             intents.markCreated(providerOrderId);
