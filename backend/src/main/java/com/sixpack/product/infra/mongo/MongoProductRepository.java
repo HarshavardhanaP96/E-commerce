@@ -88,6 +88,11 @@ class MongoProductRepository implements ProductRepository {
     }
 
     @Override
+    public boolean existsByCategoryId(String categoryId) {
+        return mongo.exists(Query.query(Criteria.where("categoryId").is(categoryId)), ProductDocument.class);
+    }
+
+    @Override
     public Product save(Product p) {
         ProductDocument doc = p.id() == null ? null : mongo.findById(p.id(), ProductDocument.class);
         if (doc == null) {

@@ -24,6 +24,8 @@ public interface ProductRepository {
 
     Optional<Product> findBySku(String sku);
 
+    boolean existsByCategoryId(String categoryId);
+
     Product save(Product product);
 
     void deleteById(String id);

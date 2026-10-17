@@ -3,7 +3,6 @@ package com.sixpack.product.web;
 import com.sixpack.product.application.ProductService;
 import com.sixpack.product.application.ProductService.ProductCommand;
 import com.sixpack.product.domain.Product;
-import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
 import com.sixpack.shared.web.ApiResponse;
 import jakarta.validation.constraints.DecimalMax;
@@ -14,7 +13,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -83,7 +81,7 @@ class ProductController {
             @RequestParam @PositiveOrZero @Max(1_000_000) Integer stock,
             @RequestParam @NotBlank @Size(max = 50) String category,
             @RequestPart("photo") MultipartFile photo) {
-        Product created = service.create(new ProductCommand(name, price, stock, category, bytes(photo)));
+        Product created = service.create(new ProductCommand(name, price, stock, category, Uploads.bytes(photo)));
         return ApiResponse.of("message", "Product created successfully", "product", ProductView.from(created));
     }
 
@@ -95,7 +93,7 @@ class ProductController {
             @RequestParam(required = false) @PositiveOrZero @Max(1_000_000) Integer stock,
             @RequestParam(required = false) @Size(max = 50) String category,
             @RequestPart(value = "photo", required = false) MultipartFile photo) {
-        Product updated = service.update(id, new ProductCommand(name, price, stock, category, bytes(photo)));
+        Product updated = service.update(id, new ProductCommand(name, price, stock, category, Uploads.bytes(photo)));
         return ApiResponse.of("message", "Product updated successfully", "product", ProductView.from(updated));
     }
 
@@ -109,14 +107,4 @@ class ProductController {
         return products.stream().map(ProductView::from).toList();
     }
 
-    private static byte[] bytes(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-        try {
-            return file.getBytes();
-        } catch (IOException e) {
-            throw ApiException.badRequest("photo: could not be read");
-        }
-    }
 }

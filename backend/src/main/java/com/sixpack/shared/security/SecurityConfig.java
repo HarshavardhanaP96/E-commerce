@@ -53,6 +53,8 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/product/admin-products").hasRole(ADMIN)
                         .requestMatchers(GET, "/api/v1/product/**").permitAll()
                         .requestMatchers("/api/v1/product/**").hasRole(ADMIN)
+                        .requestMatchers(GET, "/api/v1/category", "/api/v1/category/**").permitAll()
+                        .requestMatchers("/api/v1/category", "/api/v1/category/**").hasRole(ADMIN)
                         // coupons
                         .requestMatchers(GET, "/api/v1/payment/discount").permitAll()
                         .requestMatchers("/api/v1/payment/coupon/**").hasRole(ADMIN)
