@@ -40,7 +40,7 @@ public class OrderService {
 
     public Order advance(String id) {
         Order order = orders.findById(id).orElseThrow(() -> ApiException.notFound("Order not found"));
-        Order saved = orders.save(order.withStatus(order.status().next()));
+        Order saved = orders.save(order.withStatus(order.status().next(), "system", java.time.Instant.now()));
         events.publishEvent(new OrderChangedEvent(id));
         return saved;
     }
