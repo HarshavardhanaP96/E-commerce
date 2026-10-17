@@ -115,10 +115,35 @@ export type Order = {
   payment?: OrderPayment | null;
 };
 
+export type CouponStatus = "active" | "scheduled" | "expired" | "exhausted" | "inactive";
+
 export type Coupon = {
   _id: string;
   coupon: string;
   amount: number;
+  type: "FLAT" | "PERCENT";
+  maxDiscount?: number;
+  minOrderValue?: number;
+  startsAt?: string;
+  expiresAt?: string;
+  usageLimit?: number;
+  usedCount: number;
+  perUserLimit?: number;
+  active: boolean;
+  status: CouponStatus;
+};
+
+export type NewCouponInput = {
+  coupon: string;
+  amount: number;
+  type?: "FLAT" | "PERCENT";
+  maxDiscount?: number;
+  minOrderValue?: number;
+  startsAt?: string;
+  expiresAt?: string;
+  usageLimit?: number;
+  perUserLimit?: number;
+  active?: boolean;
 };
 
 type CountAndChange = {

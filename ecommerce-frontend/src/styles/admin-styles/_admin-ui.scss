@@ -86,6 +86,11 @@
   &--processing { background: var(--warning-subtle); color: var(--warning); }
   &--shipped { background: var(--info-subtle); color: var(--info); }
   &--delivered { background: var(--success-subtle); color: var(--success); }
+  &--active { background: var(--success-subtle); color: var(--success); }
+  &--scheduled { background: var(--info-subtle); color: var(--info); }
+  &--expired,
+  &--exhausted,
+  &--inactive { background: $color-bg-tertiary; color: $color-text-secondary; }
   &--admin { background: var(--accent-subtle); color: var(--accent-text); }
   &--user { background: $color-bg-tertiary; color: $color-text-secondary; }
 }
@@ -316,6 +321,23 @@
 
   input {
     width: 8.5rem !important;
+  }
+}
+
+.coupon-form {
+  position: relative;
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  form {
+    position: absolute;
+    right: 0;
+    z-index: 10;
+    width: min(32rem, 90vw);
+    margin-top: 0.5rem;
   }
 }
 

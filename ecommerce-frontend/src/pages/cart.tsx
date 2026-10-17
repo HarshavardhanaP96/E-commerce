@@ -3,6 +3,7 @@ import { LuAlertCircle, LuCheck, LuShoppingBag } from "react-icons/lu";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import CartItems from "../components/cartItems";
+import { errorMessage } from "../redux/api/baseQuery";
 import { useLazyDiscountQuery } from "../redux/api/couponAPI";
 import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
@@ -16,7 +17,8 @@ const Cart = () => {
   );
   const dispatch = useDispatch();
   const [couponCode, setCouponCode] = useState(coupon);
-  const [checkDiscount, { isFetching, isError }] = useLazyDiscountQuery();
+  const [checkDiscount, { isFetching }] = useLazyDiscountQuery();
+  const [couponMessage, setCouponMessage] = useState("");
 
   const incrementHandler = (item: CartItem) => {
     if (item.quantity >= item.stock) return;
@@ -28,19 +30,27 @@ const Cart = () => {
   };
   const removeHandler = (productId: string) => dispatch(removeCartItem(productId));
 
-  // Validate the coupon with the server after the user stops typing.
+  // Validate the coupon with the server after the user stops typing, and again when the subtotal changes
+  // (percent coupons and minimum order values depend on it).
   useEffect(() => {
     const code = couponCode.trim();
     if (!code) {
+      setCouponMessage("");
       dispatch(applyCoupon({ coupon: "", discount: 0 }));
       return;
     }
     const t = setTimeout(async () => {
-      const res = await checkDiscount(code);
-      dispatch(applyCoupon(res.data ? { coupon: code, discount: res.data.discount } : { coupon: "", discount: 0 }));
+      const res = await checkDiscount({ coupon: code, subtotal });
+      if (res.data) {
+        setCouponMessage("");
+        dispatch(applyCoupon({ coupon: code, discount: res.data.discount }));
+      } else {
+        setCouponMessage(errorMessage(res.error, "Invalid coupon"));
+        dispatch(applyCoupon({ coupon: "", discount: 0 }));
+      }
     }, 600);
     return () => clearTimeout(t);
-  }, [couponCode, checkDiscount, dispatch]);
+  }, [couponCode, subtotal, checkDiscount, dispatch]);
 
   const itemCount = cartItems.reduce((n, i) => n + i.quantity, 0);
   const valid = !!coupon && coupon === couponCode.trim() && discount > 0;
@@ -93,9 +103,9 @@ const Cart = () => {
               <LuCheck /> {formatINR(discount)} off with <code>{coupon}</code>
             </span>
           ) : (
-            isError && (
+            couponMessage && (
               <span className="red">
-                <LuAlertCircle /> Invalid coupon
+                <LuAlertCircle /> {couponMessage}
               </span>
             )
           ))}
