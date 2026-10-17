@@ -5,10 +5,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { policyPath } from "../legal/policies";
 import { errorMessage } from "../redux/api/baseQuery";
+import { useGetMyAddressesQuery } from "../redux/api/userAPI";
 import { useCheckoutMutation, useConfirmOrderMutation } from "../redux/api/orderAPI";
 import { resetCart, saveShippingInfo } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
-import { ShippingInfo } from "../types/types";
+import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatINR } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 
@@ -21,6 +22,27 @@ const Shipping = () => {
   const [checkout] = useCheckoutMutation();
   const [confirmOrder] = useConfirmOrderMutation();
   const [busy, setBusy] = useState(false);
+  const { data: book } = useGetMyAddressesQuery();
+  const [picked, setPicked] = useState<string>("");
+  const savedAddresses = book?.addresses ?? [];
+
+  const applySaved = (a: SavedAddress) => {
+    setPicked(a.id);
+    setShippingInfo({
+      address: a.line2 ? `${a.line1}, ${a.line2}` : a.line1,
+      city: a.city,
+      state: a.state,
+      country: a.country,
+      pinCode: a.pinCode,
+    });
+  };
+
+  // Pre-select the default address once, unless the user already typed something.
+  useEffect(() => {
+    const def = book?.addresses.find((a) => a.isDefault);
+    if (def && !picked && !saved.address) applySaved(def);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book]);
 
   useEffect(() => {
     if (cartItems.length === 0) navigate("/cart");
@@ -81,6 +103,26 @@ const Shipping = () => {
         <h1>Shipping address</h1>
         <p>Where should we deliver your order?</p>
 
+        {savedAddresses.length > 0 && (
+          <label className="span-2">
+            Saved addresses
+            <select
+              value={picked}
+              onChange={(e) => {
+                const a = savedAddresses.find((x) => x.id === e.target.value);
+                if (a) applySaved(a);
+                else setPicked("");
+              }}
+            >
+              <option value="">Enter a new address</option>
+              {savedAddresses.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label || a.name} — {a.line1}, {a.city}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="span-2">
           Address
           <input type="text" name="address" placeholder="House no., street, area" value={shippingInfo.address}

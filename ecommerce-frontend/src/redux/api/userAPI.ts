@@ -1,17 +1,19 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import {
+  AddressesResponse,
+  AddressResponse,
   AuthResponse,
   MessageResponse,
   UserResponse,
   UsersResponse,
 } from "../../types/api-types";
-import { Role } from "../../types/types";
+import { Role, SavedAddressInput } from "../../types/types";
 import { authedBaseQuery } from "./baseQuery";
 
 export const userAPI = createApi({
   reducerPath: "userApi",
   baseQuery: authedBaseQuery("user/"),
-  tagTypes: ["users"],
+  tagTypes: ["users", "addresses"],
   endpoints: (builder) => ({
     register: builder.mutation<AuthResponse, FormData>({
       query: (body) => ({ url: "register", method: "POST", body }),
@@ -33,6 +35,26 @@ export const userAPI = createApi({
     getMyProfile: builder.query<UserResponse, void>({
       query: () => "me",
       providesTags: ["users"],
+    }),
+    updateMyProfile: builder.mutation<UserResponse & MessageResponse, { name?: string; phone?: string; locale?: string }>({
+      query: (body) => ({ url: "me", method: "PUT", body }),
+      invalidatesTags: ["users"],
+    }),
+    getMyAddresses: builder.query<AddressesResponse, void>({
+      query: () => "me/addresses",
+      providesTags: ["addresses"],
+    }),
+    addAddress: builder.mutation<AddressResponse, SavedAddressInput>({
+      query: (body) => ({ url: "me/addresses", method: "POST", body }),
+      invalidatesTags: ["addresses"],
+    }),
+    updateAddress: builder.mutation<AddressResponse, { id: string; body: SavedAddressInput }>({
+      query: ({ id, body }) => ({ url: `me/addresses/${id}`, method: "PUT", body }),
+      invalidatesTags: ["addresses"],
+    }),
+    deleteAddress: builder.mutation<MessageResponse, string>({
+      query: (id) => ({ url: `me/addresses/${id}`, method: "DELETE" }),
+      invalidatesTags: ["addresses"],
     }),
     allUsers: builder.query<UsersResponse, { role?: string; gender?: string }>({
       query: (params) => ({ url: "all", params: clean(params) }),
@@ -65,6 +87,12 @@ export const {
   useDeleteMyAccountMutation,
   useGetMyProfileQuery,
   useLazyGetMyProfileQuery,
+  useUpdateMyProfileMutation,
+  useGetMyAddressesQuery,
+  useLazyGetMyAddressesQuery,
+  useAddAddressMutation,
+  useUpdateAddressMutation,
+  useDeleteAddressMutation,
   useAllUsersQuery,
   useUserDetailsQuery,
   useUpdateUserRoleMutation,

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LuLayoutDashboard, LuHelpCircle, LuLogOut, LuPackage, LuShieldCheck } from "react-icons/lu";
+import { LuLayoutDashboard, LuHelpCircle, LuLogOut, LuMapPin, LuPackage, LuShieldCheck } from "react-icons/lu";
 import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
 import { User } from "../types/types";
@@ -34,6 +34,10 @@ const AccountMenu = ({ user, onClose }: { user: User; onClose: () => void }) => 
           My orders
         </Link>
 
+        <Link onClick={onClose} to={"/account/addresses"}>
+          <LuMapPin />
+          Saved addresses
+        </Link>
         <Link onClick={onClose} to={"/account/privacy"}>
           <LuShieldCheck />
           Privacy &amp; data

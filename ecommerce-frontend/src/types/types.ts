@@ -10,7 +10,28 @@ export type User = {
   dob: string;
   age: number;
   createdAt?: string;
+  phone?: string;
+  locale?: string;
+  emailVerified?: boolean;
+  status?: "ACTIVE" | "SUSPENDED";
+  lastLoginAt?: string;
 };
+
+export type SavedAddress = {
+  id: string;
+  label?: string;
+  name: string;
+  phone: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pinCode: string;
+  isDefault: boolean;
+};
+
+export type SavedAddressInput = Omit<SavedAddress, "id">;
 
 export type Product = {
   _id: string;

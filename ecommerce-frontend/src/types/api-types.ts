@@ -1,4 +1,4 @@
-import { Bar, Coupon, Line, Order, Pie, Product, ShippingInfo, Stats, User } from "./types";
+import { Bar, Coupon, Line, Order, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
 
 export type MessageResponse = { success: boolean; message: string };
 
@@ -53,3 +53,6 @@ export type StatsResponse = { success: boolean; stats: Stats };
 export type PieResponse = { success: boolean; charts: Pie };
 export type BarResponse = { success: boolean; charts: Bar };
 export type LineResponse = { success: boolean; charts: Line };
+
+export type AddressesResponse = { success: boolean; addresses: SavedAddress[] };
+export type AddressResponse = { success: boolean; message: string; address: SavedAddress };

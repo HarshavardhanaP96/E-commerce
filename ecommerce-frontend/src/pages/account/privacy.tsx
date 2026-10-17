@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { errorMessage } from "../../redux/api/baseQuery";
 import { useDecideConsentMutation, useMyConsentQuery } from "../../redux/api/consentAPI";
 import { useLazyMyOrdersQuery } from "../../redux/api/orderAPI";
-import { useDeleteMyAccountMutation } from "../../redux/api/userAPI";
+import { useDeleteMyAccountMutation, useLazyGetMyAddressesQuery } from "../../redux/api/userAPI";
 import { resetCart } from "../../redux/reducer/cartReducer";
 import { userNotExist } from "../../redux/reducer/userReducer";
 import { RootState } from "../../redux/store";
@@ -22,6 +22,7 @@ const PrivacySettings = () => {
   const { data: consent } = useMyConsentQuery(user?._id ?? "", { skip: !user });
   const [decide, { isLoading: saving }] = useDecideConsentMutation();
   const [fetchOrders] = useLazyMyOrdersQuery();
+  const [fetchAddresses] = useLazyGetMyAddressesQuery();
   const [deleteAccount, { isLoading: deleting }] = useDeleteMyAccountMutation();
   const [password, setPassword] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -39,10 +40,11 @@ const PrivacySettings = () => {
 
   const exportData = async () => {
     try {
-      const orders = await fetchOrders().unwrap();
+      const [orders, addresses] = await Promise.all([fetchOrders().unwrap(), fetchAddresses().unwrap()]);
       const data = {
         exportedAt: new Date().toISOString(),
         profile: user,
+        addresses: addresses.addresses,
         orders: orders.orders,
         consentHistory: consent?.history ?? [],
       };
