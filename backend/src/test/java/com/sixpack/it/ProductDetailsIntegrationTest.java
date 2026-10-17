@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 class ProductDetailsIntegrationTest extends IntegrationTest {
@@ -177,5 +178,48 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
 
         assertThat(catalog.findSnapshots(List.of(draft, live)))
                 .extracting(com.sixpack.product.ProductSnapshot::id).containsExactly(live);
+    }
+
+    private static MockMultipartFile image(String part) throws Exception {
+        return new MockMultipartFile(part, "g.png", "image/png", com.sixpack.storage.TestImages.png());
+    }
+
+    @Test
+    void galleryImagesAreStoredReplacedAndKept() throws Exception {
+        String admin = adminToken();
+        MvcResult created = mvc.perform(multipart("/api/v1/product/new")
+                        .file(image("photo")).file(image("images")).file(image("images"))
+                        .param("name", "Gallery").param("price", "10").param("stock", "1").param("category", "x")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.product.images.length()").value(2)).andReturn();
+        String id = body(created).get("product").get("_id").asText();
+
+        mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id).param("brand", "Acme")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(jsonPath("$.product.images.length()").value(2));
+
+        mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id).file(image("images"))
+                        .header("Authorization", bearer(admin)))
+                .andExpect(jsonPath("$.product.images.length()").value(1));
+    }
+
+    @Test
+    void rejectsMoreThanFiveGalleryImagesAndNonImages() throws Exception {
+        String admin = adminToken();
+        var tooMany = multipart("/api/v1/product/new");
+        tooMany.file(image("photo"));
+        tooMany.param("name", "G").param("price", "10").param("stock", "1").param("category", "x")
+                .header("Authorization", bearer(admin));
+        for (int i = 0; i < 6; i++) {
+            tooMany.file(image("images"));
+        }
+        mvc.perform(tooMany).andExpect(status().isBadRequest());
+
+        mvc.perform(multipart("/api/v1/product/new").file(image("photo"))
+                        .file(new MockMultipartFile("images", "x.png", "image/png", "<html>".getBytes()))
+                        .param("name", "G").param("price", "10").param("stock", "1").param("category", "x")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isBadRequest());
     }
 }

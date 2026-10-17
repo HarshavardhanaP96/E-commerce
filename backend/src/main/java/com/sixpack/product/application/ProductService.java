@@ -13,6 +13,7 @@ import com.sixpack.product.domain.CategoryRepository;
 import com.sixpack.product.domain.ProductDetails;
 import com.sixpack.product.domain.ProductStatus;
 import com.sixpack.product.domain.Slugs;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
@@ -30,9 +31,10 @@ import org.springframework.stereotype.Service;
 public class ProductService {
 
     public record DetailsCommand(String slug, String sku, String description, String brand, Double mrp,
-                                 Double taxRate, String hsn, String status, List<String> tags, String categoryId) {
+                                 Double taxRate, String hsn, String status, List<String> tags, String categoryId,
+                                 List<byte[]> images) {
         public static final DetailsCommand NONE =
-                new DetailsCommand(null, null, null, null, null, null, null, null, null, null);
+                new DetailsCommand(null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public record ProductCommand(String name, Double price, Integer stock, String category, byte[] photo,
@@ -96,15 +98,17 @@ public class ProductService {
             throw ApiException.badRequest("photo: is required");
         }
         String photo = storage.storeImage(cmd.photo());
+        List<String> gallery = storeAll(cmd.details().images());
         try {
             String name = cmd.name().trim();
             Product saved = products.save(new Product(null, name, photo, cmd.price(), cmd.stock(),
                     Product.normalizeCategory(cmd.category()), null,
-                    merge(null, name, ProductDetails.EMPTY, cmd.details(), cmd.price())));
+                    merge(null, name, ProductDetails.EMPTY, cmd.details(), cmd.price()).withImages(gallery)));
             events.publishEvent(new ProductChangedEvent());
             return saved;
         } catch (RuntimeException e) {
             storage.delete(photo);
+            gallery.forEach(storage::delete);
             throw e;
         }
     }
@@ -119,13 +123,19 @@ public class ProductService {
         if (cmd.photo() != null) {
             photo = storage.storeImage(cmd.photo());
         }
+        List<String> oldGallery = current.details().images();
+        List<String> gallery = cmd.details().images() == null || cmd.details().images().isEmpty()
+                ? oldGallery : storeAll(cmd.details().images());
         Product saved = products.save(new Product(id, name, photo, price,
                 cmd.stock() != null ? cmd.stock() : current.stock(),
                 cmd.category() != null && !cmd.category().isBlank()
                         ? Product.normalizeCategory(cmd.category()) : current.category(),
-                current.createdAt(), details));
+                current.createdAt(), details.withImages(gallery)));
         if (!photo.equals(current.photo())) {
             storage.delete(current.photo());
+        }
+        if (gallery != oldGallery) {
+            oldGallery.forEach(storage::delete);
         }
         events.publishEvent(new ProductChangedEvent());
         return saved;
@@ -136,11 +146,28 @@ public class ProductService {
         Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
         products.deleteById(id);
         storage.delete(current.photo());
+        current.details().images().forEach(storage::delete);
         events.publishEvent(new ProductChangedEvent());
     }
 
     public int pageSize() {
         return props.pageSize();
+    }
+
+    private List<String> storeAll(List<byte[]> files) {
+        if (files == null || files.isEmpty()) {
+            return List.of();
+        }
+        List<String> stored = new ArrayList<>();
+        try {
+            for (byte[] f : files) {
+                stored.add(storage.storeImage(f));
+            }
+        } catch (RuntimeException e) {
+            stored.forEach(storage::delete);
+            throw e;
+        }
+        return stored;
     }
 
     private ProductDetails merge(String selfId, String name, ProductDetails cur, DetailsCommand c, double price) {

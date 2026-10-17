@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Objects;
+import org.springframework.web.multipart.MultipartFile;
 
 /** Optional multipart fields shared by product create and update. */
 record ProductDetailsForm(
@@ -19,9 +21,12 @@ record ProductDetailsForm(
         @Pattern(regexp = "\\d{4,8}|") String hsn,
         @Pattern(regexp = "(?i)draft|active|archived|") String status,
         @Size(max = 20) List<@Size(max = 30) String> tags,
-        @Size(max = 64) String categoryId) {
+        @Size(max = 64) String categoryId,
+        @Size(max = 5) List<MultipartFile> images) {
 
     DetailsCommand toCommand() {
-        return new DetailsCommand(slug, sku, description, brand, mrp, taxRate, hsn, status, tags, categoryId);
+        List<byte[]> files = images == null ? null : images.stream().map(Uploads::bytes)
+                .filter(Objects::nonNull).toList();
+        return new DetailsCommand(slug, sku, description, brand, mrp, taxRate, hsn, status, tags, categoryId, files);
     }
 }
