@@ -1,5 +1,16 @@
 package com.sixpack.coupon.web;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import java.time.Instant;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import com.sixpack.shared.security.AuthUser;
+import com.sixpack.coupon.domain.CouponRules;
+import com.sixpack.coupon.application.CouponService.UpdateCommand;
+import com.sixpack.coupon.application.CouponService.CreateCommand;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sixpack.coupon.application.CouponService;
 import com.sixpack.coupon.domain.Coupon;
@@ -33,12 +44,36 @@ class CouponController {
 
     record NewCouponRequest(
             @NotBlank @Pattern(regexp = CODE_PATTERN, message = "3-32 letters, digits, _ or -") String coupon,
-            @NotNull @Positive @DecimalMax("100000") Double amount) {
+            @NotNull @Positive @DecimalMax("100000") Double amount,
+            @Pattern(regexp = "(?i)flat|percent|", message = "must be FLAT or PERCENT") String type,
+            @Positive @DecimalMax("100000") Double maxDiscount,
+            @PositiveOrZero @DecimalMax("10000000") Double minOrderValue,
+            Instant startsAt,
+            Instant expiresAt,
+            @Min(1) @Max(10_000_000) Integer usageLimit,
+            @Min(1) @Max(1000) Integer perUserLimit,
+            Boolean active) {
     }
 
-    record CouponView(@JsonProperty("_id") String id, String coupon, double amount) {
+    record UpdateCouponRequest(
+            @Positive @DecimalMax("100000") Double amount,
+            @Positive @DecimalMax("100000") Double maxDiscount,
+            @PositiveOrZero @DecimalMax("10000000") Double minOrderValue,
+            Instant startsAt,
+            Instant expiresAt,
+            @Min(1) @Max(10_000_000) Integer usageLimit,
+            @Min(1) @Max(1000) Integer perUserLimit,
+            Boolean active) {
+    }
+
+    record CouponView(@JsonProperty("_id") String id, String coupon, double amount, String type, Double maxDiscount,
+                      Double minOrderValue, Instant startsAt, Instant expiresAt, Integer usageLimit, int usedCount,
+                      Integer perUserLimit, boolean active, String status) {
         static CouponView from(Coupon c) {
-            return new CouponView(c.id(), c.code(), c.amount());
+            CouponRules r = c.rules();
+            return new CouponView(c.id(), c.code(), c.amount(), r.type().name(), r.maxDiscount(), r.minOrderValue(),
+                    r.startsAt(), r.expiresAt(), r.usageLimit(), c.usedCount(), r.perUserLimit(), r.active(),
+                    c.status(Instant.now()));
         }
     }
 
@@ -49,9 +84,27 @@ class CouponController {
     }
 
     @GetMapping("/discount")
-    Map<String, Object> discount(@RequestParam @Pattern(regexp = CODE_PATTERN, message = "Invalid coupon") String coupon) {
-        double amount = service.discountFor(coupon).orElseThrow(() -> ApiException.badRequest("Invalid coupon"));
-        return ApiResponse.of("discount", amount);
+    Map<String, Object> discount(
+            @RequestParam @Pattern(regexp = CODE_PATTERN, message = "Invalid coupon") String coupon,
+            @RequestParam(required = false) @PositiveOrZero @DecimalMax("100000000") Double subtotal,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt == null ? null : AuthUser.from(jwt).id();
+        return ApiResponse.of("discount", service.discountFor(coupon, subtotal == null ? 0 : subtotal, userId));
+    }
+
+    @PostMapping("/coupon/new")
+    @ResponseStatus(HttpStatus.CREATED)
+    Map<String, Object> create(@Valid @RequestBody NewCouponRequest r) {
+        Coupon c = service.create(new CreateCommand(r.coupon(), r.amount(), r.type(), r.maxDiscount(),
+                r.minOrderValue(), r.startsAt(), r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active()));
+        return ApiResponse.of("message", "Coupon " + c.code() + " created successfully", "coupon", CouponView.from(c));
+    }
+
+    @PutMapping("/coupon/{id}")
+    Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateCouponRequest r) {
+        Coupon c = service.update(id, new UpdateCommand(r.amount(), r.maxDiscount(), r.minOrderValue(), r.startsAt(),
+                r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active()));
+        return ApiResponse.of("message", "Coupon " + c.code() + " updated successfully", "coupon", CouponView.from(c));
     }
 
     @GetMapping("/coupon/all")
@@ -59,12 +112,6 @@ class CouponController {
         return ApiResponse.of("coupons", service.list().stream().map(CouponView::from).toList());
     }
 
-    @PostMapping("/coupon/new")
-    @ResponseStatus(HttpStatus.CREATED)
-    Map<String, Object> create(@Valid @RequestBody NewCouponRequest request) {
-        Coupon c = service.create(request.coupon(), request.amount());
-        return ApiResponse.of("message", "Coupon " + c.code() + " created successfully", "coupon", CouponView.from(c));
-    }
 
     @DeleteMapping("/coupon/{id}")
     Map<String, Object> delete(@PathVariable String id) {

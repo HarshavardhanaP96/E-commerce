@@ -108,8 +108,7 @@ public class CheckoutService {
         double discount = 0;
         String normalizedCoupon = coupon == null || coupon.isBlank() ? null : coupon.trim();
         if (normalizedCoupon != null) {
-            discount = coupons.discountFor(normalizedCoupon)
-                    .orElseThrow(() -> ApiException.badRequest("Invalid coupon"));
+            discount = coupons.discountFor(normalizedCoupon, 0, userId);
         }
 
         Quote quote = PriceCalculator.quote(items, discount);
