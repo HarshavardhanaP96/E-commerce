@@ -127,8 +127,8 @@ class OrderController {
     }
 
     @PutMapping("/{id}")
-    Map<String, Object> process(@PathVariable String id) {
-        Order order = orders.advance(id);
+    Map<String, Object> process(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
+        Order order = orders.advance(id, AuthUser.from(jwt).id());
         return ApiResponse.of("message", "Order marked as " + order.status().wireValue(),
                 "status", order.status().wireValue());
     }

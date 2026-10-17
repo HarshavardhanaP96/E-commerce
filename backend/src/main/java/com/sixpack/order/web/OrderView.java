@@ -1,9 +1,12 @@
 package com.sixpack.order.web;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderItem;
+import com.sixpack.order.domain.PaymentInfo;
 import com.sixpack.order.domain.ShippingInfo;
+import com.sixpack.order.domain.StatusEntry;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -19,14 +22,37 @@ record OrderView(
         double discount,
         double total,
         String status,
-        Instant createdAt) {
+        Instant createdAt,
+        String orderNumber,
+        ShippingInfo billingInfo,
+        Customer customer,
+        List<HistoryView> statusHistory,
+        String couponCode,
+        String notes,
+        PaymentView payment) {
 
     record UserRef(@JsonProperty("_id") String id, String name) {
+    }
+
+    record HistoryView(String status, Instant at, String actor) {
+        static HistoryView from(StatusEntry e) {
+            return new HistoryView(e.status().wireValue(), e.at(), e.actor());
+        }
+    }
+
+    /** Provider order and payment ids stay server-side. */
+    record PaymentView(String provider, String status, Double amount, String currency, Instant paidAt) {
+        static PaymentView from(PaymentInfo p) {
+            return p == null ? null : new PaymentView(p.provider(), p.status(), p.amount(), p.currency(), p.paidAt());
+        }
     }
 
     static OrderView from(Order o, Map<String, String> userNames) {
         return new OrderView(o.id(), new UserRef(o.userId(), userNames.getOrDefault(o.userId(), "Deleted user")),
                 o.shippingInfo(), o.items(), o.quote().subtotal(), o.quote().tax(), o.quote().shippingCharges(),
-                o.quote().discount(), o.quote().total(), o.status().wireValue(), o.createdAt());
+                o.quote().discount(), o.quote().total(), o.status().wireValue(), o.createdAt(),
+                o.details().orderNumber(), o.details().billingInfo(), o.details().customer(),
+                o.details().statusHistory().stream().map(HistoryView::from).toList(), o.details().couponCode(),
+                o.details().notes(), PaymentView.from(o.payment()));
     }
 }

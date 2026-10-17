@@ -6,6 +6,7 @@ import com.sixpack.order.domain.OrderRepository;
 import com.sixpack.order.domain.OrderStatus;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.security.AuthUser;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -38,9 +39,13 @@ public class OrderService {
         return order;
     }
 
-    public Order advance(String id) {
+    public Order advance(String id, String actorId) {
         Order order = orders.findById(id).orElseThrow(() -> ApiException.notFound("Order not found"));
-        Order saved = orders.save(order.withStatus(order.status().next(), "system", java.time.Instant.now()));
+        OrderStatus next = order.status().next();
+        if (next == order.status()) {
+            return order; // already delivered: nothing to record
+        }
+        Order saved = orders.save(order.withStatus(next, actorId, Instant.now()));
         events.publishEvent(new OrderChangedEvent(id));
         return saved;
     }
