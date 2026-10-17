@@ -1,8 +1,10 @@
 package com.sixpack.product.infra.mongo;
 
 import com.sixpack.product.domain.Product;
+import com.sixpack.product.domain.ProductDetails;
 import com.sixpack.product.domain.ProductRepository;
 import com.sixpack.product.domain.ProductSearch;
+import com.sixpack.product.domain.ProductStatus;
 import com.sixpack.shared.PageResult;
 import java.util.Collection;
 import java.util.List;
@@ -74,6 +76,18 @@ class MongoProductRepository implements ProductRepository {
     }
 
     @Override
+    public Optional<Product> findBySlug(String slug) {
+        return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("slug").is(slug)), ProductDocument.class))
+                .map(MongoProductRepository::toDomain);
+    }
+
+    @Override
+    public Optional<Product> findBySku(String sku) {
+        return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("sku").is(sku)), ProductDocument.class))
+                .map(MongoProductRepository::toDomain);
+    }
+
+    @Override
     public Product save(Product p) {
         ProductDocument doc = p.id() == null ? null : mongo.findById(p.id(), ProductDocument.class);
         if (doc == null) {
@@ -85,6 +99,18 @@ class MongoProductRepository implements ProductRepository {
         doc.price = p.price();
         doc.stock = p.stock();
         doc.category = p.category();
+        ProductDetails d = p.details();
+        doc.slug = d.slug();
+        doc.sku = d.sku();
+        doc.description = d.description();
+        doc.brand = d.brand();
+        doc.mrp = d.mrp();
+        doc.taxRate = d.taxRate();
+        doc.hsn = d.hsn();
+        doc.status = d.status().name();
+        doc.tags = d.tags();
+        doc.images = d.images();
+        doc.categoryId = d.categoryId();
         return toDomain(mongo.save(doc));
     }
 
@@ -117,7 +143,9 @@ class MongoProductRepository implements ProductRepository {
     }
 
     private static Product toDomain(ProductDocument d) {
+        ProductDetails details = new ProductDetails(d.slug, d.sku, d.description, d.brand, d.mrp, d.taxRate, d.hsn,
+                ProductStatus.fromStored(d.status), d.tags, d.images, d.categoryId);
         return new Product(d.id, d.name, d.photo, d.price == null ? 0 : d.price, d.stock == null ? 0 : d.stock,
-                d.category, d.createdAt);
+                d.category, d.createdAt, details);
     }
 }

@@ -20,6 +20,10 @@ public interface ProductRepository {
 
     PageResult<Product> search(ProductSearch search);
 
+    Optional<Product> findBySlug(String slug);
+
+    Optional<Product> findBySku(String sku);
+
     Product save(Product product);
 
     void deleteById(String id);
