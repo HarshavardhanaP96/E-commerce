@@ -108,7 +108,8 @@ public class CheckoutService {
         double discount = 0;
         String normalizedCoupon = coupon == null || coupon.isBlank() ? null : coupon.trim();
         if (normalizedCoupon != null) {
-            discount = coupons.discountFor(normalizedCoupon, 0, userId);
+            double subtotal = PriceCalculator.quote(items, 0).subtotal();
+            discount = coupons.discountFor(normalizedCoupon, subtotal, userId);
         }
 
         Quote quote = PriceCalculator.quote(items, discount);
@@ -151,7 +152,12 @@ public class CheckoutService {
 
         Instant now = Instant.now();
         Order order;
+        boolean couponRedeemed = false;
         try {
+            if (intent.coupon() != null) {
+                coupons.redeem(intent.coupon(), userId);
+                couponRedeemed = true;
+            }
             order = orders.save(new Order(null, userId, details.shipping(), intent.items(), intent.quote(),
                     OrderStatus.PROCESSING,
                     new PaymentInfo(intent.provider(), providerOrderId, paymentId, "PAID", intent.quote().total(),
@@ -162,6 +168,9 @@ public class CheckoutService {
                             List.of(new StatusEntry(OrderStatus.PROCESSING, now, userId)), intent.coupon(),
                             details.notes())));
         } catch (RuntimeException e) {
+            if (couponRedeemed) {
+                coupons.release(intent.coupon(), userId);
+            }
             catalog.releaseStock(quantities);
             intents.markCreated(providerOrderId);
             throw e;
