@@ -10,7 +10,7 @@
 - [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax at each product's rate (18% by default) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
 - [ ] FR6a: Orders carry an order number (`ORD-YYYYMMDD-XXXXXX`), the recipient's name and phone, an optional billing address, delivery notes, and a status history that records who moved the order and when.
-- [ ] FR7: Admin coupon CRUD. Anyone can validate a coupon code.
+- [ ] FR7: Admin coupon management: flat or percent, optional cap, minimum order, validity window, total and per-customer limits, pause/resume, and a status and usage count per coupon. Customers see why a code was refused.
 - [ ] FR8: Admin customer list, details, role change, and delete. An admin cannot delete themselves.
 - [ ] FR8a: Customers can edit name, phone and locale. Admins can suspend and reactivate accounts (never their own). A suspended user can't log in or load `/me`.
 - [ ] FR8b: Customers keep up to 10 saved addresses with one default. Checkout pre-selects the default and lets them pick another. The data export includes the addresses.

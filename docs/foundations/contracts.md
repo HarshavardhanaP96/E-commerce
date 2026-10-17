@@ -94,10 +94,14 @@ Pricing: tax is computed per product `taxRate` (default 18%), rounded to whole r
 ### Payment / coupons — `/payment`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /discount` | 🔓 | `?coupon=CODE` | `{success, discount}` / 400 |
+| `GET /discount` | 🔓 (a valid token adds the caller's per-customer limit) | `?coupon=CODE&subtotal=` (`subtotal` is optional; a percent coupon previews as ₹0 without it) | `{success, discount}`. 400 with the reason: `Invalid coupon`, `This coupon is not active`, `This coupon is not valid yet`, `This coupon has expired`, `This coupon's usage limit has been reached`, `You have already used this coupon`, `Minimum order value for this coupon is ₹N` |
 | `GET /coupon/all` | 🛡 | — | `{success, coupons}` |
-| `POST /coupon/new` | 🛡 | `{coupon, amount}` | 201 `{success, message}` |
+| `POST /coupon/new` | 🛡 | `{coupon, amount, type? (FLAT\|PERCENT), maxDiscount? (percent only), minOrderValue?, startsAt?, expiresAt?, usageLimit?, perUserLimit?, active?}` (ISO-8601 instants). A body with only `coupon` and `amount` still creates an always-active flat coupon | 201 `{success, message, coupon}`. 400 for a percent over 100, `maxDiscount` on a flat coupon, `startsAt` not before `expiresAt`, an expiry in the past, or a limit under 1. 409 if the code exists |
+| `PUT /coupon/{id}` | 🛡 | any of `amount, maxDiscount, minOrderValue, startsAt, expiresAt, usageLimit, perUserLimit, active` (omitted means keep; `type` and the code cannot change) | `{success, message, coupon}`. 404 unknown id |
 | `DELETE /coupon/{id}` | 🛡 | — | `{success, message}` |
+
+`coupon = {_id, coupon, amount, type, maxDiscount?, minOrderValue?, startsAt?, expiresAt?, usageLimit?, usedCount, perUserLimit?, active, status}`. `amount` is rupees for FLAT and a percent for PERCENT. `status` is one of `active | scheduled | expired | exhausted | inactive`.
+A use is counted when the order is created, so a limited coupon can be used more than `usageLimit` times by the number of checkouts that were open at the same moment; new checkouts are refused once the limit is reached. Deleting or cancelling an order does not return a use.
 
 Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replaced by `/order/checkout` and `/order/new` (ADR-009).
 

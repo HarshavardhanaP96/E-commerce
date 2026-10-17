@@ -87,6 +87,17 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-18: ADR-018 **Coupon rules in an additive nested `CouponRules`; one pure `Coupon.evaluate`; redemption
+  counted at order creation.** Old coupons (a code and an amount) load as always-active flat coupons, so no
+  migration. The same method decides eligibility for the cart preview and for checkout, and returns the reason a
+  coupon was refused. A use is counted when the order is created, so an order whose payment was already taken is
+  never refused: a limited coupon can be over-used by the number of checkouts open at the same moment, and new
+  checkouts are refused once the limit is reached. Counters live in the coupon module (`usedCount` plus
+  `coupon_redemptions`), so `coupon` never depends on `order`. Deleting an order does not return a use, and edits
+  cannot clear a field (pause with `active`, or create a new coupon). Rejected: reserving a use at checkout with an
+  expiry (more moving parts than a handful of coupons need) and counting per-customer use from the orders
+  collection (would make `coupon` depend on `order`). Product/category scoping and first-order-only coupons stay in
+  Tier 2. Still active.
 - 2026-10-17: ADR-017 **Order and payment fields in an additive nested `OrderDetails`; tax per product rate;
   new personal data erased with the account.** Same pattern as ADR-015/016: old orders load with defaults, so no
   migration. Choices: `PaymentInfo.method` and `failureReason` are deferred, because nothing can fill them without
