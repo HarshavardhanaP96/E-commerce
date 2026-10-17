@@ -36,16 +36,35 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 ### Product — `/product`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /latest` | 🔓 | — | `{success, products}` (5 newest) |
-| `GET /categories` | 🔓 | — | `{success, categories}` |
+| `GET /latest` | 🔓 | — | `{success, products}` (5 newest public) |
+| `GET /categories` | 🔓 | — | `{success, categories}` (distinct category strings of public products) |
 | `GET /all` | 🔓 | `?search=&price=&category=&sort=asc\|dsc&page=` | `{success, products, totalPage}` |
-| `GET /{id}` | 🔓 | — | `{success, product}` |
-| `GET /admin-products` | 🛡 | — | `{success, products}` |
-| `POST /new` | 🛡 | multipart: name, price, stock, category, photo | 201 `{success, message}` |
-| `PUT /{id}` | 🛡 | multipart: any of name, price, stock, category, photo | `{success, message}` |
+| `GET /{id}` | 🔓 | — | `{success, product}` (any status, so admin edit and direct links work) |
+| `GET /admin-products` | 🛡 | — | `{success, products}` (every status) |
+| `POST /new` | 🛡 | multipart: name, price, stock, category, photo, plus the optional catalogue fields below | 201 `{success, message, product}`. 409 on duplicate `sku`/`slug`, 400 on invalid fields |
+| `PUT /{id}` | 🛡 | multipart: any of name, price, stock, category, photo and the optional catalogue fields. Omitted or blank means keep the current value | `{success, message, product}` |
 | `DELETE /{id}` | 🛡 | — | `{success, message}` |
 
-`product = {_id, name, photo, price, stock, category, createdAt}`
+`product = {_id, name, photo, price, stock, category, createdAt, slug, sku, description, brand, mrp, taxRate, hsn, status, tags, images, categoryId}`.
+The new fields are optional (null or empty for older products; `status` defaults to `ACTIVE`).
+
+Optional catalogue fields on `POST /new` and `PUT /{id}`:
+`slug` (≤80, generated from the name if absent, made unique with `-2`, `-3`…; an explicit duplicate is 409),
+`sku` (≤60, unique, blank means none), `description` (≤5000), `brand` (≤60), `mrp` (0–10,000,000 and not below `price`),
+`taxRate` (0–100), `hsn` (4–8 digits), `status` (`DRAFT|ACTIVE|ARCHIVED`, case-insensitive),
+`tags` (comma separated, lower-cased and de-duplicated, ≤20 of ≤30 characters), `categoryId` (must exist),
+`images` (repeatable file part, ≤5; sending any replaces the whole gallery).
+`DRAFT` and `ARCHIVED` products are left out of `/latest`, `/all`, `/categories` and cannot be bought (checkout treats them as missing).
+
+### Category — `/category`
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /` | 🔓 | — | `{success, categories}` |
+| `POST /new` | 🛡 | multipart: name, parentId?, image? | 201 `{success, message, category}`. 400 if `parentId` doesn't exist |
+| `PUT /{id}` | 🛡 | multipart: any of name, parentId, image | `{success, message, category}`. 400 if the new parent would create a cycle (including itself) |
+| `DELETE /{id}` | 🛡 | — | `{success, message}`. 409 if it has sub-categories or products |
+
+`category = {_id, name, slug, parentId, image, createdAt}`. The slug is generated from the name when created and never changes.
 
 ### Order — `/order`
 | Method & path | Auth | Request | Response |

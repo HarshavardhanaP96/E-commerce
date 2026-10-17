@@ -5,6 +5,8 @@
 - [ ] FR2: Forgot password is two steps. A request emails a single-use token that expires after 15 minutes. Reset takes token + new password.
 - [ ] FR3: Product catalogue: latest 5, distinct categories, search (name, max price, category, sort, page), and details.
 - [ ] FR4: Admin product CRUD with an image upload (jpeg, png, webp or gif; max 5 MB).
+- [ ] FR4a: Products carry optional catalogue fields (slug, sku, description, brand, mrp, tax rate, HSN, status, tags, gallery images, category link). Older products without them keep working. Draft and archived products are hidden from the storefront and can't be bought.
+- [ ] FR4b: Admin category CRUD with parent/child nesting. A category with sub-categories or products can't be deleted, and a parent can't create a cycle.
 - [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax (18%) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
 - [ ] FR7: Admin coupon CRUD. Anyone can validate a coupon code.
