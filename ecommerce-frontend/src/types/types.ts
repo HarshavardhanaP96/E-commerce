@@ -20,6 +20,14 @@ export type Product = {
   category: string;
   photo: string;
   createdAt?: string;
+  slug?: string;
+  sku?: string;
+  description?: string;
+  brand?: string;
+  mrp?: number;
+  status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
+  tags?: string[];
+  images?: string[];
 };
 
 export type ShippingInfo = {

@@ -22,7 +22,9 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
     return () => URL.revokeObjectURL(url);
   }, [values.photo]);
 
-  const set = (field: keyof ProductFormValues) => (e: ChangeEvent<HTMLInputElement>) =>
+  const set =
+    (field: keyof ProductFormValues) =>
+    (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     onChange({ ...values, [field]: e.target.value });
 
   const onPhoto = (e: ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +67,34 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
         <label>
           Stock
           <input type="number" min={0} step={1} value={values.stock} onChange={set("stock")} required={!currentPhoto} />
+        </label>
+        <label>
+          SKU
+          <input value={values.sku} onChange={set("sku")} maxLength={60} />
+        </label>
+        <label>
+          Brand
+          <input value={values.brand} onChange={set("brand")} maxLength={60} />
+        </label>
+        <label>
+          MRP (₹)
+          <input type="number" min={0} step="0.01" value={values.mrp} onChange={set("mrp")} />
+        </label>
+        <label>
+          Status
+          <select value={values.status} onChange={set("status")}>
+            <option value="ACTIVE">Active</option>
+            <option value="DRAFT">Draft (hidden)</option>
+            <option value="ARCHIVED">Archived (hidden)</option>
+          </select>
+        </label>
+        <label className="span-2">
+          Tags (comma separated)
+          <input value={values.tags} onChange={set("tags")} placeholder="e.g. summer, sale" />
+        </label>
+        <label className="span-2">
+          Description
+          <textarea value={values.description} onChange={set("description")} rows={3} maxLength={5000} />
         </label>
         <label className="span-2">
           Photo (JPEG, PNG, WEBP or GIF, max 5 MB)

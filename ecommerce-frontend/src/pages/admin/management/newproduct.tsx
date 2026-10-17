@@ -3,15 +3,13 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import ProductForm from "../../../components/admin/ProductForm";
-import { ProductFormValues, toFormData } from "../../../components/admin/productFormData";
+import { ProductFormValues, emptyProductForm, toFormData } from "../../../components/admin/productFormData";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import { useNewProductMutation } from "../../../redux/api/productAPI";
 
-const empty: ProductFormValues = { name: "", price: "", stock: "", category: "", photo: undefined };
-
 const NewProduct = () => {
   const navigate = useNavigate();
-  const [values, setValues] = useState<ProductFormValues>(empty);
+  const [values, setValues] = useState<ProductFormValues>(emptyProductForm);
   const [newProduct, { isLoading }] = useNewProductMutation();
 
   const submit = async (e?: FormEvent) => {

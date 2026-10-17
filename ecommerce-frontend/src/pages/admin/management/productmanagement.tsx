@@ -4,7 +4,7 @@ import { LuTrash2 } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import ProductForm from "../../../components/admin/ProductForm";
-import { ProductFormValues, toFormData } from "../../../components/admin/productFormData";
+import { ProductFormValues, emptyProductForm, toFormData } from "../../../components/admin/productFormData";
 import Loader from "../../../components/admin/Loader";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import {
@@ -19,16 +19,23 @@ const ProductManagement = () => {
   const { data, isLoading, isError } = useProductDetailsQuery(id);
   const [updateProduct, { isLoading: saving }] = useUpdateProductMutation();
   const [deleteProduct, { isLoading: deleting }] = useDeleteProductMutation();
-  const [values, setValues] = useState<ProductFormValues>({ name: "", price: "", stock: "", category: "" });
+  const [values, setValues] = useState<ProductFormValues>(emptyProductForm);
 
   const product = data?.product;
   useEffect(() => {
     if (product) {
       setValues({
+        ...emptyProductForm,
         name: product.name,
         price: String(product.price),
         stock: String(product.stock),
         category: product.category,
+        sku: product.sku ?? "",
+        brand: product.brand ?? "",
+        description: product.description ?? "",
+        mrp: product.mrp != null ? String(product.mrp) : "",
+        status: product.status ?? "ACTIVE",
+        tags: (product.tags ?? []).join(", "),
       });
     }
   }, [product]);
