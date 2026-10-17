@@ -15,10 +15,17 @@ record UserView(
         String gender,
         LocalDate dob,
         int age,
-        Instant createdAt) {
+        Instant createdAt,
+        String phone,
+        String locale,
+        boolean emailVerified,
+        String status,
+        Instant lastLoginAt) {
 
     static UserView from(User u) {
         return new UserView(u.id(), u.name(), u.email(), u.photo(), u.role().wireValue(),
-                u.gender() == null ? null : u.gender().wireValue(), u.dob(), u.age(LocalDate.now()), u.createdAt());
+                u.gender() == null ? null : u.gender().wireValue(), u.dob(), u.age(LocalDate.now()), u.createdAt(),
+                u.details().phone(), u.details().locale(), u.details().emailVerified(),
+                u.details().status().name(), u.details().lastLoginAt());
     }
 }
