@@ -38,4 +38,49 @@ class PriceCalculatorTest {
         Quote q = PriceCalculator.quote(List.of(new OrderItem("p1", "A", "", 0.1, 3), new OrderItem("p2", "B", "", 0.2, 1)), 0);
         assertThat(q.subtotal()).isEqualTo(0.5);
     }
+
+    private static OrderItem item(double price, int qty, Double taxRate) {
+        return new OrderItem("p", "Item", "", price, qty, null, taxRate);
+    }
+
+    /** The calculation as it was before per-product rates, used as the oracle for the parity test. */
+    private static double legacyTax(double subtotalRupees) {
+        long subtotalPaise = Math.round(subtotalRupees * 100);
+        return (Math.round(subtotalPaise * 0.18 / 100.0) * 100) / 100.0;
+    }
+
+    @Test
+    void defaultRateCartsPriceExactlyAsBefore() {
+        for (long rupees = 1; rupees <= 5000; rupees += 7) {
+            double price = rupees + 0.35;
+            Quote q = PriceCalculator.quote(List.of(item(price, 1, null)), 0);
+            assertThat(q.tax()).as("subtotal %s", price).isEqualTo(legacyTax(price));
+            Quote explicit = PriceCalculator.quote(List.of(item(price, 1, 18.0)), 0);
+            assertThat(explicit.tax()).isEqualTo(q.tax());
+        }
+    }
+
+    @Test
+    void mixedRatesAreTaxedPerRateGroup() {
+        // 1000 at 5% -> 50, 500 at 18% -> 90
+        Quote q = PriceCalculator.quote(List.of(item(1000, 1, 5.0), item(250, 2, null)), 0);
+        assertThat(q.subtotal()).isEqualTo(1500.0);
+        assertThat(q.tax()).isEqualTo(140.0);
+        assertThat(q.shippingCharges()).isZero();
+        assertThat(q.total()).isEqualTo(1640.0);
+    }
+
+    @Test
+    void itemsWithTheSameRateAreGroupedBeforeRounding() {
+        // 2 x 0.5 at 18% is 0.18 -> rounds to 0 once for the group, not twice.
+        Quote q = PriceCalculator.quote(List.of(item(0.5, 1, null), item(0.5, 1, 18.0)), 0);
+        assertThat(q.tax()).isEqualTo(0.0);
+    }
+
+    @Test
+    void zeroRateMeansNoTax() {
+        Quote q = PriceCalculator.quote(List.of(item(1200, 1, 0.0)), 0);
+        assertThat(q.tax()).isZero();
+        assertThat(q.total()).isEqualTo(1200.0);
+    }
 }
