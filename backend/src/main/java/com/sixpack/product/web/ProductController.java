@@ -6,6 +6,7 @@ import com.sixpack.product.domain.Product;
 import com.sixpack.shared.PageResult;
 import com.sixpack.shared.web.ApiResponse;
 import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -20,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -80,8 +82,10 @@ class ProductController {
             @RequestParam @Positive @DecimalMax("10000000") Double price,
             @RequestParam @PositiveOrZero @Max(1_000_000) Integer stock,
             @RequestParam @NotBlank @Size(max = 50) String category,
-            @RequestPart("photo") MultipartFile photo) {
-        Product created = service.create(new ProductCommand(name, price, stock, category, Uploads.bytes(photo)));
+            @RequestPart("photo") MultipartFile photo,
+            @Valid @ModelAttribute ProductDetailsForm details) {
+        Product created = service.create(new ProductCommand(name, price, stock, category, Uploads.bytes(photo),
+                details.toCommand()));
         return ApiResponse.of("message", "Product created successfully", "product", ProductView.from(created));
     }
 
@@ -92,8 +96,10 @@ class ProductController {
             @RequestParam(required = false) @Positive @DecimalMax("10000000") Double price,
             @RequestParam(required = false) @PositiveOrZero @Max(1_000_000) Integer stock,
             @RequestParam(required = false) @Size(max = 50) String category,
-            @RequestPart(value = "photo", required = false) MultipartFile photo) {
-        Product updated = service.update(id, new ProductCommand(name, price, stock, category, Uploads.bytes(photo)));
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @Valid @ModelAttribute ProductDetailsForm details) {
+        Product updated = service.update(id, new ProductCommand(name, price, stock, category, Uploads.bytes(photo),
+                details.toCommand()));
         return ApiResponse.of("message", "Product updated successfully", "product", ProductView.from(updated));
     }
 

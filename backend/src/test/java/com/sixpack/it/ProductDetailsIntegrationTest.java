@@ -1,6 +1,9 @@
 package com.sixpack.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.sixpack.product.domain.Product;
 import com.sixpack.product.domain.ProductDetails;
@@ -11,6 +14,9 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.ResultActions;
 
 class ProductDetailsIntegrationTest extends IntegrationTest {
 
@@ -43,5 +49,99 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
 
         assertThat(p.details()).isEqualTo(ProductDetails.EMPTY);
         assertThat(p.details().status()).isEqualTo(ProductStatus.ACTIVE);
+    }
+
+    private ResultActions create(String admin, String name, String... extra) throws Exception {
+        var req = multipart("/api/v1/product/new")
+                .file(new MockMultipartFile("photo", "p.png", "image/png", com.sixpack.storage.TestImages.png()))
+                .param("name", name).param("price", "100").param("stock", "5").param("category", "misc")
+                .header("Authorization", bearer(admin));
+        for (int i = 0; i < extra.length; i += 2) {
+            req.param(extra[i], extra[i + 1]);
+        }
+        return mvc.perform(req);
+    }
+
+    @Test
+    void createStoresDetailsAndGeneratesSlug() throws Exception {
+        create(adminToken(), "Running Shoe", "sku", "RS-1", "brand", "Acme", "description", "Light shoe",
+                "mrp", "150", "taxRate", "18", "hsn", "6403", "status", "draft", "tags", " Run ,SPORT,run")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.product.slug").value("running-shoe"))
+                .andExpect(jsonPath("$.product.sku").value("RS-1"))
+                .andExpect(jsonPath("$.product.brand").value("Acme"))
+                .andExpect(jsonPath("$.product.mrp").value(150.0))
+                .andExpect(jsonPath("$.product.taxRate").value(18.0))
+                .andExpect(jsonPath("$.product.hsn").value("6403"))
+                .andExpect(jsonPath("$.product.status").value("DRAFT"))
+                .andExpect(jsonPath("$.product.tags.length()").value(2))
+                .andExpect(jsonPath("$.product.tags[0]").value("run"))
+                .andExpect(jsonPath("$.product.tags[1]").value("sport"));
+    }
+
+    @Test
+    void sameNameGetsSuffixedSlug() throws Exception {
+        String admin = adminToken();
+        create(admin, "Running Shoe").andExpect(jsonPath("$.product.slug").value("running-shoe"));
+        create(admin, "Running Shoe").andExpect(jsonPath("$.product.slug").value("running-shoe-2"));
+    }
+
+    @Test
+    void blankSkuNeverCollides() throws Exception {
+        String admin = adminToken();
+        create(admin, "A", "sku", "  ").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.product.sku").doesNotExist());
+        create(admin, "B", "sku", "").andExpect(status().isCreated());
+        create(admin, "C").andExpect(status().isCreated());
+    }
+
+    @Test
+    void duplicateSkuIsConflict() throws Exception {
+        String admin = adminToken();
+        create(admin, "A", "sku", "S-1").andExpect(status().isCreated());
+        create(admin, "B", "sku", "S-1").andExpect(status().isConflict());
+    }
+
+    @Test
+    void invalidDetailsAreBadRequestNotServerError() throws Exception {
+        String admin = adminToken();
+        create(admin, "A", "mrp", "50").andExpect(status().isBadRequest()); // price is 100
+        create(admin, "A", "status", "bogus").andExpect(status().isBadRequest());
+        create(admin, "A", "taxRate", "101").andExpect(status().isBadRequest());
+        create(admin, "A", "hsn", "12").andExpect(status().isBadRequest());
+        create(admin, "A", "categoryId", "64b7f0000000000000000000").andExpect(status().isBadRequest());
+        String manyTags = String.join(",", java.util.stream.IntStream.rangeClosed(1, 21)
+                .mapToObj(i -> "t" + i).toList());
+        create(admin, "A", "tags", manyTags).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateChangesOnlyWhatIsSent() throws Exception {
+        String admin = adminToken();
+        String id = body(create(admin, "Shoe", "brand", "Acme", "sku", "S-9").andReturn())
+                .get("product").get("_id").asText();
+
+        mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id).param("description", "New text")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.description").value("New text"))
+                .andExpect(jsonPath("$.product.brand").value("Acme"))
+                .andExpect(jsonPath("$.product.sku").value("S-9"))
+                .andExpect(jsonPath("$.product.slug").value("shoe"));
+    }
+
+    @Test
+    void legacyProductCanBeEditedAndGainsASlug() throws Exception {
+        ObjectId id = new ObjectId();
+        mongo.getCollection("products").insertOne(new Document("_id", id).append("name", "Old Lamp")
+                .append("photo", "uploads/o.png").append("price", 10.0).append("stock", 2)
+                .append("category", "misc"));
+
+        mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id.toHexString()).param("stock", "7")
+                        .header("Authorization", bearer(adminToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.stock").value(7))
+                .andExpect(jsonPath("$.product.slug").value("old-lamp"))
+                .andExpect(jsonPath("$.product.status").value("ACTIVE"));
     }
 }

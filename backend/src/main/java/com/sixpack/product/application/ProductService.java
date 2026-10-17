@@ -9,6 +9,14 @@ import com.sixpack.product.ProductChangedEvent;
 import com.sixpack.product.domain.Product;
 import com.sixpack.product.domain.ProductRepository;
 import com.sixpack.product.domain.ProductSearch;
+import com.sixpack.product.domain.CategoryRepository;
+import com.sixpack.product.domain.ProductDetails;
+import com.sixpack.product.domain.ProductStatus;
+import com.sixpack.product.domain.Slugs;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
 import com.sixpack.storage.FileStorage;
@@ -21,20 +29,39 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProductService {
 
-    public record ProductCommand(String name, Double price, Integer stock, String category, byte[] photo) {
+    public record DetailsCommand(String slug, String sku, String description, String brand, Double mrp,
+                                 Double taxRate, String hsn, String status, List<String> tags, String categoryId) {
+        public static final DetailsCommand NONE =
+                new DetailsCommand(null, null, null, null, null, null, null, null, null, null);
     }
+
+    public record ProductCommand(String name, Double price, Integer stock, String category, byte[] photo,
+                                 DetailsCommand details) {
+        public ProductCommand {
+            details = details == null ? DetailsCommand.NONE : details;
+        }
+
+        public ProductCommand(String name, Double price, Integer stock, String category, byte[] photo) {
+            this(name, price, stock, category, photo, DetailsCommand.NONE);
+        }
+    }
+
+    private static final int MAX_TAGS = 20;
+    private static final int MAX_TAG_LENGTH = 30;
 
     private final ProductRepository products;
     private final FileStorage storage;
     private final ApplicationEventPublisher events;
     private final ProductProperties props;
+    private final CategoryRepository categories;
 
     ProductService(ProductRepository products, FileStorage storage, ApplicationEventPublisher events,
-                   ProductProperties props) {
+                   ProductProperties props, CategoryRepository categories) {
         this.products = products;
         this.storage = storage;
         this.events = events;
         this.props = props;
+        this.categories = categories;
     }
 
     @Cacheable(PRODUCTS_LATEST)
@@ -70,8 +97,10 @@ public class ProductService {
         }
         String photo = storage.storeImage(cmd.photo());
         try {
-            Product saved = products.save(new Product(null, cmd.name().trim(), photo, cmd.price(), cmd.stock(),
-                    Product.normalizeCategory(cmd.category()), null));
+            String name = cmd.name().trim();
+            Product saved = products.save(new Product(null, name, photo, cmd.price(), cmd.stock(),
+                    Product.normalizeCategory(cmd.category()), null,
+                    merge(null, name, ProductDetails.EMPTY, cmd.details(), cmd.price())));
             events.publishEvent(new ProductChangedEvent());
             return saved;
         } catch (RuntimeException e) {
@@ -83,18 +112,18 @@ public class ProductService {
     @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
     public Product update(String id, ProductCommand cmd) {
         Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
+        String name = cmd.name() != null && !cmd.name().isBlank() ? cmd.name().trim() : current.name();
+        double price = cmd.price() != null ? cmd.price() : current.price();
+        ProductDetails details = merge(id, name, current.details(), cmd.details(), price);
         String photo = current.photo();
         if (cmd.photo() != null) {
             photo = storage.storeImage(cmd.photo());
         }
-        Product saved = products.save(new Product(id,
-                cmd.name() != null && !cmd.name().isBlank() ? cmd.name().trim() : current.name(),
-                photo,
-                cmd.price() != null ? cmd.price() : current.price(),
+        Product saved = products.save(new Product(id, name, photo, price,
                 cmd.stock() != null ? cmd.stock() : current.stock(),
                 cmd.category() != null && !cmd.category().isBlank()
                         ? Product.normalizeCategory(cmd.category()) : current.category(),
-                current.createdAt()));
+                current.createdAt(), details));
         if (!photo.equals(current.photo())) {
             storage.delete(current.photo());
         }
@@ -112,6 +141,75 @@ public class ProductService {
 
     public int pageSize() {
         return props.pageSize();
+    }
+
+    private ProductDetails merge(String selfId, String name, ProductDetails cur, DetailsCommand c, double price) {
+        String sku = pick(c.sku(), cur.sku());
+        if (sku != null && !sku.equals(cur.sku()) && takenBySomeoneElse(products.findBySku(sku), selfId)) {
+            throw ApiException.conflict("sku: already in use");
+        }
+
+        String slug;
+        if (hasText(c.slug())) {
+            slug = Slugs.of(c.slug());
+            if (!slug.equals(cur.slug()) && takenBySomeoneElse(products.findBySlug(slug), selfId)) {
+                throw ApiException.conflict("slug: already in use");
+            }
+        } else if (cur.slug() != null) {
+            slug = cur.slug();
+        } else {
+            slug = freeSlug(Slugs.of(name), selfId);
+        }
+
+        Double mrp = c.mrp() != null ? c.mrp() : cur.mrp();
+        if (mrp != null && mrp < price) {
+            throw ApiException.badRequest("mrp: must not be less than price");
+        }
+
+        String categoryId = pick(c.categoryId(), cur.categoryId());
+        if (categoryId != null && !categoryId.equals(cur.categoryId()) && categories.findById(categoryId).isEmpty()) {
+            throw ApiException.badRequest("categoryId: category not found");
+        }
+
+        return new ProductDetails(slug, sku, pick(c.description(), cur.description()), pick(c.brand(), cur.brand()),
+                mrp, c.taxRate() != null ? c.taxRate() : cur.taxRate(), pick(c.hsn(), cur.hsn()),
+                hasText(c.status()) ? ProductStatus.parse(c.status()) : cur.status(),
+                c.tags() != null && !c.tags().isEmpty() ? normalizeTags(c.tags()) : cur.tags(),
+                cur.images(), categoryId);
+    }
+
+    private String freeSlug(String base, String selfId) {
+        String candidate = base;
+        for (int n = 2; takenBySomeoneElse(products.findBySlug(candidate), selfId); n++) {
+            candidate = base + "-" + n;
+        }
+        return candidate;
+    }
+
+    private static boolean takenBySomeoneElse(Optional<Product> found, String selfId) {
+        return found.filter(p -> !Objects.equals(p.id(), selfId)).isPresent();
+    }
+
+    private static List<String> normalizeTags(List<String> raw) {
+        var tags = new LinkedHashSet<String>();
+        for (String t : raw) {
+            if (t != null && !t.isBlank()) {
+                tags.add(t.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        if (tags.size() > MAX_TAGS || tags.stream().anyMatch(t -> t.length() > MAX_TAG_LENGTH)) {
+            throw ApiException.badRequest("tags: at most " + MAX_TAGS + " tags of " + MAX_TAG_LENGTH + " characters");
+        }
+        return List.copyOf(tags);
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    /** New value when provided (trimmed), otherwise the current one. Blank counts as not provided. */
+    private static String pick(String proposed, String current) {
+        return hasText(proposed) ? proposed.trim() : current;
     }
 
     private static String blankToNull(String s) {

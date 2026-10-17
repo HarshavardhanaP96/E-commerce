@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
@@ -71,7 +70,6 @@ class CategoryIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    @Disabled("enabled in Task 4, once products accept categoryId")
     void cannotDeleteCategoryUsedByProducts() throws Exception {
         String admin = adminToken();
         String category = createCategory(admin, "Used", null);
