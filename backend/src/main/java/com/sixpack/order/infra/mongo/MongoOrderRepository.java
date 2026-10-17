@@ -101,7 +101,11 @@ class MongoOrderRepository implements OrderRepository {
     @Override
     public void anonymiseShippingForUser(String userId) {
         mongo.updateMulti(Query.query(Criteria.where("user").is(userId)),
-                new Update().unset("shippingInfo.address").unset("shippingInfo.pinCode"), OrderDocument.class);
+                new Update()
+                        .unset("shippingInfo.address").unset("shippingInfo.pinCode")
+                        .unset("shippingInfo.name").unset("shippingInfo.phone")
+                        .unset("billingInfo").unset("customer").unset("notes"),
+                OrderDocument.class);
     }
 
     private List<Order> find(Query query) {

@@ -17,6 +17,10 @@ public interface OrderRepository {
 
     boolean hasOpenOrders(String userId);
 
-    /** Removes the street address and PIN code from the user's orders; amounts and state stay for tax records. */
+    /**
+     * Removes everything that identifies the person (street address, PIN code, recipient name and phone, billing
+     * address, contact snapshot, notes) from the user's orders; amounts, items, order number, history and payment
+     * status stay for tax records.
+     */
     void anonymiseShippingForUser(String userId);
 }
