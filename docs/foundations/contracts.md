@@ -79,12 +79,17 @@ Optional catalogue fields on `POST /new` and `PUT /{id}`:
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
 | `POST /checkout` | 👤 | `{items:[{productId, quantity}], coupon?}` | 201 `{success, checkout:{providerOrderId, provider, key, amount (paise), currency, subtotal, tax, shippingCharges, discount, total}}`. 403 if the user hasn't accepted the current Terms (checked before any money moves) |
-| `POST /new` | 👤 | `{providerOrderId, paymentId, signature, shippingInfo}` | 201 `{success, message, orderId}` |
+| `POST /new` | 👤 | `{providerOrderId, paymentId, signature, shippingInfo:{address, city, state, country, pinCode, name?, phone?}, billingInfo?:{same shape}, notes?}` (`phone` is 10–13 digits with an optional `+`; `notes` ≤ 500) | 201 `{success, message, orderId}`. 400 on invalid input, and the payment intent is **not** consumed, so the customer can fix it and retry |
 | `GET /my` | 👤 | — | `{success, orders}` (own orders only) |
 | `GET /all` | 🛡 | `?status=` | `{success, orders}` (`user` is `{_id, name}`) |
 | `GET /{id}` | 👤 owner or 🛡 | — | `{success, order}` |
-| `PUT /{id}` | 🛡 | — | `{success, message}` (advances status) |
+| `PUT /{id}` | 🛡 | — | `{success, message, status}` (advances the status and records the acting admin and time in `statusHistory`; a Delivered order is left alone, with no new entry) |
 | `DELETE /{id}` | 🛡 | — | `{success, message}` |
+
+`order = {_id, orderNumber?, user:{_id,name}, shippingInfo, billingInfo?, customer?:{name,email,phone}, orderItems:[{productId,name,photo,price,quantity,sku?,taxRate?}], subtotal, tax, shippingCharges, discount, total, status, statusHistory:[{status,at,actor}], couponCode?, notes?, payment?:{provider,status,amount,currency,paidAt}, createdAt}`.
+`orderNumber` looks like `ORD-20261017-K7M3QX`. Provider order and payment ids are never returned. Orders placed before these fields existed omit them (`statusHistory` is `[]`). `customer` is a snapshot of the buyer's name, email and phone at purchase time.
+
+Pricing: tax is computed per product `taxRate` (default 18%), rounded to whole rupees per rate group. A cart where every item uses the default 18% is taxed exactly as before.
 
 ### Payment / coupons — `/payment`
 | Method & path | Auth | Request | Response |

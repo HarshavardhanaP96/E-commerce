@@ -87,6 +87,16 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-17: ADR-017 **Order and payment fields in an additive nested `OrderDetails`; tax per product rate;
+  new personal data erased with the account.** Same pattern as ADR-015/016: old orders load with defaults, so no
+  migration. Choices: `PaymentInfo.method` and `failureReason` are deferred, because nothing can fill them without
+  a gateway "fetch payment" call or webhooks (the refund/settlement work); items store the tax **rate**, not an
+  amount, because per-line amounts would disagree with the order total, which rounds to whole rupees per rate
+  group (a test proves default-18% carts price exactly as before); no retry on a duplicate order number (about
+  one in 887 million per day, and the existing rollback releases stock and re-opens the intent); the buyer's
+  contact is snapshotted at confirm and, with the billing address, recipient name/phone and notes, removed by
+  `OrderAccountPolicy` on `UserDeletedEvent` while amounts, order number and history stay for tax. Rejected: a
+  per-line tax amount and a separate invoice collection (premature until invoices exist). Still active.
 - 2026-10-17: ADR-016 **User profile fields in an additive nested `UserDetails`; addresses embedded in the user
   document; targeted `$set` updates.** Same pattern as ADR-015: old documents load with defaults, so there is no
   migration. Addresses are embedded (max 10, always read with the user) and their rules (limit, one default,

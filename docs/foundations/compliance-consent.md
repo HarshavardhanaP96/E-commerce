@@ -79,7 +79,7 @@ The app sets **no cookies today**. It uses `localStorage`, which ePrivacy and DP
 | Key / cookie | Set by | Where | Purpose | Category | Lifetime | Consent needed? |
 |---|---|---|---|---|---|---|
 | `token` | us | localStorage (`redux/reducer/userReducer.ts`) | JWT session (24 h expiry, ADR-006) | Strictly necessary | Until logout or expiry | No, list it in P6 |
-| `cart` | us | localStorage (`redux/reducer/cartReducer.ts`) | Cart items, coupon, shipping info | Strictly necessary (the user asked for it) | Until checkout or cleared | No, list it in P6 |
+| `cart` | us | localStorage (`redux/reducer/cartReducer.ts`) | Cart items, coupon, shipping info (address, recipient name and phone) | Strictly necessary (the user asked for it) | Until checkout or cleared | No, list it in P6 |
 | `consent` (new) | us | localStorage + server (§6) | Remembers the cookie-banner choice | Strictly necessary | 6 months, then re-prompt | No |
 | Razorpay cookies | checkout.razorpay.com | 3rd-party, only on the payment step | Payment processing, fraud checks | Strictly necessary | Set by Razorpay | No, disclose in P6 |
 | Google Fonts request | fonts.googleapis.com (`index.html`) | 3rd-party request, sends the visitor's IP to Google | Font delivery | Not necessary | n/a | 🟡 Under GDPR this needs consent. **Recommended: self-host the fonts** so the issue goes away. |
@@ -158,6 +158,7 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 
 | Data | Keep for | Then |
 |---|---|---|
+| Order contact snapshot, billing address, recipient name/phone, delivery notes | Until the account is deleted, then erased from its orders by `OrderAccountPolicy`. Orders keep amounts, order number and status history for tax. | Erased with the account |
 | Phone, locale, saved addresses, last-login time | Same as the account profile. They are stored on the user record, erased with it (`DELETE /user/me`), included in the data export, and never used for marketing. | Deleted with the account |
 | Account profile | While the account is active. 🟢 Delete after 3 years of inactivity, with a 48 h warning email (mirrors DPDP Rules for large platforms). | Delete or anonymise |
 | Orders, payment ids | ~8 years (tax / accounting) | Anonymise the user link |

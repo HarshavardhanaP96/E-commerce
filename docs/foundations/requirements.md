@@ -7,8 +7,9 @@
 - [ ] FR4: Admin product CRUD with an image upload (jpeg, png, webp or gif; max 5 MB).
 - [ ] FR4a: Products carry optional catalogue fields (slug, sku, description, brand, mrp, tax rate, HSN, status, tags, gallery images, category link). Older products without them keep working. Draft and archived products are hidden from the storefront and can't be bought.
 - [ ] FR4b: Admin category CRUD with parent/child nesting. A category with sub-categories or products can't be deleted, and a parent can't create a cycle.
-- [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax (18%) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
+- [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax at each product's rate (18% by default) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
+- [ ] FR6a: Orders carry an order number (`ORD-YYYYMMDD-XXXXXX`), the recipient's name and phone, an optional billing address, delivery notes, and a status history that records who moved the order and when.
 - [ ] FR7: Admin coupon CRUD. Anyone can validate a coupon code.
 - [ ] FR8: Admin customer list, details, role change, and delete. An admin cannot delete themselves.
 - [ ] FR8a: Customers can edit name, phone and locale. Admins can suspend and reactivate accounts (never their own). A suspended user can't log in or load `/me`.
