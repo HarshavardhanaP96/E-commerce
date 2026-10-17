@@ -105,7 +105,7 @@ public class CheckoutService {
         }
         ProviderOrder providerOrder = gateway.createOrder(quote.totalPaise(), "rcpt_" + System.currentTimeMillis());
         intents.save(new PaymentIntent(null, userId, gateway.provider(), providerOrder.id(), items,
-                normalizedCoupon, quote));
+                normalizedCoupon, quote, providerOrder.currency()));
         return new CheckoutResult(gateway.provider(), gateway.publicKey(), providerOrder.id(),
                 providerOrder.amountPaise(), providerOrder.currency(), quote);
     }

@@ -29,6 +29,13 @@ class OrderDocument {
     List<OrderItemDoc> orderItems;
     PaymentDoc payment;
     String termsVersion;
+    @Indexed(unique = true, sparse = true)
+    String orderNumber;
+    ShippingInfoDoc billingInfo;
+    CustomerDoc customer;
+    List<StatusEntryDoc> statusHistory;
+    String couponCode;
+    String notes;
     @CreatedDate
     @Indexed
     Instant createdAt;
@@ -41,6 +48,8 @@ class OrderDocument {
         String state;
         String country;
         Long pinCode;
+        String name;
+        String phone;
     }
 
     static class OrderItemDoc {
@@ -50,11 +59,29 @@ class OrderDocument {
         Integer quantity;
         @Field(targetType = FieldType.OBJECT_ID)
         String productId;
+        String sku;
+        Double taxRate;
     }
 
     static class PaymentDoc {
         String provider;
         String orderId;
         String paymentId;
+        String status;
+        Double amount;
+        String currency;
+        Instant paidAt;
+    }
+
+    static class CustomerDoc {
+        String name;
+        String email;
+        String phone;
+    }
+
+    static class StatusEntryDoc {
+        String status;
+        Instant at;
+        String actor;
     }
 }

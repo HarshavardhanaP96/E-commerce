@@ -21,6 +21,7 @@ class PaymentIntentDocument {
     String providerOrderId;
     List<OrderDocument.OrderItemDoc> items;
     String coupon;
+    String currency;
     Double subtotal;
     Double tax;
     Double shippingCharges;
