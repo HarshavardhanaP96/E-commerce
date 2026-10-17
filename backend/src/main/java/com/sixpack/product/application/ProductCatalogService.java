@@ -32,6 +32,7 @@ class ProductCatalogService implements ProductCatalog {
     @Override
     public List<ProductSnapshot> findSnapshots(Collection<String> productIds) {
         return products.findAllById(productIds).stream()
+                .filter(p -> p.details().status().isPublic())
                 .map(p -> new ProductSnapshot(p.id(), p.name(), p.photo(), p.price(), p.stock()))
                 .toList();
     }

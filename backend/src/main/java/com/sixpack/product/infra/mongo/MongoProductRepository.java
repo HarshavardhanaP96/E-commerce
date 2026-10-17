@@ -40,7 +40,7 @@ class MongoProductRepository implements ProductRepository {
 
     @Override
     public List<Product> findLatest(int limit) {
-        return find(new Query().with(NEWEST_FIRST).limit(limit));
+        return find(new Query(publicOnly()).with(NEWEST_FIRST).limit(limit));
     }
 
     @Override
@@ -50,13 +50,13 @@ class MongoProductRepository implements ProductRepository {
 
     @Override
     public List<String> distinctCategories() {
-        return mongo.findDistinct(new Query(), "category", ProductDocument.class, String.class).stream()
+        return mongo.findDistinct(new Query(publicOnly()), "category", ProductDocument.class, String.class).stream()
                 .filter(c -> c != null && !c.isBlank()).sorted().toList();
     }
 
     @Override
     public PageResult<Product> search(ProductSearch s) {
-        Query query = new Query();
+        Query query = new Query(publicOnly());
         if (s.search() != null) {
             String literal = s.search().length() > 100 ? s.search().substring(0, 100) : s.search();
             query.addCriteria(Criteria.where("name")
@@ -137,6 +137,11 @@ class MongoProductRepository implements ProductRepository {
     public void incrementStock(String id, int quantity) {
         mongo.updateFirst(Query.query(Criteria.where("id").is(id)),
                 new Update().inc("stock", quantity).currentDate("updatedAt"), ProductDocument.class);
+    }
+
+    /** Matches ACTIVE products and legacy documents with no status at all. */
+    private static Criteria publicOnly() {
+        return Criteria.where("status").nin(ProductStatus.DRAFT.name(), ProductStatus.ARCHIVED.name());
     }
 
     private List<Product> find(Query query) {

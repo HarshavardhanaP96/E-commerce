@@ -12,12 +12,16 @@ public interface ProductRepository {
 
     List<Product> findAllById(Collection<String> ids);
 
+    /** Public (ACTIVE) products only. */
     List<Product> findLatest(int limit);
 
+    /** Every product regardless of status (admin). */
     List<Product> findAll();
 
+    /** Categories of public (ACTIVE) products only. */
     List<String> distinctCategories();
 
+    /** Public (ACTIVE) products only. */
     PageResult<Product> search(ProductSearch search);
 
     Optional<Product> findBySlug(String slug);

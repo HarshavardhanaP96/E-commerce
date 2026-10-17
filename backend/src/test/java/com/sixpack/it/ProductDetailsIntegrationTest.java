@@ -1,6 +1,7 @@
 package com.sixpack.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -143,5 +144,38 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.product.stock").value(7))
                 .andExpect(jsonPath("$.product.slug").value("old-lamp"))
                 .andExpect(jsonPath("$.product.status").value("ACTIVE"));
+    }
+
+    @Autowired
+    com.sixpack.product.ProductCatalog catalog;
+
+    @Test
+    void draftAndArchivedAreHiddenFromPublicListings() throws Exception {
+        String admin = adminToken();
+        create(admin, "Visible", "status", "active");
+        create(admin, "Hidden Draft", "status", "draft", "category", "secret-draft");
+        create(admin, "Hidden Archived", "status", "archived");
+        mongo.getCollection("products").insertOne(new Document("name", "Legacy").append("photo", "uploads/o.png")
+                .append("price", 10.0).append("stock", 1).append("category", "misc")
+                .append("createdAt", java.time.Instant.now()));
+
+        mvc.perform(get("/api/v1/product/all")).andExpect(jsonPath("$.total").value(2));
+        mvc.perform(get("/api/v1/product/latest")).andExpect(jsonPath("$.products.length()").value(2));
+        mvc.perform(get("/api/v1/product/categories"))
+                .andExpect(jsonPath("$.categories", org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem("secret-draft"))));
+        mvc.perform(get("/api/v1/product/admin-products").header("Authorization", bearer(admin)))
+                .andExpect(jsonPath("$.products.length()").value(4));
+    }
+
+    @Test
+    void nonPublicProductsCannotBePurchased() throws Exception {
+        String admin = adminToken();
+        String draft = body(create(admin, "Draft", "status", "draft").andReturn())
+                .get("product").get("_id").asText();
+        String live = body(create(admin, "Live").andReturn()).get("product").get("_id").asText();
+
+        assertThat(catalog.findSnapshots(List.of(draft, live)))
+                .extracting(com.sixpack.product.ProductSnapshot::id).containsExactly(live);
     }
 }
