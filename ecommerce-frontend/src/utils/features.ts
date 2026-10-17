@@ -20,3 +20,10 @@ export const formatINR = (value: number) =>
 
 export const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+/** The reference customers and admins quote: the order number, or the short id for older orders. */
+export const orderLabel = (o: { _id: string; orderNumber?: string }) =>
+  o.orderNumber ?? o._id.slice(-8).toUpperCase();
+
+export const formatDateTime = (iso?: string) =>
+  iso ? new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—";

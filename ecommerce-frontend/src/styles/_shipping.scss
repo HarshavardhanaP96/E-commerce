@@ -121,3 +121,17 @@
     background: transparent;
   }
 }
+
+.order-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.35rem;
+
+  li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+  }
+}

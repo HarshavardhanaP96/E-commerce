@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import Loader from "../components/loader";
 import StatusBadge from "../components/admin/StatusBadge";
 import { useOrderDetailsQuery } from "../redux/api/orderAPI";
-import { formatDate, formatINR, transformImage } from "../utils/features";
+import { formatDate, formatDateTime, formatINR, orderLabel, transformImage } from "../utils/features";
 
 const OrderDetails = () => {
   const { id = "" } = useParams();
@@ -24,7 +24,7 @@ const OrderDetails = () => {
   return (
     <div className="container order-details">
       <h1>
-        Order {o._id.slice(-8).toUpperCase()} <StatusBadge status={o.status} />
+        Order {orderLabel(o)} <StatusBadge status={o.status} />
       </h1>
       <p>Placed on {formatDate(o.createdAt)}</p>
       <div className="detail-grid">
@@ -34,7 +34,10 @@ const OrderDetails = () => {
             {o.orderItems.map((i) => (
               <li key={i.productId}>
                 <img src={transformImage(i.photo)} alt={i.name} />
-                <span>{i.name}</span>
+                <span>
+                  {i.name}
+                  {i.sku && <small> · SKU {i.sku}</small>}
+                </span>
                 <span>
                   {formatINR(i.price)} × {i.quantity} = <strong>{formatINR(i.price * i.quantity)}</strong>
                 </span>
@@ -44,7 +47,24 @@ const OrderDetails = () => {
         </section>
         <section className="card">
           <h4>Shipping to</h4>
-          {s && <p>{s.address}, {s.city}, {s.state}, {s.country} – {s.pinCode}</p>}
+          {s && (
+            <p>
+              {s.name && <strong>{s.name} · {s.phone}<br /></strong>}
+              {s.address}, {s.city}, {s.state}, {s.country} – {s.pinCode}
+            </p>
+          )}
+          {o.billingInfo && (
+            <>
+              <h4>Billing address</h4>
+              <p>{o.billingInfo.address}, {o.billingInfo.city}, {o.billingInfo.state}, {o.billingInfo.country} – {o.billingInfo.pinCode}</p>
+            </>
+          )}
+          {o.notes && (
+            <>
+              <h4>Delivery notes</h4>
+              <p>{o.notes}</p>
+            </>
+          )}
           <h4>Payment</h4>
           <dl className="facts">
             <dt>Subtotal</dt><dd>{formatINR(o.subtotal)}</dd>
@@ -53,6 +73,25 @@ const OrderDetails = () => {
             <dt>Discount</dt><dd className="red">−{formatINR(o.discount)}</dd>
             <dt><strong>Total</strong></dt><dd><strong>{formatINR(o.total)}</strong></dd>
           </dl>
+          {o.payment?.status && (
+            <p>
+              Payment {o.payment.status.toLowerCase()}
+              {o.payment.paidAt ? ` on ${formatDateTime(o.payment.paidAt)}` : ""}
+              {o.couponCode ? ` · coupon ${o.couponCode}` : ""}
+            </p>
+          )}
+          {o.statusHistory.length > 0 && (
+            <>
+              <h4>Order timeline</h4>
+              <ol className="order-timeline">
+                {o.statusHistory.map((h) => (
+                  <li key={`${h.status}-${h.at}`}>
+                    <strong>{h.status}</strong> <small>{formatDateTime(h.at)}</small>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
         </section>
       </div>
     </div>

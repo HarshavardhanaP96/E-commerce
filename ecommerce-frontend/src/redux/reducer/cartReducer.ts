@@ -31,7 +31,13 @@ const recalculate = (state: CartState) => {
   const subtotal = state.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   state.subtotal = subtotal;
   state.shippingCharges = subtotal === 0 || subtotal > 1000 ? 0 : 200;
-  state.tax = Math.round(subtotal * 0.18);
+  const DEFAULT_TAX_RATE = 18;
+  const taxableByRate = new Map<number, number>();
+  for (const item of state.cartItems) {
+    const rate = item.taxRate ?? DEFAULT_TAX_RATE;
+    taxableByRate.set(rate, (taxableByRate.get(rate) ?? 0) + item.price * item.quantity);
+  }
+  state.tax = [...taxableByRate].reduce((sum, [rate, amount]) => sum + Math.round((amount * rate) / 100), 0);
   const discount = Math.min(state.discount, subtotal);
   state.total = subtotal + state.tax + state.shippingCharges - discount;
 };

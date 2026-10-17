@@ -5,20 +5,30 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { policyPath } from "../legal/policies";
 import { errorMessage } from "../redux/api/baseQuery";
-import { useGetMyAddressesQuery } from "../redux/api/userAPI";
 import { useCheckoutMutation, useConfirmOrderMutation } from "../redux/api/orderAPI";
+import { useGetMyAddressesQuery } from "../redux/api/userAPI";
 import { resetCart, saveShippingInfo } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatINR } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 
+const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
+
 const Shipping = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { cartItems, coupon, shippingInfo: saved } = useSelector((s: RootState) => s.cartReducer);
   const user = useSelector((s: RootState) => s.userReducer.user);
-  const [shippingInfo, setShippingInfo] = useState<ShippingInfo>(saved);
+
+  const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
+    ...saved,
+    name: saved.name ?? user?.name ?? "",
+    phone: saved.phone ?? user?.phone ?? "",
+  });
+  const [sameBilling, setSameBilling] = useState(true);
+  const [billing, setBilling] = useState<ShippingInfo>(emptyAddress);
+  const [notes, setNotes] = useState("");
   const [checkout] = useCheckoutMutation();
   const [confirmOrder] = useConfirmOrderMutation();
   const [busy, setBusy] = useState(false);
@@ -34,6 +44,8 @@ const Shipping = () => {
       state: a.state,
       country: a.country,
       pinCode: a.pinCode,
+      name: a.name,
+      phone: a.phone,
     });
   };
 
@@ -50,6 +62,9 @@ const Shipping = () => {
 
   const changeHandler = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setShippingInfo((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const changeBilling = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setBilling((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const submitHandler = async (e: FormEvent) => {
     e.preventDefault();
@@ -82,7 +97,14 @@ const Shipping = () => {
       }
 
       // 3. Server verifies the payment, reserves stock and creates the order.
-      const res = await confirmOrder({ providerOrderId: c.providerOrderId, paymentId, signature, shippingInfo }).unwrap();
+      const res = await confirmOrder({
+        providerOrderId: c.providerOrderId,
+        paymentId,
+        signature,
+        shippingInfo,
+        billingInfo: sameBilling ? undefined : billing,
+        notes: notes.trim() || undefined,
+      }).unwrap();
       dispatch(resetCart());
       toast.success(res.message);
       navigate(`/order/${res.orderId}`);
@@ -123,6 +145,17 @@ const Shipping = () => {
             </select>
           </label>
         )}
+
+        <label>
+          Recipient name
+          <input type="text" name="name" value={shippingInfo.name ?? ""} onChange={changeHandler}
+                 maxLength={80} required autoComplete="name" />
+        </label>
+        <label>
+          Phone
+          <input type="tel" name="phone" value={shippingInfo.phone ?? ""} onChange={changeHandler} required
+                 pattern="\+?[0-9]{10,13}" title="10-13 digits, optionally starting with +" autoComplete="tel" />
+        </label>
         <label className="span-2">
           Address
           <input type="text" name="address" placeholder="House no., street, area" value={shippingInfo.address}
@@ -150,6 +183,46 @@ const Shipping = () => {
           <input type="text" inputMode="numeric" pattern="\d{4,10}" title="4-10 digits" name="pinCode"
                  value={shippingInfo.pinCode} onChange={changeHandler} required autoComplete="postal-code" />
         </label>
+
+        <label className="span-2 address-book__default">
+          <input type="checkbox" checked={sameBilling} onChange={(e) => setSameBilling(e.target.checked)} />
+          Billing address is the same as the shipping address
+        </label>
+        {!sameBilling && (
+          <>
+            <label className="span-2">
+              Billing address
+              <input type="text" name="address" value={billing.address} onChange={changeBilling}
+                     maxLength={200} required />
+            </label>
+            <label>
+              City
+              <input type="text" name="city" value={billing.city} onChange={changeBilling} maxLength={80} required />
+            </label>
+            <label>
+              State
+              <input type="text" name="state" value={billing.state} onChange={changeBilling} maxLength={80} required />
+            </label>
+            <label>
+              Country
+              <select name="country" required value={billing.country} onChange={changeBilling}>
+                <option value="India">India</option>
+              </select>
+            </label>
+            <label>
+              Pin code
+              <input type="text" inputMode="numeric" pattern="\d{4,10}" title="4-10 digits" name="pinCode"
+                     value={billing.pinCode} onChange={changeBilling} required />
+            </label>
+          </>
+        )}
+
+        <label className="span-2">
+          Delivery notes (optional)
+          <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500}
+                 placeholder="Gate code, preferred time…" />
+        </label>
+
         <button type="submit" className="span-2" disabled={busy}>
           <LuLock /> {busy ? "Processing…" : "Pay & place order"}
         </button>

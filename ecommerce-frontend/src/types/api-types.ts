@@ -43,6 +43,8 @@ export type ConfirmOrderRequest = {
   paymentId: string;
   signature: string;
   shippingInfo: ShippingInfo;
+  billingInfo?: ShippingInfo;
+  notes?: string;
 };
 export type ConfirmOrderResponse = MessageResponse & { orderId: string };
 

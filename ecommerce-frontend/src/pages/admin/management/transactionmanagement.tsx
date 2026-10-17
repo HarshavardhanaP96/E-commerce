@@ -7,7 +7,7 @@ import Loader from "../../../components/admin/Loader";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import { useDeleteOrderMutation, useOrderDetailsQuery, useProcessOrderMutation } from "../../../redux/api/orderAPI";
-import { formatDate, formatINR, transformImage } from "../../../utils/features";
+import { formatDate, formatDateTime, formatINR, orderLabel, transformImage } from "../../../utils/features";
 
 const NEXT_ACTION: Record<string, string> = { Processing: "Mark shipped", Shipped: "Mark delivered" };
 
@@ -46,7 +46,7 @@ const TransactionManagement = () => {
 
   return (
     <DetailLayout
-      title={`Order ${order._id.slice(-8).toUpperCase()}`}
+      title={`Order ${orderLabel(order)}`}
       subtitle={<>Placed {formatDate(order.createdAt)} · <StatusBadge status={order.status} /></>}
       actions={
         <>
@@ -82,10 +82,44 @@ const TransactionManagement = () => {
           <p>
             <Link to={`/admin/customer/${order.user._id}`}>{order.user.name}</Link>
           </p>
+          {order.customer && (
+            <p>
+              {order.customer.email}
+              {order.customer.phone ? ` · ${order.customer.phone}` : ""}
+            </p>
+          )}
           {s && (
             <p>
+              {s.name && <strong>{s.name}{s.phone ? ` · ${s.phone}` : ""}<br /></strong>}
               {s.address}, {s.city}, {s.state}, {s.country} – {s.pinCode}
             </p>
+          )}
+          {order.billingInfo && (
+            <>
+              <h4>Billing address</h4>
+              <p>
+                {order.billingInfo.address}, {order.billingInfo.city}, {order.billingInfo.state},{" "}
+                {order.billingInfo.country} – {order.billingInfo.pinCode}
+              </p>
+            </>
+          )}
+          {order.notes && (
+            <>
+              <h4>Delivery notes</h4>
+              <p>{order.notes}</p>
+            </>
+          )}
+          {order.statusHistory.length > 0 && (
+            <>
+              <h4>Order timeline</h4>
+              <ol className="order-timeline">
+                {order.statusHistory.map((h) => (
+                  <li key={`${h.status}-${h.at}`}>
+                    <strong>{h.status}</strong> <small>{formatDateTime(h.at)}</small>
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
           <h4>Amount</h4>
           <dl className="facts">

@@ -8,6 +8,7 @@ type ProductsProps = {
   name: string;
   price: number;
   stock: number;
+  taxRate?: number;
   handler: (item: CartItem) => void;
 };
 
@@ -17,6 +18,7 @@ const ProductCard = ({
   name,
   price,
   stock,
+  taxRate,
   handler,
 }: ProductsProps) => {
   const soldOut = stock < 1;
@@ -40,7 +42,7 @@ const ProductCard = ({
         <button
           className="product-card__add"
           onClick={() =>
-            handler({ productId, photo, name, price, quantity: 1, stock })
+            handler({ productId, photo, name, price, quantity: 1, stock, taxRate })
           }
           disabled={soldOut}
           aria-label={`Add ${name} to cart`}

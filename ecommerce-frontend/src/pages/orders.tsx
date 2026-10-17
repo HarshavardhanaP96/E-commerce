@@ -4,12 +4,13 @@ import DataTable from "../components/admin/DataTable";
 import StatusBadge from "../components/admin/StatusBadge";
 import { useMyOrdersQuery } from "../redux/api/orderAPI";
 import { Order } from "../types/types";
-import { formatDate, formatINR } from "../utils/features";
+import { formatDate, formatINR, orderLabel } from "../utils/features";
 
 type Row = Order & { items: number };
 
 const columns: Column<Row>[] = [
-  { Header: "Order", accessor: "_id", width: 220 },
+  { Header: "Order", accessor: "orderNumber", width: 220,
+    Cell: ({ row }: CellProps<Row>) => orderLabel(row.original) } as Column<Row>,
   { Header: "Date", accessor: "createdAt", Cell: ({ value }: CellProps<Row>) => formatDate(value) } as Column<Row>,
   { Header: "Items", accessor: "items", width: 80 },
   { Header: "Discount", accessor: "discount", Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,

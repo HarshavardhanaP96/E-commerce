@@ -41,6 +41,7 @@ export type Product = {
   category: string;
   photo: string;
   createdAt?: string;
+  taxRate?: number;
   slug?: string;
   sku?: string;
   description?: string;
@@ -57,6 +58,8 @@ export type ShippingInfo = {
   state: string;
   country: string;
   pinCode: string;
+  name?: string;
+  phone?: string;
 };
 
 export type CartItem = {
@@ -66,6 +69,7 @@ export type CartItem = {
   price: number;
   quantity: number;
   stock: number;
+  taxRate?: number;
 };
 
 export type OrderItem = {
@@ -74,9 +78,21 @@ export type OrderItem = {
   name: string;
   price: number;
   quantity: number;
+  sku?: string;
+  taxRate?: number;
 };
 
 export type OrderStatus = "Processing" | "Shipped" | "Delivered";
+
+export type OrderStatusEntry = { status: OrderStatus; at: string; actor: string };
+export type OrderCustomer = { name?: string; email?: string; phone?: string };
+export type OrderPayment = {
+  provider: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  paidAt?: string;
+};
 
 export type Order = {
   _id: string;
@@ -90,6 +106,13 @@ export type Order = {
   status: OrderStatus;
   user: { _id: string; name: string };
   createdAt: string;
+  orderNumber?: string;
+  billingInfo?: ShippingInfo | null;
+  customer?: OrderCustomer | null;
+  statusHistory: OrderStatusEntry[];
+  couponCode?: string;
+  notes?: string;
+  payment?: OrderPayment | null;
 };
 
 export type Coupon = {

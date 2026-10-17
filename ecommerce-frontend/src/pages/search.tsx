@@ -130,6 +130,7 @@ const Search = () => {
                 name={i.name}
                 price={i.price}
                 stock={i.stock}
+              taxRate={i.taxRate}
                 handler={addToCartHandler}
                 photo={i.photo}
               />
