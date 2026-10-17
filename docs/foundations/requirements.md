@@ -11,6 +11,8 @@
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
 - [ ] FR7: Admin coupon CRUD. Anyone can validate a coupon code.
 - [ ] FR8: Admin customer list, details, role change, and delete. An admin cannot delete themselves.
+- [ ] FR8a: Customers can edit name, phone and locale. Admins can suspend and reactivate accounts (never their own). A suspended user can't log in or load `/me`.
+- [ ] FR8b: Customers keep up to 10 saved addresses with one default. Checkout pre-selects the default and lets them pick another. The data export includes the addresses.
 - [ ] FR9: Admin dashboard: stats, pie, bar and line charts, optionally scoped by productId, category or userId.
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.

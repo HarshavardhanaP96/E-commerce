@@ -5,7 +5,7 @@
   change, Razorpay signature verification, image type sniffing, order status transitions, and JWT issue/parse.
 - Integration (`@SpringBootTest` + Testcontainers `mongo:7`, MockMvc): auth flows (register multipart, login,
   forgot/reset), authorisation matrix (public, user, admin, owner), product CRUD with upload, checkout →
-  confirm with the `fake` gateway including out-of-stock rollback, coupon CRUD, a dashboard smoke test, catalogue fields and visibility
+  confirm with the `fake` gateway including out-of-stock rollback, coupon CRUD, a dashboard smoke test, user profile, address book and suspension (`UserDomainTest`, `UserDetailsPersistenceIntegrationTest`, `UserProfileIntegrationTest`, `UserStatusIntegrationTest`), catalogue fields and visibility
   (`ProductDetailsIntegrationTest`), and category CRUD with its tree rules (`CategoryIntegrationTest`).
   These tests need Docker. CI's `ubuntu-latest` has it.
 - Architecture: `ModularityTests` (`ApplicationModules.of(SixPackApplication.class).verify()`) fails the build

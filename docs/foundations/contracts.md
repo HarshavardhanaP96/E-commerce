@@ -23,17 +23,24 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
 | `POST /register` | 🔓 | multipart: name, email, password (≥8), gender?, dob (yyyy-mm-dd), photo?, `acceptTerms=true` (required), `marketingOptIn?` | 201 `{success, message, token, user}`. 400 if under 18 or `acceptTerms` isn't true. Records terms, privacy and marketing consents |
-| `POST /login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token, user}` |
+| `POST /login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token, user}`. 403 if the account is suspended (checked after the password, so status can't be probed). A successful login stamps `lastLoginAt` |
 | `POST /forgot-password` | 🔓 (rate-limited) | `{email}` | always 200 `{success, message}` (no account enumeration) |
 | `POST /reset-password` | 🔓 | `{token, password}` | `{success, message}` |
-| `GET /me` | 👤 | — | `{success, user}` |
+| `GET /me` | 👤 | — | `{success, user}`. 403 if suspended |
+| `PUT /me` | 👤 | `{name?, phone?, locale?}` (blank or omitted keeps the current value; phone is 10–13 digits, optional `+`; locale like `en` or `en-IN`) | `{success, message, user}`. 400 on invalid values |
+| `GET /me/addresses` | 👤 | — | `{success, addresses}` |
+| `POST /me/addresses` | 👤 | `{label?, name, phone, line1, line2?, city, state, country, pinCode (4–10 digits), isDefault}` | 201 `{success, message, address}`. 409 beyond 10 addresses, 400 invalid |
+| `PUT /me/addresses/{addressId}` | 👤 | same body, replaces the address | `{success, message, address}`. 404 unknown id |
+| `DELETE /me/addresses/{addressId}` | 👤 | — | `{success, message}`. 404 unknown id. Deleting the default promotes the first remaining address |
 | `DELETE /me` | 👤 | `{password}` | `{success, message}`. 403 wrong password, 400 for admins, 409 while any order isn't delivered. Deletes the photo and the user, then strips street address and PIN code from their orders |
 | `GET /all` | 🛡 | `?role=&gender=` | `{success, users}` |
 | `GET /{id}` | 🛡 | — | `{success, user}` |
-| `PUT /{id}` | 🛡 | `{role}` | `{success, message}` |
+| `PUT /{id}` | 🛡 | `{role?, status?}` (`status` is `active\|suspended`; at least one is required) | `{success, message}`. 400 if you suspend yourself |
 | `DELETE /{id}` | 🛡 | — | `{success, message}` (400 if deleting yourself, 409 while the user has undelivered orders). Same erasure as `DELETE /me` |
 
-`user = {_id, name, email, photo, role, gender?, dob, createdAt}` (`gender` is optional since the consent work)
+`user = {_id, name, email, photo, role, gender?, dob, age, createdAt, phone?, locale?, emailVerified, status, lastLoginAt?}` (`gender` is optional since the consent work; `status` is `ACTIVE` or `SUSPENDED`, defaulting to `ACTIVE` for older users; `emailVerified` is stored but nothing sets it yet)
+
+`address = {id, label?, name, phone, line1, line2?, city, state, country, pinCode, isDefault}`. A user has at most 10, and exactly one is the default whenever any exist. Addresses are never part of `user`; only their owner can read them, through `/me/addresses`.
 
 ### Product — `/product`
 | Method & path | Auth | Request | Response |

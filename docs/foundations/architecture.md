@@ -87,6 +87,15 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-17: ADR-016 **User profile fields in an additive nested `UserDetails`; addresses embedded in the user
+  document; targeted `$set` updates.** Same pattern as ADR-015: old documents load with defaults, so there is no
+  migration. Addresses are embedded (max 10, always read with the user) and their rules (limit, one default,
+  promotion on delete) live in the pure `AddressBook` class. Profile, address and login writes use targeted
+  `$set` updates so they can't overwrite a concurrent role or password change. Marketing preferences stay in the
+  consent ledger (ADR-014), not on `User`. Suspension is enforced at login and `/me` only: an already-issued JWT
+  keeps working until it expires (24 h, ADR-006), because checking per request costs a DB read per call.
+  `emailVerified` is stored but nothing sets it yet. Rejected: a separate `addresses` collection and a global
+  suspended-user request filter. Revisit the filter if suspension needs to bite immediately. Still active.
 - 2026-10-17: ADR-015 **Catalogue fields as an additive nested `ProductDetails`; `Category` inside the `product`
   module; no migration.** The new product fields live in a `ProductDetails` record on `Product`, so the old
   constructor and every call site keep compiling, and stored documents without the fields load as

@@ -158,6 +158,7 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 
 | Data | Keep for | Then |
 |---|---|---|
+| Phone, locale, saved addresses, last-login time | Same as the account profile. They are stored on the user record, erased with it (`DELETE /user/me`), included in the data export, and never used for marketing. | Deleted with the account |
 | Account profile | While the account is active. 🟢 Delete after 3 years of inactivity, with a 48 h warning email (mirrors DPDP Rules for large platforms). | Delete or anonymise |
 | Orders, payment ids | ~8 years (tax / accounting) | Anonymise the user link |
 | Consent records | Account lifetime + 3 years (proof) | Delete |
