@@ -4,7 +4,7 @@
 #
 # Usage:  k8s/scripts/seal-backend-secrets.sh <test|prod> <path/to/plain.env>
 # The env file holds KEY=value lines: JWT_SECRET, MONGO_URI, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
-# ADMIN_EMAIL, ADMIN_PASSWORD. Keep it outside the repo (or name it *.secret.env, which git ignores)
+# ADMIN_EMAIL, ADMIN_PASSWORD, CONSENT_IP_SALT. Keep it outside the repo (or name it *.secret.env, which git ignores)
 # and delete it afterwards. The plaintext never touches disk here: it is piped straight into kubeseal.
 set -euo pipefail
 
@@ -19,7 +19,7 @@ esac
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/overlays/$env/backend-secrets.sealed.yaml"
 
-for key in JWT_SECRET MONGO_URI RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET ADMIN_EMAIL ADMIN_PASSWORD; do
+for key in JWT_SECRET MONGO_URI RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET ADMIN_EMAIL ADMIN_PASSWORD CONSENT_IP_SALT; do
   grep -q "^$key=." "$file" || { echo "missing $key in $file" >&2; exit 1; }
 done
 

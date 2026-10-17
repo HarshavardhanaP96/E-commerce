@@ -11,9 +11,10 @@ public record Order(
         Quote quote,
         OrderStatus status,
         PaymentInfo payment,
+        String termsVersion,
         Instant createdAt) {
 
     public Order withStatus(OrderStatus newStatus) {
-        return new Order(id, userId, shippingInfo, items, quote, newStatus, payment, createdAt);
+        return new Order(id, userId, shippingInfo, items, quote, newStatus, payment, termsVersion, createdAt);
     }
 }

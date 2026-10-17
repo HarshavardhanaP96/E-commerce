@@ -1,5 +1,7 @@
 package com.sixpack.order.application;
 
+import com.sixpack.consent.ConsentLedger;
+import com.sixpack.consent.Purpose;
 import com.sixpack.coupon.CouponLookup;
 import com.sixpack.order.OrderChangedEvent;
 import com.sixpack.order.domain.Order;
@@ -53,22 +55,28 @@ public class CheckoutService {
     private final PaymentGateway gateway;
     private final PaymentIntentRepository intents;
     private final OrderRepository orders;
+    private final ConsentLedger consents;
     private final ApplicationEventPublisher events;
     private final MeterRegistry meters;
 
     CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateway gateway,
-                    PaymentIntentRepository intents, OrderRepository orders, ApplicationEventPublisher events,
-                    MeterRegistry meters) {
+                    PaymentIntentRepository intents, OrderRepository orders, ConsentLedger consents,
+                    ApplicationEventPublisher events, MeterRegistry meters) {
         this.catalog = catalog;
         this.coupons = coupons;
         this.gateway = gateway;
         this.intents = intents;
         this.orders = orders;
+        this.consents = consents;
         this.events = events;
         this.meters = meters;
     }
 
     public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
+        // Checked before money moves, so a paid order is never refused for a missing acceptance.
+        if (!consents.hasAcceptedCurrent(userId, Purpose.TERMS)) {
+            throw ApiException.forbidden("Please accept the updated Terms & Conditions before placing an order");
+        }
         Map<String, Integer> quantities = mergeLines(lines);
         Map<String, ProductSnapshot> products = catalog.findSnapshots(quantities.keySet()).stream()
                 .collect(Collectors.toMap(ProductSnapshot::id, Function.identity()));
@@ -130,7 +138,8 @@ public class CheckoutService {
         Order order;
         try {
             order = orders.save(new Order(null, userId, shipping, intent.items(), intent.quote(),
-                    OrderStatus.PROCESSING, new PaymentInfo(intent.provider(), providerOrderId, paymentId), null));
+                    OrderStatus.PROCESSING, new PaymentInfo(intent.provider(), providerOrderId, paymentId),
+                    consents.currentVersion(Purpose.TERMS), null));
         } catch (RuntimeException e) {
             catalog.releaseStock(quantities);
             intents.markCreated(providerOrderId);

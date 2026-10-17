@@ -8,6 +8,7 @@ import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartRed
 import { RootState } from "../redux/store";
 import { CartItem } from "../types/types";
 import { formatINR } from "../utils/features";
+import { policyPath } from "../legal/policies";
 
 const Cart = () => {
   const { cartItems, subtotal, tax, total, shippingCharges, discount, coupon } = useSelector(
@@ -100,6 +101,10 @@ const Cart = () => {
           ))}
         <small>Final amount is confirmed at checkout.</small>
         {cartItems.length > 0 && <Link to="/shipping">Checkout</Link>}
+        <small className="cart__policies">
+          <Link to={policyPath("refunds")}>Returns &amp; refunds</Link> ·{" "}
+          <Link to={policyPath("shipping")}>Shipping</Link>
+        </small>
       </aside>
     </div>
   );

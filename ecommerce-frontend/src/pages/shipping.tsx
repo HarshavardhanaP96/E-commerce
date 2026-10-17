@@ -2,7 +2,8 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { LuArrowLeft, LuLock } from "react-icons/lu";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { policyPath } from "../legal/policies";
 import { errorMessage } from "../redux/api/baseQuery";
 import { useCheckoutMutation, useConfirmOrderMutation } from "../redux/api/orderAPI";
 import { resetCart, saveShippingInfo } from "../redux/reducer/cartReducer";
@@ -110,6 +111,12 @@ const Shipping = () => {
         <button type="submit" className="span-2" disabled={busy}>
           <LuLock /> {busy ? "Processing…" : "Pay & place order"}
         </button>
+        <p className="shipping__terms span-2">
+          By placing this order you agree to our <Link to={policyPath("terms")} target="_blank">Terms</Link>,{" "}
+          <Link to={policyPath("refunds")} target="_blank">Cancellation &amp; Refund Policy</Link> and{" "}
+          <Link to={policyPath("shipping")} target="_blank">Shipping Policy</Link>. Payment is processed securely
+          by Razorpay.
+        </p>
       </form>
     </div>
   );

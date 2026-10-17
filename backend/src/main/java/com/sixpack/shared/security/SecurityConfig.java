@@ -48,7 +48,11 @@ class SecurityConfig {
                         .requestMatchers(POST, "/api/v1/user/register", "/api/v1/user/login",
                                 "/api/v1/user/forgot-password", "/api/v1/user/reset-password").permitAll()
                         .requestMatchers(GET, "/api/v1/user/me").authenticated()
+                        .requestMatchers(DELETE, "/api/v1/user/me").authenticated()
                         .requestMatchers("/api/v1/user/**").hasRole(ADMIN)
+                        // legal & consent
+                        .requestMatchers(GET, "/api/v1/legal/**").permitAll()
+                        .requestMatchers("/api/v1/consent/**", "/api/v1/consent").authenticated()
                         // product
                         .requestMatchers(GET, "/api/v1/product/admin-products").hasRole(ADMIN)
                         .requestMatchers(GET, "/api/v1/product/**").permitAll()

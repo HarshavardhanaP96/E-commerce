@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 public class UserAdminService {
 
     private final UserRepository users;
+    private final AccountService accounts;
 
-    UserAdminService(UserRepository users) {
+    UserAdminService(UserRepository users, AccountService accounts) {
         this.users = users;
+        this.accounts = accounts;
     }
 
     public List<User> list(Role role, Gender gender) {
@@ -36,7 +38,6 @@ public class UserAdminService {
         if (id.equals(actingAdminId)) {
             throw ApiException.badRequest("You cannot delete your own account");
         }
-        get(id);
-        users.deleteById(id);
+        accounts.erase(get(id));
     }
 }

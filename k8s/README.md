@@ -22,6 +22,7 @@ config, host, and replica counts. CI renders an overlay with `kustomize edit set
    RAZORPAY_KEY_SECRET=xxx
    ADMIN_EMAIL=admin@yourdomain.com
    ADMIN_PASSWORD=a-long-unique-password
+   CONSENT_IP_SALT=<openssl rand -base64 32>   # salts IPs kept as consent evidence; never change it
    ENV
    k8s/scripts/seal-backend-secrets.sh prod /tmp/prod.secret.env && rm /tmp/prod.secret.env
    ```

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { CartItem, ShippingInfo } from "../../types/types";
+import { userNotExist } from "./userReducer";
 
 const CART_KEY = "cart";
 
@@ -79,6 +80,12 @@ export const cartReducer = createSlice({
       state.shippingInfo = action.payload;
     },
     resetCart: (state) => ({ ...emptyCart, shippingInfo: state.shippingInfo }),
+  },
+  // A home address shouldn't outlive the session on a shared device (compliance-consent.md §4).
+  extraReducers: (builder) => {
+    builder.addCase(userNotExist, (state) => {
+      state.shippingInfo = emptyCart.shippingInfo;
+    });
   },
 });
 

@@ -8,7 +8,8 @@ import { showsBottomNav } from "../utils/routes";
 import AccountMenu from "./accountMenu";
 
 const isAccountRoute = (pathname: string) =>
-  pathname === "/login" || pathname === "/orders" || pathname.startsWith("/order/");
+  pathname === "/login" || pathname === "/orders" || pathname.startsWith("/order/") ||
+  pathname.startsWith("/account");
 
 /** Mobile-only tab bar (CSS hides it above the breakpoint); replaces the header's icon actions. */
 const BottomNav = () => {

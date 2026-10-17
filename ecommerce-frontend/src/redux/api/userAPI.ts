@@ -27,6 +27,9 @@ export const userAPI = createApi({
     resetPassword: builder.mutation<MessageResponse, { token: string; password: string }>({
       query: (body) => ({ url: "reset-password", method: "POST", body }),
     }),
+    deleteMyAccount: builder.mutation<MessageResponse, { password: string }>({
+      query: (body) => ({ url: "me", method: "DELETE", body }),
+    }),
     getMyProfile: builder.query<UserResponse, void>({
       query: () => "me",
       providesTags: ["users"],
@@ -59,6 +62,7 @@ export const {
   useLoginMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useDeleteMyAccountMutation,
   useGetMyProfileQuery,
   useLazyGetMyProfileQuery,
   useAllUsersQuery,

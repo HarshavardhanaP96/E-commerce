@@ -5,7 +5,7 @@ export type User = {
   name: string;
   email: string;
   photo: string;
-  gender: "male" | "female";
+  gender?: "male" | "female";
   role: Role;
   dob: string;
   age: number;

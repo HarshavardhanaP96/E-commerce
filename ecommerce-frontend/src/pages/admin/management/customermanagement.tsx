@@ -85,7 +85,7 @@ const CustomerManagement = () => {
 
         <section className="card">
           <dl className="facts">
-            <dt>Gender</dt><dd>{user.gender}</dd>
+            <dt>Gender</dt><dd>{user.gender ?? "Not given"}</dd>
             <dt>Date of birth</dt><dd>{formatDate(user.dob)} ({user.age} yrs)</dd>
             <dt>Joined</dt><dd>{formatDate(user.createdAt)}</dd>
             <dt>Orders</dt><dd>{userOrders.length} · {formatINR(spent)} spent</dd>

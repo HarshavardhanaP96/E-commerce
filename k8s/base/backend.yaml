@@ -28,7 +28,7 @@ spec:
             - { name: http, containerPort: 8080 }
           envFrom:
             - configMapRef: { name: backend-config }
-            - secretRef: { name: backend-secrets }   # JWT_SECRET, MONGO_URI, RAZORPAY_*, ADMIN_* (see k8s/README.md)
+            - secretRef: { name: backend-secrets }   # JWT_SECRET, MONGO_URI, RAZORPAY_*, ADMIN_*, CONSENT_IP_SALT (see k8s/README.md)
           resources:
             requests: { cpu: 250m, memory: 512Mi }
             limits: { memory: 768Mi }

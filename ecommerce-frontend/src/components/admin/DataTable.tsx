@@ -86,7 +86,7 @@ function DataTable<T extends object>({
                   <th
                     {...column.getHeaderProps(column.getSortByToggleProps())}
                     key={column.id}
-                    style={{ width: column.width === 150 ? undefined : column.width }}
+                    style={column.width === 150 ? { minWidth: 200 } : { minWidth: column.width, width: column.width <= 96 ? 1 : undefined }}
                   >
                     <span>
                       {column.render("Header")}

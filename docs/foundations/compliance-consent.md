@@ -85,7 +85,7 @@ The app sets **no cookies today**. It uses `localStorage`, which ePrivacy and DP
 | Google Fonts request | fonts.googleapis.com (`index.html`) | 3rd-party request, sends the visitor's IP to Google | Font delivery | Not necessary | n/a | 🟡 Under GDPR this needs consent. **Recommended: self-host the fonts** so the issue goes away. |
 | *(future)* Google Analytics, Meta Pixel, Hotjar, etc. | 3rd-party | cookies | Analytics, marketing | Analytics / Marketing | varies | **Yes, opt-in. Load only after consent.** |
 
-Note: `cart.shippingInfo` holds a home address in `localStorage`. Clear it on logout, and mention it in P6.
+Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared on sign-out, and P6 mentions it.
 
 **Categories for the banner, once one is needed:**
 1. **Strictly necessary**: always on, and the toggle is disabled.
@@ -118,27 +118,31 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. Clear it on lo
 ```
 - **Append-only**: never update a row. Withdrawing consent inserts a new row with `granted:false`. A user's current
   state is the latest row for each purpose. Under DPDP the business has to prove consent was given, and this log is that proof.
-- Add `users.consentSummary` as a denormalised cache, e.g. `{terms:"2026-11-01", privacy:"2026-11-01", marketing:false}`,
-  so `GET /user/me` can tell the SPA whether to re-prompt (C4).
-- Store `termsVersion` on each `orders` document (C8).
+- `GET /consent/me` returns `pending`: the required policies whose newest record isn't a grant of the
+  current version. The SPA re-prompts (C4) while it's non-empty. No denormalised copy is kept on `users`.
+- Accounts created before this existed have no records, so they are prompted once on their next visit.
+- Store `termsVersion` on each `orders` document (C8). Checkout returns 403 until the current Terms are accepted.
 
 ### Policy versioning
-- Keep policy text in the repo, for example `ecommerce-frontend/src/legal/*.md` or a `policies` collection. Each policy has a
-  `version` (an effective date) and a `major: boolean`.
-- `GET /api/v1/legal/versions` (🔓) returns the current version and major version of each policy.
+- Policy text lives in `ecommerce-frontend/src/legal/policies.ts`, each with an `updated` date shown on the page.
+- The version users must accept is the backend's `LEGAL_TERMS_VERSION` / `LEGAL_PRIVACY_VERSION`, bumped
+  only for a major change. `GET /api/v1/legal/versions` (🔓) returns them.
 - **Major change** (new purpose, new data-sharing recipient, changed refund terms): re-prompt with C4, and
   email users 🟢 at least 7 days before it takes effect.
 - **Minor change** (typos, contact details): notice banner C5 only.
 
-### API additions (proposed)
+### API additions (built)
 | Method & path | Auth | Purpose |
 |---|---|---|
 | `GET /legal/versions` | 🔓 | Current policy versions |
-| `POST /consent` | 🔓 / 👤 | Record a consent change, `{purpose, granted, policyVersion, source, anonId?}` |
-| `GET /consent/me` | 👤 | The user's current consent state + history |
-| `GET /user/me/export` | 👤 | Download my data (DPDP right to access) |
-| `DELETE /user/me` | 👤 | Delete my own account (DPDP right to erasure). **This doesn't exist yet. Only an admin can delete a user today.** |
-| `POST /register` | 🔓 | Add the `acceptTerms` (must be true), `marketingOptIn` and `policyVersion` fields. Reject anyone under 18. |
+| `POST /consent` | 👤 | Record a consent change, `{purpose, granted, source}`. The server stamps the version, hashed IP and user agent |
+| `GET /consent/me` | 👤 | The user's current consent state, `pending` list and history |
+| `DELETE /user/me` | 👤 | Delete my own account (right to erasure). Needs the password; blocked while orders are undelivered |
+| `POST /register` | 🔓 | `acceptTerms` (must be true) and `marketingOptIn`. Rejects anyone under 18 |
+
+"Download my data" (right to access) is assembled in the browser from `/user/me`, `/order/my` and
+`/consent/me`, so no new endpoint was needed. Anonymous cookie choices (`anonId`) aren't stored because there
+is no banner yet. Full request and response shapes are in `contracts.md`.
 
 ### User rights & grievances
 - **Access / export**: return JSON with the profile, orders and consent history.
@@ -177,20 +181,23 @@ EU/UK traffic. It adds cost, adds a script, and itself needs disclosing.
 
 I'll go with **Option A** unless you object.
 
-## 9. Implementation checklist (Option A)
+## 9. Implementation checklist (Option A, ADR-014)
 
-- [ ] 🔴 Draft P1–P6 and add `/legal/*` routes in `App.tsx`. Add a footer component with the C14 links.
-- [ ] 🔴 Register form: required terms checkbox (C1), optional marketing checkbox (C3), make gender optional, and block anyone under 18 (C2) in both the UI and `POST /user/register`.
-- [ ] 🔴 Backend `consent` module: `consents` collection, `GET /legal/versions`, `POST /consent`, `GET /consent/me`. Add `consentSummary` to `/user/me`.
-- [ ] 🔴 Re-prompt modal on login or app load when a major version is newer (C4).
-- [ ] 🔴 Checkout: policy links + the "By placing this order…" line (C7, C8). Store `termsVersion` on the order.
-- [ ] 🔴 Account → Privacy page: consent toggles, `GET /user/me/export`, `DELETE /user/me` (C13).
-- [ ] 🔴 Publish the Grievance Officer's name and contact, and the legal entity details (P5).
-- [ ] 🟡 Self-host the Inter and Bricolage Grotesque fonts and remove the `fonts.googleapis.com` links from `index.html`.
-- [ ] 🟢 Clear `cart.shippingInfo` from `localStorage` on logout.
-- [ ] 🟢 Add a `hasConsent(category)` helper and route all future third-party scripts through it.
+- [x] 🔴 Draft P1–P6 (`ecommerce-frontend/src/legal/policies.ts`) at `/legal/:slug`, plus a footer with the C14 links.
+- [x] 🔴 Register form: required terms checkbox (C1), optional marketing checkbox (C3), gender optional, under-18s blocked (C2) in the UI and in `POST /user/register`.
+- [x] 🔴 Backend `consent` module: `consents` collection, `GET /legal/versions`, `POST /consent`, `GET /consent/me`.
+- [x] 🔴 Blocking re-prompt dialog (`components/consentPrompt.tsx`) while `pending` is non-empty (C4). Checkout is also refused server-side.
+- [x] 🔴 Checkout: policy links on the cart, the "By placing this order…" line on the shipping page (C7, C8). `termsVersion` stored on the order.
+- [x] 🔴 Account → Privacy & data (`/account/privacy`): marketing toggle, consent history, JSON export, account deletion (C13).
+- [ ] 🔴 **Fill in `BUSINESS` in `policies.ts`** (legal entity, address, contact, Grievance Officer) and the `[bracketed]` values in the policies, then have a lawyer review the text. This blocks launch and Razorpay activation.
+- [ ] 🔴 **Set `CONSENT_IP_SALT`** in each environment's sealed secret (`k8s/scripts/seal-backend-secrets.sh` now requires it).
+- [ ] 🔴 Profile correction (users editing their own name and email). Until then it's handled by request to the Grievance Officer.
+- [x] 🟡 Fonts self-hosted (`@fontsource-variable/*`). The Google Fonts links are gone and the CSP no longer allows them.
+- [x] 🟢 `cart.shippingInfo` cleared on sign-out.
+- [x] 🟢 `hasConsent(category)` helper (`utils/consent.ts`) as the gate for future third-party scripts.
+- [ ] 🟢 Admin acceptable-use clickwrap (P8 / C12).
 - [ ] 🟢 Set Loki log retention to ≥ 1 year.
-- [ ] Tests: registration is rejected without `acceptTerms` or when under 18. Re-prompt fires on a version bump. Withdrawal inserts a `granted:false` row. Export and delete work only on your own account.
+- [x] Tests (`ConsentIntegrationTest`): registration rejected without `acceptTerms` or under 18; consent recorded with a hashed IP; legacy users prompted and blocked from checkout until they accept; marketing withdrawal is append-only; terms can't be withdrawn; deletion needs the password, waits for delivery (admins too) and anonymises orders; admins can't self-delete.
 
 ## Open questions
 - What is the legal entity name, registered address and Grievance Officer? This blocks P5 and Razorpay activation.

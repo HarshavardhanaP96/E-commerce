@@ -1,0 +1,167 @@
+// ===================================
+// STORE — help centre (FAQ)
+// ===================================
+
+.help {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: $spacing-xl var(--gutter) $spacing-3xl;
+  @include flex(column, flex-start, stretch, $spacing-lg);
+  animation: fadeIn 0.3s ease;
+
+  &__head {
+    @include flex(column, flex-start, stretch, $spacing-md);
+
+    h1 {
+      @include text(h2);
+    }
+  }
+
+  &__search {
+    position: relative;
+    display: block;
+
+    svg {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.15rem;
+      color: $color-text-muted;
+      pointer-events: none;
+    }
+
+    input {
+      @include field;
+      height: 3rem;
+      padding-left: 2.75rem;
+      border-radius: $radius-full;
+    }
+  }
+
+  &__chips {
+    @include flex(row, flex-start, center, $spacing-sm);
+    flex-wrap: wrap;
+
+    button {
+      height: 2.25rem;
+      padding: 0 $spacing-md;
+      border: 1px solid $color-border;
+      border-radius: $radius-full;
+      background: $color-bg-secondary;
+      color: $color-text-secondary;
+      @include text(body-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background $transition-fast, color $transition-fast, border-color $transition-fast;
+      @include focus-ring;
+
+      &:hover {
+        border-color: $color-border-hover;
+        color: $color-text-primary;
+      }
+
+      &.is-active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--on-primary);
+      }
+    }
+  }
+
+  &__list {
+    @include flex(column, flex-start, stretch, $spacing-sm);
+  }
+
+  &__item {
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    transition: border-color $transition-fast;
+
+    &[open] {
+      border-color: $color-border-hover;
+
+      summary svg {
+        transform: rotate(180deg);
+      }
+    }
+
+    summary {
+      @include flex(row, space-between, center, $spacing-md);
+      padding: $spacing-md $spacing-lg;
+      @include text(label);
+      font-weight: 600;
+      color: $color-text-primary;
+      cursor: pointer;
+      list-style: none;
+      border-radius: $radius-md;
+      @include focus-ring;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      svg {
+        flex: none;
+        font-size: 1.15rem;
+        color: $color-text-muted;
+        transition: transform $transition-fast;
+      }
+    }
+  }
+
+  &__answer {
+    @include flex(column, flex-start, stretch, $spacing-sm);
+    padding: 0 $spacing-lg $spacing-lg;
+    @include text(body);
+    color: $color-text-secondary;
+
+    a {
+      align-self: flex-start;
+      font-weight: 600;
+    }
+  }
+
+  &__empty {
+    padding: $spacing-xl $spacing-lg;
+    border: 1px dashed $color-border-hover;
+    border-radius: $radius-lg;
+    text-align: center;
+    color: $color-text-muted;
+  }
+
+  &__contact {
+    @include flex(row, space-between, center, $spacing-md);
+    flex-wrap: wrap;
+    margin-top: $spacing-md;
+    padding: $spacing-lg;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+
+    h2 {
+      @include text(h4);
+    }
+
+    p {
+      @include text(body-sm);
+      color: $color-text-muted;
+    }
+
+    p a {
+      font-weight: 600;
+    }
+
+    .help__mail {
+      @include button(primary);
+      color: var(--on-primary);
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .help {
+    padding-top: $spacing-lg;
+  }
+}

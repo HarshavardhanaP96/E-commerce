@@ -7,9 +7,10 @@ The collection names and field names match the old Mongoose models, so existing 
 |---|---|
 | `users` | `_id: string` (legacy: string ids like Firebase uids or ObjectId hex), `name`, `email` (unique), `password` (bcrypt, never serialised), `photo`, `role: "admin"\|"user"`, `gender: "male"\|"female"`, `dob: Date`, `createdAt`, `updatedAt` |
 | `products` | `_id: ObjectId`, `name`, `photo` (relative path `uploads/yyyy/mm/dd/<uuid>.<ext>` or absolute URL), `price: number`, `stock: int ≥ 0`, `category` (lower-case, trimmed), `createdAt`, `updatedAt` |
-| `orders` | `_id`, `shippingInfo{address, city, state, country, pinCode}`, `user: string` (user id), `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: Processing\|Shipped\|Delivered`, `orderItems[{name, photo, price, quantity, productId}]`, `payment{provider, orderId, paymentId}` (new, optional), `createdAt`, `updatedAt` |
+| `orders` | `_id`, `shippingInfo{address, city, state, country, pinCode}`, `user: string` (user id), `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: Processing\|Shipped\|Delivered`, `orderItems[{name, photo, price, quantity, productId}]`, `payment{provider, orderId, paymentId}` (new, optional), `termsVersion` (new, optional: the Terms version in force when the order was placed), `createdAt`, `updatedAt` |
 | `coupons` | `_id`, `coupon` (unique code), `amount` (flat ₹ discount) |
 | `payment_intents` (new) | `_id`, `userId`, `providerOrderId` (unique), `items[{productId, name, photo, price, quantity}]`, `coupon`, `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: CREATED\|CONSUMED`, `createdAt` (TTL index: 24 h) |
+| `consents` (new, append-only) | `_id`, `userId`, `purpose: terms\|privacy\|marketing_email`, `granted`, `policyVersion`, `source: register\|reprompt\|settings`, `ipHash` (salted SHA-256), `userAgent`, `createdAt`. Never updated or deleted: a withdrawal is a new row. A user's state is the newest row per purpose |
 | `password_reset_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256), `expiresAt` (TTL index), `used` |
 
 Pricing rule: `subtotal = Σ price×qty`, `shipping = subtotal > 1000 ? 0 : 200`, `tax = round(subtotal × 0.18)`,
@@ -21,17 +22,18 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 ### User — `/user`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `POST /register` | 🔓 | multipart: name, email, password (≥8), gender, dob (yyyy-mm-dd), photo? | 201 `{success, message, token, user}` |
+| `POST /register` | 🔓 | multipart: name, email, password (≥8), gender?, dob (yyyy-mm-dd), photo?, `acceptTerms=true` (required), `marketingOptIn?` | 201 `{success, message, token, user}`. 400 if under 18 or `acceptTerms` isn't true. Records terms, privacy and marketing consents |
 | `POST /login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token, user}` |
 | `POST /forgot-password` | 🔓 (rate-limited) | `{email}` | always 200 `{success, message}` (no account enumeration) |
 | `POST /reset-password` | 🔓 | `{token, password}` | `{success, message}` |
 | `GET /me` | 👤 | — | `{success, user}` |
+| `DELETE /me` | 👤 | `{password}` | `{success, message}`. 403 wrong password, 400 for admins, 409 while any order isn't delivered. Deletes the photo and the user, then strips street address and PIN code from their orders |
 | `GET /all` | 🛡 | `?role=&gender=` | `{success, users}` |
 | `GET /{id}` | 🛡 | — | `{success, user}` |
 | `PUT /{id}` | 🛡 | `{role}` | `{success, message}` |
-| `DELETE /{id}` | 🛡 | — | `{success, message}` (400 if deleting yourself) |
+| `DELETE /{id}` | 🛡 | — | `{success, message}` (400 if deleting yourself, 409 while the user has undelivered orders). Same erasure as `DELETE /me` |
 
-`user = {_id, name, email, photo, role, gender, dob, createdAt}`
+`user = {_id, name, email, photo, role, gender?, dob, createdAt}` (`gender` is optional since the consent work)
 
 ### Product — `/product`
 | Method & path | Auth | Request | Response |
@@ -69,7 +71,7 @@ Optional catalogue fields on `POST /new` and `PUT /{id}`:
 ### Order — `/order`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `POST /checkout` | 👤 | `{items:[{productId, quantity}], coupon?}` | 201 `{success, checkout:{providerOrderId, provider, key, amount (paise), currency, subtotal, tax, shippingCharges, discount, total}}` |
+| `POST /checkout` | 👤 | `{items:[{productId, quantity}], coupon?}` | 201 `{success, checkout:{providerOrderId, provider, key, amount (paise), currency, subtotal, tax, shippingCharges, discount, total}}`. 403 if the user hasn't accepted the current Terms (checked before any money moves) |
 | `POST /new` | 👤 | `{providerOrderId, paymentId, signature, shippingInfo}` | 201 `{success, message, orderId}` |
 | `GET /my` | 👤 | — | `{success, orders}` (own orders only) |
 | `GET /all` | 🛡 | `?status=` | `{success, orders}` (`user` is `{_id, name}`) |
@@ -86,6 +88,13 @@ Optional catalogue fields on `POST /new` and `PUT /{id}`:
 | `DELETE /coupon/{id}` | 🛡 | — | `{success, message}` |
 
 Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replaced by `/order/checkout` and `/order/new` (ADR-009).
+
+### Legal & consent
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /legal/versions` | 🔓 | — | `{success, versions:{terms, privacy}}` |
+| `GET /consent/me` | 👤 | — | `{success, consents:{<purpose>:{granted, version, at}}, pending:[purpose], history:[{purpose, granted, version, source, at}]}`. `pending` lists the required policies not yet accepted at the current version; the SPA blocks with a prompt while it's non-empty |
+| `POST /consent` | 👤 | `{purpose, granted, source: reprompt\|settings}` | same as `GET /consent/me`. 400 for withdrawing terms or privacy (delete the account instead) |
 
 ### Dashboard — `/dashboard` (🛡, all accept `?productId=&category=&userId=`)
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`

@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
 
-/** Mirrors the legacy `orders` schema; {@code payment} is new and optional. */
+/** Mirrors the legacy `orders` schema; {@code payment} and {@code termsVersion} are new and optional. */
 @Document("orders")
 class OrderDocument {
 
@@ -28,6 +28,7 @@ class OrderDocument {
     String status;
     List<OrderItemDoc> orderItems;
     PaymentDoc payment;
+    String termsVersion;
     @CreatedDate
     @Indexed
     Instant createdAt;

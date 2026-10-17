@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LuLogIn, LuSearch, LuShoppingBag, LuUser } from "react-icons/lu";
+import { LuBookOpen, LuLogIn, LuSearch, LuShoppingBag, LuUser } from "react-icons/lu";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { transformImage } from "../utils/features";
 import AccountMenu from "./accountMenu";
 import { showsBottomNav } from "../utils/routes";
+import { guideForPath } from "../help/adminGuides";
 
 const Header = () => {
   const { user } = useSelector((state: RootState) => state.userReducer);
@@ -15,6 +16,8 @@ const Header = () => {
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith("/admin");
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  // Admin pages: one-click link to the guide for the page being viewed (empty on the help pages themselves).
+  const guide = isAdmin ? guideForPath(pathname) : null;
 
   return (
     // --compact: on mobile the bottom nav carries these actions, so the header shows only the logo.
@@ -23,6 +26,19 @@ const Header = () => {
         6PACK<span>.</span>
         {isAdmin && <small>Admin</small>}
       </Link>
+
+      {guide !== null && (
+        <Link
+          className="header__help"
+          onClick={() => setIsOpen(false)}
+          to={guide ? `/admin/help/${guide}` : "/admin/help"}
+          aria-label={guide ? "Help for this page" : "All help guides"}
+          title={guide ? "Guide for this page" : "All guides"}
+        >
+          <LuBookOpen />
+          <span>Help</span>
+        </Link>
+      )}
 
       <Link onClick={() => setIsOpen(false)} to={"/search"} aria-label="Search products" title="Search">
         <LuSearch />

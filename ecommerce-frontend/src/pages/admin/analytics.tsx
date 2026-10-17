@@ -75,7 +75,7 @@ const Analytics = () => {
         <section className="analytics__grid">
           <div className="card chart-card chart-card--wide">
             <h4>Revenue & orders (6 months)</h4>
-            <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders"
+            <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders" dualAxis
                       bgColor_1={c.series[0]} bgColor_2={c.series[1]} labels={six} />
           </div>
           <div className="card chart-card">

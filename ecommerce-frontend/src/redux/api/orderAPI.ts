@@ -56,6 +56,7 @@ export const {
   useCheckoutMutation,
   useConfirmOrderMutation,
   useMyOrdersQuery,
+  useLazyMyOrdersQuery,
   useAllOrdersQuery,
   useOrderDetailsQuery,
   useProcessOrderMutation,

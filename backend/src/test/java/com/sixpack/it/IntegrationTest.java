@@ -64,7 +64,7 @@ public abstract class IntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",
-                "password_reset_tokens"}) {
+                "password_reset_tokens", "consents", "categories"}) {
             mongo.getCollection(c).deleteMany(new org.bson.Document());
         }
     }
@@ -72,7 +72,8 @@ public abstract class IntegrationTest {
     protected String register(String email) throws Exception {
         MvcResult res = mvc.perform(multipart("/api/v1/user/register")
                         .param("name", "Test User").param("email", email).param("password", "password123")
-                        .param("gender", "female").param("dob", "2000-05-01"))
+                        .param("gender", "female").param("dob", "2000-05-01")
+                        .param("acceptTerms", "true"))
                 .andExpect(status().isCreated()).andReturn();
         return body(res).get("token").asText();
     }

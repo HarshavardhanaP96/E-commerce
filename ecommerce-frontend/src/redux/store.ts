@@ -4,6 +4,7 @@ import { productAPI } from "./api/productAPI";
 import { orderAPI } from "./api/orderAPI";
 import { couponAPI } from "./api/couponAPI";
 import { dashboardAPI } from "./api/dashboardAPI";
+import { consentAPI } from "./api/consentAPI";
 import { userReducer } from "./reducer/userReducer";
 import { cartReducer, persistCart } from "./reducer/cartReducer";
 
@@ -14,6 +15,7 @@ export const store = configureStore({
     [orderAPI.reducerPath]: orderAPI.reducer,
     [couponAPI.reducerPath]: couponAPI.reducer,
     [dashboardAPI.reducerPath]: dashboardAPI.reducer,
+    [consentAPI.reducerPath]: consentAPI.reducer,
     [userReducer.name]: userReducer.reducer,
     [cartReducer.name]: cartReducer.reducer,
   },
@@ -23,7 +25,8 @@ export const store = configureStore({
       productAPI.middleware,
       orderAPI.middleware,
       couponAPI.middleware,
-      dashboardAPI.middleware
+      dashboardAPI.middleware,
+      consentAPI.middleware
     ),
 });
 

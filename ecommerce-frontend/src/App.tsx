@@ -4,6 +4,8 @@ import ProtectedRoute from "./components/protected-route";
 import Loader from "./components/loader";
 import Header from "./components/header";
 import BottomNav from "./components/bottomNav";
+import Footer from "./components/footer";
+import ConsentPrompt from "./components/consentPrompt";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { userExist, userNotExist } from "./redux/reducer/userReducer";
@@ -19,6 +21,10 @@ const Login = lazy(() => import("./pages/login"));
 const ForgotPassword = lazy(() => import("./pages/forgot-password"));
 const Orders = lazy(() => import("./pages/orders"));
 const OrderDetails = lazy(() => import("./pages/order-details"));
+const Legal = lazy(() => import("./pages/legal"));
+const Help = lazy(() => import("./pages/help"));
+const AdminHelp = lazy(() => import("./pages/admin/helpcenter"));
+const PrivacySettings = lazy(() => import("./pages/account/privacy"));
 
 // Admin Routes
 const Products = lazy(() => import("./pages/admin/products"));
@@ -88,13 +94,16 @@ const App = () => {
         }}
       />
 
-      {/* Header */}
+      {/* .app-main is a plain block that grows, so the footer sits at the bottom of short pages */}
+      <div className="app-main">
       <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/cart" element={<Cart />} />
-          
+          <Route path="/legal/:slug" element={<Legal />} />
+          <Route path="/help" element={<Help />} />
+
           {/* only for not logged in */}
           <Route
             path="/login"
@@ -120,6 +129,7 @@ const App = () => {
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/order/:id" element={<OrderDetails />} />
+            <Route path="/account/privacy" element={<PrivacySettings />} />
           </Route>
           
           {/* Admin Routes */}
@@ -151,10 +161,15 @@ const App = () => {
               element={<TransactionManagement />}
             />
             <Route path="/admin/customer/:id" element={<CustomerManagement />} />
+            <Route path="/admin/help" element={<AdminHelp />} />
+            <Route path="/admin/help/:slug" element={<AdminHelp />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      </div>
+      {user && <ConsentPrompt key={user._id} userId={user._id} />}
+      <Footer />
       <BottomNav />
     </Router>
   );

@@ -28,7 +28,8 @@ class AuthIntegrationTest extends IntegrationTest {
         mvc.perform(multipart("/api/v1/user/register")
                         .file(new MockMultipartFile("photo", "me.png", "image/png", TestImages.png()))
                         .param("name", "Asha").param("email", "Asha@Example.com").param("password", "password123")
-                        .param("gender", "female").param("dob", "1999-02-03"))
+                        .param("gender", "female").param("dob", "1999-02-03")
+                        .param("acceptTerms", "true"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.token").isNotEmpty())
@@ -42,7 +43,8 @@ class AuthIntegrationTest extends IntegrationTest {
     void duplicateAndInvalidRegistrationsAreRejected() throws Exception {
         register("dup@test.dev");
         mvc.perform(multipart("/api/v1/user/register").param("name", "X").param("email", "dup@test.dev")
-                        .param("password", "password123").param("gender", "male").param("dob", "2000-01-01"))
+                        .param("password", "password123").param("gender", "male").param("dob", "2000-01-01")
+                        .param("acceptTerms", "true"))
                 .andExpect(status().isConflict());
         mvc.perform(multipart("/api/v1/user/register").param("name", "X").param("email", "short@test.dev")
                         .param("password", "short").param("gender", "male").param("dob", "2000-01-01"))

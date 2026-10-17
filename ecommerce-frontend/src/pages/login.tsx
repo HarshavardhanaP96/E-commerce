@@ -4,7 +4,17 @@ import { useLoginMutation, useRegisterMutation } from "../redux/api/userAPI";
 import { errorMessage } from "../redux/api/baseQuery";
 import { useDispatch } from "react-redux";
 import { userLoggedIn } from "../redux/reducer/userReducer";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { policyPath } from "../legal/policies";
+
+/** DPDP treats under-18s as children needing parental consent; the server enforces the same limit. */
+const MINIMUM_AGE = 18;
+
+const isAdult = (dob: string) => {
+  const birth = new Date(`${dob}T00:00:00`);
+  const adultOn = new Date(birth.getFullYear() + MINIMUM_AGE, birth.getMonth(), birth.getDate());
+  return adultOn <= new Date();
+};
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -15,6 +25,8 @@ const Login = () => {
   const [date, setDate] = useState("");
   const [photoPrev, setPhotoPrev] = useState("");
   const [photo, setPhoto] = useState<File>();
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const [login] = useLoginMutation();
   const [register] = useRegisterMutation();
@@ -56,13 +68,19 @@ const Login = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdult(date)) {
+      toast.error(`You must be ${MINIMUM_AGE} or older to create an account`);
+      return;
+    }
     try {
       const formData = new FormData();
       formData.set("name", name);
       formData.set("email", email);
       formData.set("password", password);
-      formData.set("gender", gender);
+      if (gender) formData.set("gender", gender);
       formData.set("dob", date);
+      formData.set("acceptTerms", String(acceptTerms));
+      formData.set("marketingOptIn", String(marketingOptIn));
       if (photo) formData.set("photo", photo);
 
       const res = await register(formData);
@@ -98,9 +116,9 @@ const Login = () => {
                 />
               </div>
               <div>
-                <label htmlFor="reg-gender">Gender</label>
-                <select id="reg-gender" value={gender} onChange={(e) => setGender(e.target.value)} required>
-                  <option value="">Select gender</option>
+                <label htmlFor="reg-gender">Gender (optional)</label>
+                <select id="reg-gender" value={gender} onChange={(e) => setGender(e.target.value)}>
+                  <option value="">Prefer not to say</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
@@ -162,7 +180,24 @@ const Login = () => {
              </button>
           )}
 
-          <button type="submit">
+          {isRegister && (
+            <>
+              <label className="checkbox">
+                <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
+                       required />
+                <span>
+                  I agree to the <Link to={policyPath("terms")} target="_blank">Terms &amp; Conditions</Link> and
+                  have read the <Link to={policyPath("privacy")} target="_blank">Privacy Policy</Link>.
+                </span>
+              </label>
+              <label className="checkbox">
+                <input type="checkbox" checked={marketingOptIn} onChange={(e) => setMarketingOptIn(e.target.checked)} />
+                <span>Email me offers and updates (optional — you can turn this off any time).</span>
+              </label>
+            </>
+          )}
+
+          <button type="submit" disabled={isRegister && !acceptTerms}>
             {isRegister ? "Create account" : "Sign in"}
           </button>
         </form>

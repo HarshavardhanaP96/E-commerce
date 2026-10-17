@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { IconType } from "react-icons";
 import {
   LuBarChart3,
+  LuBookOpen,
   LuMenu,
   LuPackage,
   LuReceipt,
@@ -18,6 +19,8 @@ const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
   { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },
 ];
+
+const SUPPORT: typeof NAV = [{ url: "/admin/help", text: "Help & guides", Icon: LuBookOpen }];
 
 /** Fixed sidebar on desktop; an off-canvas drawer below 1100px (see .admin-sidebar in app.scss). */
 const AdminSidebar = () => {
@@ -45,6 +48,18 @@ const AdminSidebar = () => {
         <h5>Manage</h5>
         <ul>
           {NAV.map(({ url, text, Icon }) => (
+            <li key={url}>
+              <NavLink to={url}>
+                <Icon aria-hidden />
+                {text}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        <h5>Support</h5>
+        <ul>
+          {SUPPORT.map(({ url, text, Icon }) => (
             <li key={url}>
               <NavLink to={url}>
                 <Icon aria-hidden />

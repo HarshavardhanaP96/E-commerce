@@ -70,7 +70,7 @@ class MongoUserRepository implements UserRepository {
         doc.password = user.passwordHash();
         doc.photo = user.photo();
         doc.role = user.role().wireValue();
-        doc.gender = user.gender().wireValue();
+        doc.gender = user.gender() == null ? null : user.gender().wireValue();
         doc.dob = user.dob() == null ? null : Date.from(user.dob().atStartOfDay(ZoneOffset.UTC).toInstant());
         return toDomain(mongo.save(doc));
     }

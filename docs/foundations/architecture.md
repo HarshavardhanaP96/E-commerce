@@ -20,12 +20,13 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | Module      | Public API (root package)                         | Internals |
 |-------------|---------------------------------------------------|-----------|
 | `shared`    | (open module) error model, security config, JWT, rate limit, web config | — |
-| `user`      | `UserDirectory` (look up name / exists)            | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
-| `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering |
+| `user`      | `UserDirectory` (look up name / exists), `UserDeletedEvent`, `AccountDeletionGuard` (other modules can veto a deletion) | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
+| `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering; also owns `Category` (`/category`) |
 | `coupon`    | `CouponLookup` (discount for a code)              | same layering |
 | `payment`   | `PaymentGateway` (create order, verify signature) | `infra.razorpay`, `infra.fake` adapters picked by `app.payment.provider` |
 | `storage`   | `FileStorage` (store image, delete)               | `infra.local` disk adapter |
-| `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment and user APIs |
+| `consent`   | `ConsentLedger` (record registration consent, check current acceptance, current policy version) | append-only `consents` log, policy versions from `app.legal.*`, `/legal` + `/consent` endpoints |
+| `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment, user and consent APIs. Blocks deletion of users with undelivered orders and anonymises addresses on `UserDeletedEvent` |
 | `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`) |
 
 Layer rules inside a module: `web → application → domain ← infra`. Domain types never import Spring Data
@@ -74,11 +75,36 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   `/shipping` (`utils/routes.ts#showsBottomNav`). The account menu (`components/accountMenu.tsx`) is shared
   between the header dropdown and the bottom sheet, which is a native `<dialog>` for focus trapping and Escape.
 - **Admin conventions:** `DataTable` puts search, inline filters and the primary action (e.g. "Add product") in
-  one toolbar. It uses fixed column widths with ellipsis, puts pagination and page size at the bottom, and
-  scrolls the table body instead of the page. `DetailLayout` is the shell for product, user, order and
-  new-product pages: it fits the viewport and puts Save / Update / Delete top-right.
+  one toolbar. Column `width` values are minimums (auto layout shares spare width; cells truncate with
+  ellipsis), pagination and page size sit at the bottom, and the table body scrolls instead of the page.
+  `DetailLayout` is the shell for product, user, order and new-product pages and puts Save / Update / Delete
+  top-right; its cards fit their content.
+- **Help:** two separate surfaces. The store has a static, searchable FAQ at `/help` (`pages/help.tsx`, content in
+  `help/articles.ts`, linked from the footer and account menu) with a support email taken from
+  `BUSINESS.email`. The admin panel has its own knowledge base at `/admin/help[/:slug]`
+  (`pages/admin/helpcenter.tsx`, content in `help/adminGuides.ts`). Every admin page shows a Help button in the
+  header that opens the guide for that page (`guideForPath`); a new admin page needs a guide and a case there.
+  FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-17: ADR-015 **Catalogue fields as an additive nested `ProductDetails`; `Category` inside the `product`
+  module; no migration.** The new product fields live in a `ProductDetails` record on `Product`, so the old
+  constructor and every call site keep compiling, and stored documents without the fields load as
+  `ProductDetails.EMPTY` (status ACTIVE). `slug` and `sku` get sparse unique indexes, so legacy documents don't
+  collide, and blank SKUs are normalised to none. Public queries use `status nin [DRAFT, ARCHIVED]`, which keeps
+  documents with no status visible; `ProductCatalog.findSnapshots` drops non-public products so checkout can't
+  sell them. `Category` is a new collection in the same module (no new module, since nothing else needs it yet).
+  Rejected: a separate `catalogue` module (nothing else depends on categories) and a one-off backfill script
+  (optional fields don't need one). Multi-tenancy stays a parked future plan (spec appendix). Still active.
+- 2026-10-16: ADR-014 **Consent and erasure in-house, no cookie banner yet (Option A in
+  `compliance-consent.md`).** A new `consent` module keeps an append-only `consents` log as proof (DPDP),
+  versions the Terms/Privacy by effective date (`LEGAL_*_VERSION`), and blocks checkout until the current
+  Terms are accepted. Account erasure lives in `user` and other modules join through `AccountDeletionGuard` /
+  `UserDeletedEvent`, so `user` never depends on `order`. Data export is assembled in the SPA from existing
+  endpoints rather than a new cross-module endpoint. No cookie banner: the site stores only strictly necessary
+  data, and fonts are now self-hosted. Rejected: a third-party CMP (cost and an extra script for nothing to
+  gate) and a banner with nothing optional in it. Revisit when the first analytics or marketing tag is added,
+  or if we sell to the EU/UK. Still active.
 - 2026-10-15: ADR-013 **One token-driven design system with two surfaces (store and admin).** All styling is
   driven by CSS custom properties in `_tokens.scss`, scoped by `data-surface`. This replaced the old
   per-page SCSS (`_dashboard`, `_products`, `_chart`, `_mediaquery`, …) and the compile-time SCSS variables

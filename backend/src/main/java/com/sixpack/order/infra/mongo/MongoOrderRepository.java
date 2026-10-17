@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -41,6 +42,7 @@ class MongoOrderRepository implements OrderRepository {
         doc.discount = order.quote().discount();
         doc.total = order.quote().total();
         doc.shippingInfo = toDoc(order.shippingInfo());
+        doc.termsVersion = order.termsVersion();
         doc.orderItems = order.items().stream().map(MongoOrderRepository::toDoc).toList();
         if (order.payment() != null) {
             doc.payment = new OrderDocument.PaymentDoc();
@@ -73,6 +75,18 @@ class MongoOrderRepository implements OrderRepository {
     @Override
     public void deleteById(String id) {
         mongo.remove(Query.query(Criteria.where("id").is(id)), OrderDocument.class);
+    }
+
+    @Override
+    public boolean hasOpenOrders(String userId) {
+        return mongo.exists(Query.query(Criteria.where("user").is(userId)
+                .and("status").ne(OrderStatus.DELIVERED.wireValue())), OrderDocument.class);
+    }
+
+    @Override
+    public void anonymiseShippingForUser(String userId) {
+        mongo.updateMulti(Query.query(Criteria.where("user").is(userId)),
+                new Update().unset("shippingInfo.address").unset("shippingInfo.pinCode"), OrderDocument.class);
     }
 
     private List<Order> find(Query query) {
@@ -113,7 +127,8 @@ class MongoOrderRepository implements OrderRepository {
                 : d.orderItems.stream().map(MongoOrderRepository::toDomain).toList();
         return new Order(d.id, d.user, shipping, items,
                 new Quote(nz(d.subtotal), nz(d.tax), nz(d.shippingCharges), nz(d.discount), nz(d.total)),
-                d.status == null ? OrderStatus.PROCESSING : OrderStatus.fromWire(d.status), payment, d.createdAt);
+                d.status == null ? OrderStatus.PROCESSING : OrderStatus.fromWire(d.status), payment, d.termsVersion,
+                d.createdAt);
     }
 
     private static double nz(Double v) {

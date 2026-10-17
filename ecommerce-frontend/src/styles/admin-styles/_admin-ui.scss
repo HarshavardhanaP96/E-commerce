@@ -92,7 +92,7 @@
 
 // ---------- layout ----------
 .admin-container > main.admin-main {
-  padding: $spacing-lg;
+  padding: $spacing-xl;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -190,7 +190,8 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; // fixed column widths; long text is truncated (prompt.txt #5)
+    // Auto layout shares spare width across all columns (fixed layout gave it all to the one unsized column).
+    // Long text is still truncated via the max-width on cells (prompt.txt #5).
   }
 
   th,
@@ -201,6 +202,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 22rem;
   }
 
   th {
@@ -323,10 +325,11 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-lg;
 
   &__header {
     @include flex(row, flex-start, center, 0.75rem);
+    min-height: 2.75rem; // same height with or without the subtitle, so titles don't jump between pages
   }
 
   &__title {
@@ -353,19 +356,27 @@
   &__body {
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    @include custom-scrollbar();
   }
 }
 
 .detail-grid {
-  height: 100%;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: $spacing-md;
+  gap: $spacing-lg;
+  align-items: start; // cards fit their content instead of stretching to the window height
 
   > .card {
-    overflow: auto;
-    @include custom-scrollbar();
+    padding: $spacing-xl;
+  }
+
+  // The summary card (photo / avatar) stays in view while a long form scrolls.
+  > .card--center {
+    position: sticky;
+    top: 0;
+    justify-content: flex-start;
+    padding-block: $spacing-2xl;
   }
 }
 
@@ -514,7 +525,180 @@
 }
 
 .orders-page .data-table {
-  height: calc(100vh - var(--header-h) - 9rem);
+  height: auto; // fits the rows; scrolls only once it would outgrow the window
+  min-height: 16rem;
+  max-height: calc(100vh - var(--header-h) - 9rem);
+}
+
+// ---------- knowledge base (admin help) ----------
+.kb {
+  max-width: 56rem;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  overflow-y: auto;
+  min-height: 0;
+  @include custom-scrollbar();
+
+  > * {
+    flex-shrink: 0; // the column scrolls; children must not shrink and overlap
+  }
+
+  &__head {
+    @include flex(column, flex-start, stretch, $spacing-sm);
+
+    h2 {
+      @include text(h2);
+    }
+
+    p {
+      color: $color-text-secondary;
+    }
+  }
+
+  &__search {
+    position: relative;
+    display: block;
+    margin-top: $spacing-xs;
+
+    svg {
+      position: absolute;
+      left: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $color-text-muted;
+      pointer-events: none;
+    }
+
+    input {
+      width: 100% !important;
+      padding-left: 2.5rem !important;
+    }
+  }
+
+  &__group {
+    @include flex(column, flex-start, stretch, $spacing-sm);
+
+    h3 {
+      @include overline;
+    }
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: $spacing-md;
+  }
+
+  &__card {
+    @include flex(column, flex-start, flex-start, $spacing-xs);
+    padding: $spacing-md $spacing-lg;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    color: $color-text-primary;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    strong {
+      font-weight: 600;
+    }
+
+    span {
+      @include text(body-sm);
+      color: $color-text-secondary;
+    }
+
+    &:hover {
+      border-color: $color-accent-primary;
+      box-shadow: $shadow-sm;
+      color: $color-text-primary;
+    }
+  }
+
+  &__empty {
+    color: $color-text-muted;
+  }
+
+  &__back {
+    @include flex(row, flex-start, center, 0.375rem);
+    align-self: flex-start;
+    @include text(body-sm);
+    font-weight: 500;
+    color: $color-text-secondary;
+
+    &:hover {
+      color: $color-text-primary;
+    }
+  }
+
+  &__group-label {
+    @include overline;
+  }
+
+  &__summary {
+    @include text(h4);
+    font-weight: 400;
+    color: $color-text-secondary;
+  }
+
+  article {
+    @include flex(column, flex-start, stretch, $spacing-md);
+    padding: $spacing-xl;
+
+    h2 {
+      @include text(h2);
+    }
+
+    h3 {
+      @include text(body);
+      font-weight: 600;
+      margin-bottom: $spacing-sm;
+    }
+
+    ol {
+      padding-left: 1.25rem;
+      @include flex(column, flex-start, stretch, $spacing-sm);
+      line-height: 1.55;
+
+      li::marker {
+        font-weight: 600;
+        color: $color-accent-text;
+      }
+    }
+
+    p {
+      line-height: 1.6;
+    }
+  }
+
+  &__open {
+    align-self: flex-start;
+    margin-top: $spacing-xs;
+  }
+}
+
+.kb-note {
+  @include flex(row, flex-start, flex-start, 0.625rem);
+  padding: 0.75rem $spacing-md;
+  border-radius: $radius-md;
+  @include text(body-sm);
+  line-height: 1.5;
+
+  svg {
+    flex: none;
+    margin-top: 0.15rem;
+    font-size: 1rem;
+  }
+
+  &--tip {
+    background: var(--info-subtle);
+    color: var(--info);
+  }
+
+  &--warn {
+    background: var(--warning-subtle);
+    color: var(--warning);
+  }
 }
 
 // ---------- analytics ----------
@@ -525,7 +709,7 @@
   @include custom-scrollbar();
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-lg;
 
   &__toolbar {
     @include flex(row, space-between, center);
@@ -538,14 +722,14 @@
   &__grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: $spacing-md;
+    gap: $spacing-lg;
   }
 }
 
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: $spacing-md;
+  gap: $spacing-lg;
 }
 
 .kpi {
@@ -579,11 +763,24 @@
   }
 }
 
+// Chart.js sizes itself from its parent, so the canvas needs its own positioned box; as a bare flex child
+// the buffer and CSS size disagreed and the donuts were drawn as ellipses.
+.chart-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
 .chart-card {
-  height: 280px;
+  height: 300px;
   display: flex;
   flex-direction: column;
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-lg;
+
+  > h4 {
+    margin-bottom: $spacing-md;
+  }
 
   > canvas,
   > div:not(.category-bars) {
@@ -598,6 +795,11 @@
 
 .category-bars {
   list-style: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly; // spread rows over the card instead of hugging the title
   overflow-y: auto;
   @include custom-scrollbar();
 
@@ -610,7 +812,8 @@
     @include tabular;
     padding: 0.375rem 0;
     text-transform: capitalize;
-    color: $color-text-secondary;
+    font-weight: 500;
+    color: $color-text-primary;
 
     div {
       height: 0.375rem;
@@ -673,18 +876,24 @@
   }
 }
 
+@media (max-width: 1100px) {
+  // Leave room for the floating menu button (#hamburger) so it never covers the last row / pager.
+  .admin-container > main.admin-main {
+    padding-bottom: 4.5rem;
+  }
+}
+
 @media (max-width: 800px) {
   .admin-container > main.admin-main {
-    padding: $spacing-md;
+    padding: $spacing-md $spacing-md 4.5rem;
   }
 
   .detail-grid {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
+    grid-template-columns: minmax(0, 1fr);
 
-  .detail-page__body {
-    overflow-y: auto;
+    > .card--center {
+      position: static;
+    }
   }
 
   .form-grid {
@@ -695,9 +904,39 @@
     }
   }
 
+  .analytics__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .analytics__grid,
   .kpi-row {
-    grid-template-columns: 1fr;
+    gap: $spacing-md;
+  }
+
+  .kpi {
+    padding: $spacing-md;
+
+    > strong {
+      font-size: var(--fs-h2);
+    }
+  }
+
+  // Fixed-layout tables keep readable column widths and scroll sideways rather than crushing "Name".
+  .data-table table {
+    min-width: 48rem;
+  }
+
+  .detail-grid > .card {
+    padding: $spacing-lg;
+  }
+
+  // Long product names win over the price: the price drops under the name.
+  .order-items li {
+    grid-template-columns: 3rem minmax(0, 1fr);
+
+    > :last-child {
+      grid-column: 2;
+    }
   }
 
   .chart-card--wide {

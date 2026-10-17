@@ -29,20 +29,30 @@ ChartJS.register(
 );
 
 ChartJS.defaults.font.family = "Inter, ui-sans-serif, system-ui, sans-serif";
-ChartJS.defaults.font.size = 12;
-ChartJS.defaults.color = "#64748b";
+ChartJS.defaults.font.size = 13;
+ChartJS.defaults.font.weight = 500;
+ChartJS.defaults.color = "#334155"; // slate-700: ~10:1 on white (the old slate-500 read as washed out)
 ChartJS.defaults.borderColor = "#e2e8f0";
 ChartJS.defaults.plugins.tooltip.backgroundColor = "#0f172a";
 ChartJS.defaults.plugins.tooltip.padding = 10;
 ChartJS.defaults.plugins.tooltip.cornerRadius = 6;
 ChartJS.defaults.plugins.tooltip.titleFont = { weight: 600 };
 ChartJS.defaults.plugins.tooltip.boxPadding = 4;
+ChartJS.defaults.plugins.tooltip.bodyFont = { size: 13 };
+ChartJS.defaults.plugins.legend.labels.color = "#0f172a";
+ChartJS.defaults.plugins.legend.labels.font = { size: 13, weight: 500 };
 ChartJS.defaults.plugins.legend.labels.usePointStyle = true;
 ChartJS.defaults.plugins.legend.labels.pointStyle = "circle";
 
 /** Light horizontal gridlines only — enough to read values without visual noise. */
-const valueAxis = { beginAtZero: true, border: { display: false }, grid: { color: "#f1f5f9" } };
-const categoryAxis = { border: { display: false }, grid: { display: false } };
+const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+const valueAxis = {
+  beginAtZero: true,
+  border: { display: false },
+  grid: { color: "#e2e8f0" },
+  ticks: { callback: (v: string | number) => compact.format(Number(v)), maxTicksLimit: 6 },
+};
+const categoryAxis = { border: { display: false }, grid: { display: false }, ticks: { color: "#475569" } };
 
 const months = ["January", "February", "March", "April", "May", "June", "July"];
 
@@ -55,6 +65,8 @@ interface BarChartProps {
   bgColor_1: string;
   bgColor_2: string;
   labels?: string[];
+  /** Give the second series its own right-hand axis (e.g. revenue ₹ vs order count, which differ by orders of magnitude). */
+  dualAxis?: boolean;
 }
 
 export const BarChart = ({
@@ -66,6 +78,7 @@ export const BarChart = ({
   bgColor_2,
   horizontal = false,
   labels = months,
+  dualAxis = false,
 }: BarChartProps) => {
   const options: ChartOptions<"bar"> = {
     responsive: true,
@@ -83,7 +96,11 @@ export const BarChart = ({
       },
     },
 
-    scales: horizontal ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
+    scales: horizontal
+      ? { x: valueAxis, y: categoryAxis }
+      : dualAxis
+        ? { x: categoryAxis, y: valueAxis, y1: { ...valueAxis, position: "right", grid: { drawOnChartArea: false } } }
+        : { x: categoryAxis, y: valueAxis },
   };
 
   const data: ChartData<"bar", number[], string> = {
@@ -95,8 +112,9 @@ export const BarChart = ({
         backgroundColor: bgColor_1,
         borderRadius: 4,
         barThickness: "flex",
-        barPercentage: 1,
-        categoryPercentage: 0.4,
+        barPercentage: 0.9,
+        categoryPercentage: 0.7,
+        yAxisID: "y",
       },
       {
         label: title_2,
@@ -104,13 +122,18 @@ export const BarChart = ({
         backgroundColor: bgColor_2,
         borderRadius: 4,
         barThickness: "flex",
-        barPercentage: 1,
-        categoryPercentage: 0.4,
+        barPercentage: 0.9,
+        categoryPercentage: 0.7,
+        yAxisID: dualAxis ? "y1" : "y",
       },
     ],
   };
 
-  return <Bar width={horizontal ? "200%" : ""} options={options} data={data} />;
+  return (
+    <div className="chart-box">
+      <Bar options={options} data={data} />
+    </div>
+  );
 };
 
 interface DoughnutChartProps {
@@ -148,16 +171,20 @@ export const DoughnutChart = ({
     plugins: {
       legend: {
         display: legends,
-        position: "right",
+        position: "bottom", // below the ring: the cards are narrow, so a side legend squeezed the donut
         labels: {
-          padding: 10, boxWidth: 8, boxHeight: 8,
+          padding: 14, boxWidth: 10, boxHeight: 10,
         },
       },
     },
     cutout,
   };
 
-  return <Doughnut data={doughnutData} options={doughnutOptions} />;
+  return (
+    <div className="chart-box">
+      <Doughnut data={doughnutData} options={doughnutOptions} />
+    </div>
+  );
 };
 
 interface PieChartProps {
@@ -194,7 +221,11 @@ export const PieChart = ({
     },
   };
 
-  return <Pie data={pieChartData} options={pieChartOptions} />;
+  return (
+    <div className="chart-box">
+      <Pie data={pieChartData} options={pieChartOptions} />
+    </div>
+  );
 };
 
 interface LineChartProps {
@@ -245,5 +276,9 @@ export const LineChart = ({
     ],
   };
 
-  return <Line options={options} data={lineChartData} />;
+  return (
+    <div className="chart-box">
+      <Line options={options} data={lineChartData} />
+    </div>
+  );
 };

@@ -7,7 +7,7 @@
 
 :root {
   // ---- type families ----
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
   // ---- status (shared) ----
@@ -49,7 +49,7 @@
   --on-primary: #ffffff;
   --ring: rgba(228, 87, 46, 0.35);
 
-  --font-display: "Bricolage Grotesque", var(--font-sans);
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", var(--font-sans);
   --weight-heading: 700;
   --tracking-heading: -0.02em;
 
@@ -73,6 +73,8 @@
 
   --control-h: 2.75rem;
   --header-h: 4rem;
+  // Page gutter: header, content and footer all share the 1200px column edge.
+  --gutter: max(1.5rem, calc((100vw - 1200px) / 2 + 1.5rem));
 }
 
 // ---------- ADMIN: neutral slate, dense, flat ----------
@@ -121,4 +123,13 @@
 
   --control-h: 2.25rem;
   --header-h: 3.5rem;
+  --gutter: 1.5rem;
+}
+
+// Phones use a tighter page gutter (matches .home / .container at ≤480px).
+@media (max-width: 480px) {
+  :root,
+  [data-surface="store"] {
+    --gutter: 1rem;
+  }
 }
