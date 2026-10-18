@@ -144,7 +144,7 @@ class MongoProductRepository implements ProductRepository {
     @Override
     public boolean decrementStockIfAvailable(String id, int quantity) {
         var result = mongo.updateFirst(
-                Query.query(Criteria.where("id").is(id).and("stock").gte(quantity)),
+                Query.query(Criteria.where("id").is(id).and("stock").gte(quantity).and("variants").exists(false)),
                 new Update().inc("stock", -quantity).inc("rev", 1).currentDate("updatedAt"),
                 ProductDocument.class);
         return result.getModifiedCount() == 1;
@@ -180,6 +180,18 @@ class MongoProductRepository implements ProductRepository {
             }
         }
         throw ApiException.conflict("This product is being changed right now, please try again");
+    }
+
+    @Override
+    public boolean decrementVariantStockIfAvailable(String productId, String variantId, int quantity) {
+        var result = mongo.updateFirst(
+                Query.query(Criteria.where("id").is(productId).and("variants.items").elemMatch(
+                        Criteria.where("variantId").is(variantId).and("stock").gte(quantity)
+                                .and("status").ne(VariantStatus.DISABLED.name()))),
+                new Update().inc("variants.items.$.stock", -quantity).inc("stock", -quantity).inc("rev", 1)
+                        .currentDate("updatedAt"),
+                ProductDocument.class);
+        return result.getModifiedCount() == 1;
     }
 
     @Override

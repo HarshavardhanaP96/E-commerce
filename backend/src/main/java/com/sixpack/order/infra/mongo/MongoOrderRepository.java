@@ -133,12 +133,21 @@ class MongoOrderRepository implements OrderRepository {
         d.quantity = i.quantity();
         d.sku = i.sku();
         d.taxRate = i.taxRate();
+        d.variantId = i.variantId();
+        d.variantLabel = i.variantLabel();
+        d.options = i.options().isEmpty() ? null : i.options().stream().map(o -> {
+            OrderDocument.OptionDoc option = new OrderDocument.OptionDoc();
+            option.name = o.name();
+            option.value = o.value();
+            return option;
+        }).toList();
         return d;
     }
 
     static OrderItem toDomain(OrderDocument.OrderItemDoc d) {
         return new OrderItem(d.productId, d.name, d.photo, nz(d.price), d.quantity == null ? 0 : d.quantity, d.sku,
-                d.taxRate);
+                d.taxRate, d.variantId, d.variantLabel, d.options == null ? null
+                        : d.options.stream().map(o -> new OrderItem.Option(o.name, o.value)).toList());
     }
 
     private static Order toDomain(OrderDocument d) {

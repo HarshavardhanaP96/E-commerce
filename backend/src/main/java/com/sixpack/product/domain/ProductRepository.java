@@ -36,10 +36,21 @@ public interface ProductRepository {
 
     void deleteById(String id);
 
-    /** @return true if stock was ≥ quantity and has been decremented */
+    /**
+     * Sale of a product without variants. Never matches a product that has variants, whose stock lives on them.
+     *
+     * @return true if stock was ≥ quantity and has been decremented
+     */
     boolean decrementStockIfAvailable(String id, int quantity);
 
     void incrementStock(String id, int quantity);
+
+    /**
+     * Sale of a variant: decrements it and the product total only if the variant is sellable and has enough stock.
+     *
+     * @return true if stock was ≥ quantity and has been decremented
+     */
+    boolean decrementVariantStockIfAvailable(String productId, String variantId, int quantity);
 
     /**
      * Applies {@code change} to a freshly read product and stores only its variants, price and stock, retrying

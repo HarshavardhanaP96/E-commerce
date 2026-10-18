@@ -2,7 +2,7 @@
 
 **Goal:** Let one product be sold in several variants (size, colour, and any other option such as material, storage or pack size), each with its own SKU, stock and optionally price, while products without variants keep working exactly as they do today.
 
-**Status:** Phase 1 built on `feat/product-variants` (see "Phase 1 as built" below). Phases 2-5 not started. Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
+**Status:** Phases 1 and 2 built on `feat/product-variants` (see "As built" below). Phases 3-5 not started. Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
 
 ## What the code does today (why this is a big change)
 
@@ -126,7 +126,17 @@ Done and verified (`mvn verify`: 163 tests, Modulith boundary check green):
 - API: `PUT /product/{id}/variants`, `PATCH /product/{id}/variants/{variantId}/stock`; product JSON gains `variants` and `countryOfOrigin`; plain product `PUT` ignores `price`/`stock` for variant products.
 - Flag `app.products.variants-enabled` (env `PRODUCT_VARIANTS_ENABLED`, default false); integration tests turn it on, and one test proves it blocks creation when off.
 - Differences from the plan above: variant price is required; blank variant SKUs are always generated (a unique index across array elements breaks on null SKUs); `rev` makes structure saves safe against concurrent sales; a plain `save` never writes price/stock/variants of a variant product.
-- Not yet: `ProductCatalog`/checkout/orders are unaware of variants. That is why the flag stays off until Phase 2 and 3 land.
+- At the end of Phase 1 checkout was unaware of variants, which is why the flag stayed off.
+
+## Phase 2 as built (2026-10-18)
+
+Done and verified (`mvn verify`: 178 tests, Modulith boundary check green):
+- `ProductCatalog`: `resolveLine(productId, variantId)` (throws 400 for a missing/unavailable product or variant, a missing choice, or a variant on a simple product), and `reserveStock` / `releaseStock` over `StockLine(productId, variantId, qty)`. The old `Map`-based methods were removed (only checkout used them), which avoids a default method bypassing the cache-evicting proxy.
+- `ProductSnapshot` carries the variant's price, stock, SKU, id, label and options; photo is the first image of any of the variant's option values, else the product photo.
+- Repository: `decrementVariantStockIfAvailable` (needs a sellable variant with enough stock); `decrementStockIfAvailable` no longer matches a product that has variants.
+- `CheckoutService`: `CartLine(productId, variantId, quantity)` (the 2-argument form still works), lines merged per product + variant, errors name the variant, rollback and confirm release per line.
+- `OrderItem`, `OrderItemDoc` (so payment intents too) and `OrderView` gain `variantId`, `variantLabel`, `options`; old orders load with nulls and an empty `options` list.
+- 9 integration tests: price/snapshot/decrement of one variant; two variants as two lines; merge of the same variant; line/variant mismatch rules; disabled variant; last-unit race; rollback of the other lines; simple sale never touches a variant product; legacy order loads.
 
 ## Risks and mitigations
 

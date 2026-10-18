@@ -24,6 +24,7 @@ import com.sixpack.payment.PaymentGateway;
 import com.sixpack.payment.ProviderOrder;
 import com.sixpack.product.ProductCatalog;
 import com.sixpack.product.ProductSnapshot;
+import com.sixpack.product.StockLine;
 import com.sixpack.shared.ApiException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.LinkedHashMap;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.time.Instant;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class CheckoutService {
 
-    public record CartLine(String productId, int quantity) {
+    /** @param variantId null for a product without variants */
+    public record CartLine(String productId, String variantId, int quantity) {
+
+        public CartLine(String productId, int quantity) {
+            this(productId, null, quantity);
+        }
+    }
+
+    /** A cart line's identity: the same product in two variants is two lines. */
+    private record LineKey(String productId, String variantId) {
     }
 
     public record ConfirmDetails(ShippingInfo shipping, ShippingInfo billing, String notes) {
@@ -90,19 +99,17 @@ public class CheckoutService {
         if (!consents.hasAcceptedCurrent(userId, Purpose.TERMS)) {
             throw ApiException.forbidden("Please accept the updated Terms & Conditions before placing an order");
         }
-        Map<String, Integer> quantities = mergeLines(lines);
-        Map<String, ProductSnapshot> products = catalog.findSnapshots(quantities.keySet()).stream()
-                .collect(Collectors.toMap(ProductSnapshot::id, Function.identity()));
+        Map<LineKey, Integer> quantities = mergeLines(lines);
 
         List<OrderItem> items = quantities.entrySet().stream().map(line -> {
-            ProductSnapshot p = products.get(line.getKey());
-            if (p == null) {
-                throw ApiException.badRequest("A product in your cart no longer exists");
-            }
+            ProductSnapshot p = catalog.resolveLine(line.getKey().productId(), line.getKey().variantId());
+            String what = p.variantLabel() == null ? p.name() : p.name() + " (" + p.variantLabel() + ")";
             if (p.stock() < line.getValue()) {
-                throw ApiException.conflict("Only " + p.stock() + " left in stock for " + p.name());
+                throw ApiException.conflict("Only " + p.stock() + " left in stock for " + what);
             }
-            return new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue(), p.sku(), p.taxRate());
+            return new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue(), p.sku(), p.taxRate(),
+                    p.variantId(), p.variantLabel(),
+                    p.options().stream().map(o -> new OrderItem.Option(o.name(), o.value())).toList());
         }).toList();
 
         double discount = 0;
@@ -138,8 +145,10 @@ public class CheckoutService {
             throw ApiException.conflict("This payment has already been used for an order");
         }
 
-        Map<String, Integer> quantities = intent.items().stream()
-                .collect(Collectors.toMap(OrderItem::productId, OrderItem::quantity, Integer::sum));
+        Map<LineKey, Integer> merged = intent.items().stream().collect(Collectors.toMap(
+                i -> new LineKey(i.productId(), i.variantId()), OrderItem::quantity, Integer::sum));
+        List<StockLine> quantities = merged.entrySet().stream()
+                .map(e -> new StockLine(e.getKey().productId(), e.getKey().variantId(), e.getValue())).toList();
         try {
             catalog.reserveStock(quantities);
         } catch (ApiException e) {
@@ -180,10 +189,11 @@ public class CheckoutService {
         return order.id();
     }
 
-    private static Map<String, Integer> mergeLines(List<CartLine> lines) {
-        Map<String, Integer> merged = new LinkedHashMap<>();
+    private static Map<LineKey, Integer> mergeLines(List<CartLine> lines) {
+        Map<LineKey, Integer> merged = new LinkedHashMap<>();
         for (CartLine line : lines) {
-            merged.merge(line.productId(), line.quantity(), Integer::sum);
+            String variantId = line.variantId() == null || line.variantId().isBlank() ? null : line.variantId().trim();
+            merged.merge(new LineKey(line.productId(), variantId), line.quantity(), Integer::sum);
         }
         if (merged.values().stream().anyMatch(q -> q > 100)) {
             throw ApiException.badRequest("Maximum quantity per product is 100");
