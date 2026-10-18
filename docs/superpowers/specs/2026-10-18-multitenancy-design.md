@@ -1,6 +1,6 @@
 # Multi-tenancy — draft design and open questions
 
-Status: **draft for discussion, not approved.** Date: 2026-10-18. Branch: `feat/multi-tenancy` (from `main` at `bcdc23f`).
+Status: **draft, reviewed 2026-10-18 (see §8); implementation of the foundation has started on the assumptions in §8.2.** Date: 2026-10-18. Branch: `feat/multi-tenancy` (from `main` at `bcdc23f`).
 Supersedes the unreviewed appendix in `2026-10-17-richer-entities-design.md`, which pre-dates the four entity plans.
 
 ## 1. What changes since the first draft
@@ -107,3 +107,60 @@ Answers decide levels marked **?** above. My recommendation is in bold.
 
 Answers (even one-line) to Q1, Q4, Q5, Q7 and Q14 unblock the plan; the rest have defaults. Once those are settled the next step is a
 detailed, task-by-task implementation plan in the same format as plans 1–4, starting with the foundation step.
+
+## 8. Review after other sessions' changes (2026-10-18)
+
+Three other pieces of work landed on branch `feat/multi-tenancy` while this draft was open: **product variants**, the **admin
+acceptable-use agreement**, and the start of the **audit log** (`docs/superpowers/specs/2026-10-18-admin-agreement-and-audit-design.md`).
+None of them is on `main` yet. This section updates the draft for them.
+
+### 8.1 What changed in the picture
+
+| New thing | Isolation level | What it means for tenancy |
+|---|---|---|
+| **Product variants** (embedded `options` and `variants` inside the product document, no new collection) | **T**, same as `products` | The per-variant atomic stock updates are new raw Mongo operations. They must go through the tenant-aware wrapper like everything else; variant SKUs are unique per `(tenantId, sku)`. |
+| **`audit_log`** (new, append-only, TTL) | **T** for tenant admins, **G-read** for platform admins | `tenantId` is already reserved on the entry. `AuditService` must stamp it from the tenant context. A tenant admin sees only their tenant's log; a platform admin can search across tenants. The TTL retention stays one platform setting. |
+| **`ADMIN_AUP`** consent purpose and `LEGAL_ADMIN_AUP_VERSION` | **T+** | Moves onto the `Tenant` record with the Terms and Privacy versions (already planned for Q4). Whether a `PLATFORM_ADMIN` must also accept it is new question Q16. |
+| Admin agreement interceptor (`HandlerInterceptor` on `/api/v1/**`) | follows the request | It runs after authentication, so it sees the tenant context set by the earlier tenant filter. |
+| `IntegrationTest` base class | n/a | Three sessions now edit it. Treat it as a merge hotspot: tenancy adds helpers in a **subclass**, not in the base. |
+
+**Ordering consequence.** Variants rewrite `MongoProductRepository` and `ProductService`, and the audit work adds a new repository and touches
+most services. Converting those repositories to the tenant-aware wrapper before those branches reach `main` would cause large merge
+conflicts. The foundation (tenant module, request resolution, JWT `tid`, the wrapper and the guard test) does not touch them, so it can start
+now. The per-entity migrations (§5 steps 3 to 5) wait until variants and audit are on `main`.
+
+### 8.2 Assumptions I am applying (answers to §6 not yet given)
+
+Change any of these and the affected step changes; the foundation is the same under all of them.
+
+| Q | Assumption | Why this is safe to start on |
+|---|---|---|
+| 1 | Customers are **not shared**: each tenant has its own users (level T). | The foundation does not touch users. Identity migration (step 5) is where this matters. |
+| 2 | No shared catalogue. | Only affects step 3. |
+| 3 | `PLATFORM_ADMIN` plus per-tenant `ADMIN`s. | Platform API is step 7. |
+| 4 | Legal text and versions are per tenant. | Needs `legal` fields on `Tenant`; added in step 6. |
+| 5 | Each tenant has its own Razorpay keys. | Step 6. |
+| 6 | One signing secret with a `tid` claim. | **Built in the foundation.** |
+| 7 | A handful of tenants, created by you. | No self-serve onboarding is built. |
+| 9 | No dedicated databases (level D). | The wrapper is the single seam where a per-tenant database could be selected later. |
+| 14 | Today's data becomes the `default` tenant. | Built as an idempotent backfill. |
+
+New questions from this review:
+16. Must a `PLATFORM_ADMIN` accept the admin acceptable-use agreement? **Recommend yes** (they can see more than any tenant admin).
+17. Should a tenant admin see only their own tenant's audit log, with cross-tenant search for platform admins only? **Recommend yes.**
+18. Variant SKUs unique per tenant (not per platform)? **Recommend yes**, same as product SKUs.
+
+### 8.3 Decisions refined by the review
+
+1. **A wrapper, not a base class.** Repositories are plain classes around `MongoTemplate`, so the cleanest enforcement point is a
+   `TenantMongo` bean (in `com.sixpack.shared.tenant`, an open module, so no module cycle) that repositories use instead of `MongoTemplate`.
+   It adds the tenant to every query, stamps it on every save, and refuses to overwrite another tenant's document.
+2. **A guard that can only shrink.** An ArchUnit test fails the build if any class outside the wrapper and the tenant module uses
+   `MongoTemplate`. It starts with an explicit allowlist of today's repositories and also fails if an allowlisted class no longer uses it, so
+   each migration step must delete its entries.
+3. **Single-tenant fallback.** When only the `default` tenant exists, any host resolves to it, so every current deployment keeps working with no
+   configuration. As soon as a second tenant exists, unknown hosts get 404. (Without this, deploying the foundation would break production
+   until someone listed its domain.)
+4. **Legacy tokens.** Tokens issued before the change have no `tid`. They stay valid for the default tenant only, until they expire (24 hours).
+5. **Known foundation-phase limit.** Users are still global until step 5, so a login on a second tenant's domain would succeed with a global
+   user. No second real tenant should be created before the identity migration; only tests create one.
