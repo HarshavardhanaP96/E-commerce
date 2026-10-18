@@ -47,6 +47,12 @@ app:
     terms-version: ${LEGAL_TERMS_VERSION:2026-10-16}
     privacy-version: ${LEGAL_PRIVACY_VERSION:2026-10-16}
     ip-hash-salt: ${CONSENT_IP_SALT:}
+  tenant:
+    default-slug: ${TENANT_DEFAULT_SLUG:default}
+    default-name: ${TENANT_DEFAULT_NAME:6Pack}
+    # Hosts that belong to the default tenant when it is first created. Not needed for a single-store setup
+    # (with one tenant every host resolves to it).
+    default-domains: ${TENANT_DEFAULT_DOMAINS:localhost,127.0.0.1}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
     razorpay:
