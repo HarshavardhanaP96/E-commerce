@@ -83,3 +83,13 @@ spec:
             severity: warning
           annotations:
             summary: "Backend pod {{ $labels.pod }} is at {{ $value | humanizePercentage }} of its memory limit ({{ $labels.namespace }})"
+
+        - alert: SixpackAuditWriteFailing
+          # Audit entries are written best-effort (a failed write never fails the user's request), so a failure means
+          # an admin action or login went unrecorded. Check MongoDB health and the audit_log collection.
+          expr: sum by (namespace) (increase(sixpack_audit_write_total{job="backend-service", result="failure"}[10m])) > 0
+          labels:
+            severity: '{{ if eq $labels.namespace "prod-env" }}critical{{ else }}warning{{ end }}'
+          annotations:
+            summary: "{{ $value }} audit log writes failed in 10m ({{ $labels.namespace }}); those events were not recorded"
+            runbook: "Search logs for 'Audit write failed' (Grafana → Explore → Loki), then check MongoDB availability and disk."
