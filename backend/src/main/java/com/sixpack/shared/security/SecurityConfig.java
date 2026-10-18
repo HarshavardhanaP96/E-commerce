@@ -44,6 +44,7 @@ class SecurityConfig {
                                 "/actuator/prometheus").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(GET, "/uploads/**").permitAll()
+                        .requestMatchers(GET, "/api/v1/tenant/config").permitAll()
                         // user
                         .requestMatchers(POST, "/api/v1/user/register", "/api/v1/user/login",
                                 "/api/v1/user/forgot-password", "/api/v1/user/reset-password").permitAll()
