@@ -60,7 +60,12 @@ class MongoAuditRepository implements AuditRepository {
             query.addCriteria(range);
         }
         long total = mongo.count(query, AuditDocument.class);
-        query.with(NEWEST_FIRST).skip((long) (q.page() - 1) * q.size()).limit(q.size());
+        long skip = (long) (q.page() - 1) * q.size();
+        if (skip > Integer.MAX_VALUE) {
+            // Spring Data narrows skip to an int for the driver; anything this far out is past the end anyway.
+            return new PageResult<>(List.of(), total);
+        }
+        query.with(NEWEST_FIRST).skip(skip).limit(q.size());
         List<AuditEntry> items = mongo.find(query, AuditDocument.class).stream()
                 .map(MongoAuditRepository::toDomain).toList();
         return new PageResult<>(items, total);

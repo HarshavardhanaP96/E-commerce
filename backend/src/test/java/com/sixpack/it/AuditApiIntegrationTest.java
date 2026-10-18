@@ -53,6 +53,9 @@ class AuditApiIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.entries", hasSize(1)))
                 .andExpect(jsonPath("$.entries[0].changes[0].field").value("price"))
                 .andExpect(jsonPath("$.entries[0].changes[0].after").value(2.0));
+        search(admin, "entityType", "product", "entityId", "p2").andExpect(jsonPath("$.entries", hasSize(0)));
+        search(admin, "entityId", "o1").andExpect(jsonPath("$.entries", hasSize(1)))
+                .andExpect(jsonPath("$.entries[0].entityType").value("order"));
         search(admin, "actorId", "a2").andExpect(jsonPath("$.entries", hasSize(1)))
                 .andExpect(jsonPath("$.entries[0].entityId").value("o1"));
         search(admin, "outcome", "FAILURE").andExpect(jsonPath("$.entries", hasSize(0)));
@@ -84,6 +87,8 @@ class AuditApiIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.totalPage").value(2));
         search(admin, "action", "PRODUCT_UPDATED", "page", "2").andExpect(jsonPath("$.entries", hasSize(5)));
         search(admin, "action", "PRODUCT_UPDATED", "page", "9").andExpect(jsonPath("$.entries", hasSize(0)));
+        search(admin, "action", "PRODUCT_UPDATED", "page", String.valueOf(Integer.MAX_VALUE))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.entries", hasSize(0)));
         search(admin, "action", "PRODUCT_UPDATED", "page", "0").andExpect(jsonPath("$.entries", hasSize(100)));
     }
 
