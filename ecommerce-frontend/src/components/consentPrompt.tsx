@@ -10,6 +10,7 @@ const POLICY_OF: Record<ConsentPurpose, keyof typeof POLICIES | null> = {
   terms: "terms",
   privacy: "privacy",
   marketing_email: null,
+  admin_aup: "admin-aup",
 };
 
 /**

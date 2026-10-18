@@ -1,7 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { authedBaseQuery } from "./baseQuery";
 
-export type ConsentPurpose = "terms" | "privacy" | "marketing_email";
+export type ConsentPurpose = "terms" | "privacy" | "marketing_email" | "admin_aup";
 
 export type ConsentResponse = {
   success: boolean;
