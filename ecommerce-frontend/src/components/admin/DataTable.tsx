@@ -14,6 +14,8 @@ type DataTableProps<T extends object> = {
   isLoading?: boolean;
   emptyText?: string;
   onRowClick?: (row: T) => void;
+  /** When this value changes the table returns to its first page (e.g. server-side filters/paging feeding new data). */
+  resetKey?: string;
 };
 
 const PAGE_SIZES = [10, 25, 50];
@@ -31,6 +33,7 @@ function DataTable<T extends object>({
   isLoading,
   emptyText = "No records found",
   onRowClick,
+  resetKey,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
 
@@ -46,6 +49,7 @@ function DataTable<T extends object>({
     canPreviousPage,
     pageCount,
     setPageSize,
+    gotoPage,
     setGlobalFilter,
     rows,
     state: { pageIndex, pageSize },
@@ -57,6 +61,11 @@ function DataTable<T extends object>({
   ) as any;
 
   useEffect(() => setGlobalFilter(search || undefined), [search, setGlobalFilter]);
+
+  // gotoPage is a stable useCallback over the reducer dispatch; on page 0 it is a no-op (reducer returns the same state).
+  useEffect(() => {
+    gotoPage(0);
+  }, [resetKey, gotoPage]);
 
   const from = rows.length === 0 ? 0 : pageIndex * pageSize + 1;
   const to = Math.min((pageIndex + 1) * pageSize, rows.length);

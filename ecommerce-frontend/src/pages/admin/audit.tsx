@@ -73,9 +73,8 @@ const AuditLog = () => {
           {failure}
         </p>
       )}
-      {/* Remount on every query change so the table's own page index and search/sort start fresh. */}
       <DataTable
-        key={`${entityType}|${action}|${outcome}|${from}|${to}|${page}`}
+        resetKey={`${entityType}|${action}|${outcome}|${from}|${to}|${page}`}
         columns={columns}
         data={rows}
         isLoading={isLoading || isFetching}
