@@ -1,5 +1,9 @@
 package com.sixpack.product.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.product.domain.Category;
 import com.sixpack.product.domain.CategoryRepository;
 import com.sixpack.product.domain.ProductRepository;
@@ -7,6 +11,7 @@ import com.sixpack.product.domain.Slugs;
 import com.sixpack.shared.ApiException;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,11 +25,14 @@ public class CategoryService {
     private final CategoryRepository categories;
     private final ProductRepository products;
     private final FileStorage storage;
+    private final AuditTrail audit;
 
-    CategoryService(CategoryRepository categories, ProductRepository products, FileStorage storage) {
+    CategoryService(CategoryRepository categories, ProductRepository products, FileStorage storage,
+                    AuditTrail audit) {
         this.categories = categories;
         this.products = products;
         this.storage = storage;
+        this.audit = audit;
     }
 
     public List<Category> all() {
@@ -43,7 +51,10 @@ public class CategoryService {
         String name = cmd.name().trim();
         String image = cmd.image() == null ? null : storage.storeImage(cmd.image());
         try {
-            return categories.save(new Category(null, name, freeSlug(Slugs.of(name)), parentId, image, null));
+            Category saved = categories.save(new Category(null, name, freeSlug(Slugs.of(name)), parentId, image, null));
+            audit.record(AuditEvent.of(AuditAction.CATEGORY_CREATED).on("category", saved.id())
+                    .changing(Changes.diff(Map.of(), CatalogAudit.view(saved), CatalogAudit.CATEGORY)));
+            return saved;
         } catch (RuntimeException e) {
             if (image != null) {
                 storage.delete(image);
@@ -67,6 +78,9 @@ public class CategoryService {
         if (current.image() != null && !current.image().equals(image)) {
             storage.delete(current.image());
         }
+        audit.record(AuditEvent.of(AuditAction.CATEGORY_UPDATED).on("category", id)
+                .changing(Changes.diff(CatalogAudit.view(current), CatalogAudit.view(saved),
+                        CatalogAudit.CATEGORY)));
         return saved;
     }
 
@@ -82,6 +96,8 @@ public class CategoryService {
         if (current.image() != null) {
             storage.delete(current.image());
         }
+        audit.record(AuditEvent.of(AuditAction.CATEGORY_DELETED).on("category", id)
+                .changing(Changes.diff(CatalogAudit.view(current), Map.of(), CatalogAudit.CATEGORY)));
     }
 
     private void requireExists(String parentId) {

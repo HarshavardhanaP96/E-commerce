@@ -1,5 +1,9 @@
 package com.sixpack.order.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.FieldChange;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
 import com.sixpack.coupon.CouponLookup;
@@ -79,10 +83,12 @@ public class CheckoutService {
     private final ApplicationEventPublisher events;
     private final MeterRegistry meters;
     private final UserDirectory users;
+    private final AuditTrail audit;
 
     CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateway gateway,
                     PaymentIntentRepository intents, OrderRepository orders, ConsentLedger consents,
-                    ApplicationEventPublisher events, MeterRegistry meters, UserDirectory users) {
+                    ApplicationEventPublisher events, MeterRegistry meters, UserDirectory users,
+                    AuditTrail audit) {
         this.catalog = catalog;
         this.coupons = coupons;
         this.gateway = gateway;
@@ -92,6 +98,7 @@ public class CheckoutService {
         this.events = events;
         this.meters = meters;
         this.users = users;
+        this.audit = audit;
     }
 
     public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
@@ -186,6 +193,9 @@ public class CheckoutService {
         }
         meters.counter("sixpack.orders.placed").increment();
         events.publishEvent(new OrderChangedEvent(order.id()));
+        audit.record(AuditEvent.of(AuditAction.ORDER_PLACED).on("order", order.id())
+                .changing(List.of(FieldChange.of("status", null, OrderStatus.PROCESSING.name()),
+                        FieldChange.of("total", null, intent.quote().total()))));
         return order.id();
     }
 

@@ -5,6 +5,10 @@ import static com.sixpack.shared.config.CacheConfig.PRODUCTS_BY_ID;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_CATEGORIES;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_LATEST;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.product.ProductChangedEvent;
 import com.sixpack.product.domain.Product;
 import com.sixpack.product.domain.ProductRepository;
@@ -28,6 +32,7 @@ import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
+import java.util.Map;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,14 +74,16 @@ public class ProductService {
     private final ApplicationEventPublisher events;
     private final ProductProperties props;
     private final CategoryRepository categories;
+    private final AuditTrail audit;
 
     ProductService(ProductRepository products, FileStorage storage, ApplicationEventPublisher events,
-                   ProductProperties props, CategoryRepository categories) {
+                   ProductProperties props, CategoryRepository categories, AuditTrail audit) {
         this.products = products;
         this.storage = storage;
         this.events = events;
         this.props = props;
         this.categories = categories;
+        this.audit = audit;
     }
 
     @Cacheable(PRODUCTS_LATEST)
@@ -118,6 +125,8 @@ public class ProductService {
                     Product.normalizeCategory(cmd.category()), null,
                     merge(null, name, ProductDetails.EMPTY, cmd.details(), cmd.price()).withImages(gallery)));
             events.publishEvent(new ProductChangedEvent());
+            audit.record(AuditEvent.of(AuditAction.PRODUCT_CREATED).on("product", saved.id())
+                    .changing(Changes.diff(Map.of(), CatalogAudit.view(saved), CatalogAudit.PRODUCT)));
             return saved;
         } catch (RuntimeException e) {
             storage.delete(photo);
@@ -152,6 +161,8 @@ public class ProductService {
             oldGallery.forEach(storage::delete);
         }
         events.publishEvent(new ProductChangedEvent());
+        audit.record(AuditEvent.of(AuditAction.PRODUCT_UPDATED).on("product", id)
+                .changing(Changes.diff(CatalogAudit.view(current), CatalogAudit.view(saved), CatalogAudit.PRODUCT)));
         return saved;
     }
 
@@ -162,6 +173,8 @@ public class ProductService {
         storage.delete(current.photo());
         current.details().images().forEach(storage::delete);
         events.publishEvent(new ProductChangedEvent());
+        audit.record(AuditEvent.of(AuditAction.PRODUCT_DELETED).on("product", id)
+                .changing(Changes.diff(CatalogAudit.view(current), Map.of(), CatalogAudit.PRODUCT)));
     }
 
     /**

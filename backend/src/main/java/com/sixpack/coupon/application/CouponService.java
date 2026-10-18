@@ -1,5 +1,9 @@
 package com.sixpack.coupon.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.coupon.CouponLookup;
 import com.sixpack.coupon.domain.Coupon;
 import com.sixpack.coupon.domain.CouponRepository;
@@ -8,6 +12,7 @@ import com.sixpack.coupon.domain.CouponType;
 import com.sixpack.shared.ApiException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,9 +32,11 @@ public class CouponService implements CouponLookup {
     }
 
     private final CouponRepository coupons;
+    private final AuditTrail audit;
 
-    CouponService(CouponRepository coupons) {
+    CouponService(CouponRepository coupons, AuditTrail audit) {
         this.coupons = coupons;
+        this.audit = audit;
     }
 
     @Override
@@ -70,7 +77,10 @@ public class CouponService implements CouponLookup {
         CouponRules rules = new CouponRules(type, c.maxDiscount(), c.minOrderValue(), c.startsAt(), c.expiresAt(),
                 c.usageLimit(), c.perUserLimit(), c.active() == null || c.active());
         validate(c.amount(), rules);
-        return coupons.save(new Coupon(null, code, c.amount(), rules, 0));
+        Coupon saved = coupons.save(new Coupon(null, code, c.amount(), rules, 0));
+        audit.record(AuditEvent.of(AuditAction.COUPON_CREATED).on("coupon", saved.id())
+                .changing(Changes.diff(Map.of(), CouponAudit.view(saved), CouponAudit.POLICY)));
+        return saved;
     }
 
     public Coupon update(String id, UpdateCommand u) {
@@ -86,13 +96,19 @@ public class CouponService implements CouponLookup {
                 u.active() != null ? u.active() : r.active());
         double amount = u.amount() != null ? u.amount() : current.amount();
         validate(amount, merged);
-        return coupons.save(current.withRules(amount, merged));
+        Coupon saved = coupons.save(current.withRules(amount, merged));
+        audit.record(AuditEvent.of(AuditAction.COUPON_UPDATED).on("coupon", id)
+                .changing(Changes.diff(CouponAudit.view(current), CouponAudit.view(saved), CouponAudit.POLICY)));
+        return saved;
     }
 
     public void delete(String id) {
+        Coupon current = coupons.findById(id).orElseThrow(() -> ApiException.notFound("Coupon not found"));
         if (!coupons.deleteById(id)) {
             throw ApiException.notFound("Coupon not found");
         }
+        audit.record(AuditEvent.of(AuditAction.COUPON_DELETED).on("coupon", id)
+                .changing(Changes.diff(CouponAudit.view(current), Map.of(), CouponAudit.POLICY)));
     }
 
     private java.util.Optional<Coupon> find(String code) {
