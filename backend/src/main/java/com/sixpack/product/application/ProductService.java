@@ -33,6 +33,7 @@ import com.sixpack.shared.PageResult;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -186,7 +187,9 @@ public class ProductService {
         if (!props.variantsEnabled()) {
             throw ApiException.forbidden("Product variants are not enabled yet");
         }
+        AtomicReference<Product> before = new AtomicReference<>();
         Product saved = products.updateVariants(id, current -> {
+            before.set(current);
             ProductDetails d = current.details();
             ProductVariants built = VariantRules.build(d.variants(), cmd.axes(), cmd.variants(),
                     d.sku() != null ? d.sku() : d.slug(), d.sku(), () -> UUID.randomUUID().toString()
@@ -199,6 +202,8 @@ public class ProductService {
             return current.withVariants(built);
         }).orElseThrow(() -> ApiException.notFound("Product not found"));
         events.publishEvent(new ProductChangedEvent());
+        audit.record(AuditEvent.of(AuditAction.PRODUCT_UPDATED).on("product", id)
+                .changing(Changes.diff(CatalogAudit.view(before.get()), CatalogAudit.view(saved), CatalogAudit.PRODUCT)));
         return saved;
     }
 
@@ -234,7 +239,10 @@ public class ProductService {
             }
         }
         events.publishEvent(new ProductChangedEvent());
-        return products.findById(id).orElseThrow();
+        Product saved = products.findById(id).orElseThrow();
+        audit.record(AuditEvent.of(AuditAction.PRODUCT_UPDATED).on("product", id)
+                .changing(Changes.diff(CatalogAudit.view(current), CatalogAudit.view(saved), CatalogAudit.PRODUCT)));
+        return saved;
     }
 
     private Product get(String id, String variantId) {
