@@ -105,9 +105,9 @@ const AuditLog = () => {
         }
         actions={
           <>
-            <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Newer</button>
+            <button type="button" className="btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>Newer</button>
             <span aria-live="polite">Page {page} of {Math.max(totalPage, 1)}</span>
-            <button type="button" disabled={page >= totalPage} onClick={() => setPage(page + 1)}>Older</button>
+            <button type="button" className="btn" disabled={page >= totalPage} onClick={() => setPage(page + 1)}>Older</button>
           </>
         }
       />

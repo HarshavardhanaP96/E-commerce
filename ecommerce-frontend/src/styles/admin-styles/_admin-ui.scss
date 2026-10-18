@@ -183,14 +183,6 @@
   &__actions {
     margin-left: auto;
     @include flex(row, flex-end, center, $spacing-sm);
-
-    button {
-      @include button(secondary);
-      height: 2rem;
-      padding: 0 0.625rem;
-      @include text(body-sm);
-      font-weight: 500;
-    }
   }
 
   &__scroll {
