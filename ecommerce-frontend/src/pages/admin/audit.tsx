@@ -17,20 +17,39 @@ const summarise = (changes: AuditChange[]) =>
     .map((c) => (c.redacted ? `${c.field} changed` : `${c.field}: ${show(c.before)} → ${show(c.after)}`))
     .join("; ");
 
+// Widths are tuned so the Changes column is visible at a 1280px viewport; the Record cell shows the type and
+// id in full in its tooltip (DataTable puts the cell value in the title; for When that is the exact ISO time) and is clipped with an ellipsis.
 const columns: Column<Row>[] = [
-  { Header: "When", accessor: "at", width: 170, Cell: ({ value }: CellProps<Row>) => new Date(value).toLocaleString("en-IN") } as Column<Row>,
-  { Header: "Who", accessor: "actor", width: 190 },
-  { Header: "Action", accessor: "action", width: 210 },
-  { Header: "Record", accessor: "entity", width: 230 },
-  { Header: "Result", accessor: "outcome", width: 100 },
+  { Header: "When", accessor: "at", width: 130, Cell: ({ value }: CellProps<Row>) => new Date(value).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) } as Column<Row>,
+  { Header: "Who", accessor: "actor", width: 130 },
+  { Header: "Action", accessor: "action", width: 200 },
+  {
+    Header: "Record",
+    accessor: "entity",
+    width: 110,
+    Cell: ({ value }: CellProps<Row>) => (
+      <span style={{ display: "inline-block", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }}>
+        {value}
+      </span>
+    ),
+  } as Column<Row>,
+  { Header: "Result", accessor: "outcome", width: 96 },
   { Header: "Changes", accessor: "summary" },
 ];
 
-const startOfDay = (date: string) => (date ? new Date(`${date}T00:00:00`).toISOString() : "");
-const endOfDay = (date: string) => (date ? new Date(`${date}T23:59:59.999`).toISOString() : "");
+// A half-typed year gives an invalid Date, and toISOString() would throw during render; treat it as "no bound".
+const toIso = (date: string, time: string) => {
+  if (!date) return "";
+  const d = new Date(`${date}T${time}`);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+};
+const startOfDay = (date: string) => toIso(date, "00:00:00");
+const endOfDay = (date: string) => toIso(date, "23:59:59.999");
 
 const AuditLog = () => {
   const [entityType, setEntityType] = useState("");
+  const [entityId, setEntityId] = useState("");
+  const [actorId, setActorId] = useState("");
   const [action, setAction] = useState("");
   const [outcome, setOutcome] = useState("");
   const [from, setFrom] = useState("");
@@ -40,6 +59,8 @@ const AuditLog = () => {
   // currentData (not data) so rows from a previous filter are never shown for the current one.
   const { currentData, isLoading, isFetching, isError, error } = useAuditLogQuery({
     entityType,
+    entityId: entityId.trim(),
+    actorId: actorId.trim(),
     action,
     outcome,
     from: startOfDay(from),
@@ -74,7 +95,7 @@ const AuditLog = () => {
         </p>
       )}
       <DataTable
-        resetKey={`${entityType}|${action}|${outcome}|${from}|${to}|${page}`}
+        resetKey={`${entityType}|${entityId.trim()}|${actorId.trim()}|${action}|${outcome}|${from}|${to}|${page}`}
         columns={columns}
         data={rows}
         isLoading={isLoading || isFetching}
@@ -88,6 +109,20 @@ const AuditLog = () => {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
+            <input
+              type="text"
+              value={entityId}
+              onChange={(e) => filter(setEntityId)(e.target.value)}
+              placeholder="Record id"
+              aria-label="Record id"
+            />
+            <input
+              type="text"
+              value={actorId}
+              onChange={(e) => filter(setActorId)(e.target.value)}
+              placeholder="Actor id"
+              aria-label="Actor id"
+            />
             <select value={action} onChange={(e) => filter(setAction)(e.target.value)} aria-label="Action">
               <option value="">All actions</option>
               {AUDIT_ACTIONS.map((a) => (

@@ -30,6 +30,8 @@ export type AuditEntry = {
 
 export type AuditFilters = {
   entityType?: string;
+  entityId?: string;
+  actorId?: string;
   action?: string;
   outcome?: string;
   from?: string;
