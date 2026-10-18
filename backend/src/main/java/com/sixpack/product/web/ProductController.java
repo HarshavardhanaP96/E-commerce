@@ -22,9 +22,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -101,6 +103,19 @@ class ProductController {
         Product updated = service.update(id, new ProductCommand(name, price, stock, category, Uploads.bytes(photo),
                 details.toCommand()));
         return ApiResponse.of("message", "Product updated successfully", "product", ProductView.from(updated));
+    }
+
+    @PutMapping(value = "/{id}/variants", consumes = MediaType.APPLICATION_JSON_VALUE)
+    Map<String, Object> replaceVariants(@PathVariable String id, @Valid @RequestBody VariantsRequest request) {
+        Product updated = service.replaceVariants(id, request.toCommand());
+        return ApiResponse.of("message", "Variants saved successfully", "product", ProductView.from(updated));
+    }
+
+    @PatchMapping(value = "/{id}/variants/{variantId}/stock", consumes = MediaType.APPLICATION_JSON_VALUE)
+    Map<String, Object> adjustVariantStock(@PathVariable String id, @PathVariable String variantId,
+                                           @Valid @RequestBody StockRequest request) {
+        Product updated = service.adjustVariantStock(id, variantId, request.toCommand());
+        return ApiResponse.of("message", "Stock updated successfully", "product", ProductView.from(updated));
     }
 
     @DeleteMapping("/{id}")

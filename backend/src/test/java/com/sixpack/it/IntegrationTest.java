@@ -33,7 +33,8 @@ import org.testcontainers.containers.MongoDBContainer;
         "app.security.auth-requests-per-minute=10000",
         "app.storage.local-dir=target/test-uploads",
         "app.payment.provider=fake",
-        "app.user.admin-email="
+        "app.user.admin-email=",
+        "app.products.variants-enabled=true"
 })
 @AutoConfigureMockMvc
 public abstract class IntegrationTest {

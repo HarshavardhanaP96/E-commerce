@@ -41,6 +41,7 @@ app:
     local-dir: ${UPLOADS_DIR:uploads}
   products:
     page-size: ${PRODUCT_PER_PAGE:10}
+    variants-enabled: ${PRODUCT_VARIANTS_ENABLED:false}
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).

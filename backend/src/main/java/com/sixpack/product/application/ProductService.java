@@ -12,7 +12,13 @@ import com.sixpack.product.domain.ProductSearch;
 import com.sixpack.product.domain.CategoryRepository;
 import com.sixpack.product.domain.ProductDetails;
 import com.sixpack.product.domain.ProductStatus;
+import com.sixpack.product.domain.ProductVariants;
 import com.sixpack.product.domain.Slugs;
+import com.sixpack.product.domain.Variant;
+import com.sixpack.product.domain.VariantRules;
+import com.sixpack.product.domain.VariantRules.AxisInput;
+import com.sixpack.product.domain.VariantRules.VariantInput;
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -32,9 +38,16 @@ public class ProductService {
 
     public record DetailsCommand(String slug, String sku, String description, String brand, Double mrp,
                                  Double taxRate, String hsn, String status, List<String> tags, String categoryId,
-                                 List<byte[]> images) {
+                                 String countryOfOrigin, List<byte[]> images) {
         public static final DetailsCommand NONE =
-                new DetailsCommand(null, null, null, null, null, null, null, null, null, null, null);
+                new DetailsCommand(null, null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    public record VariantsCommand(List<AxisInput> axes, List<VariantInput> variants) {
+    }
+
+    /** Exactly one of {@code delta} (relative change) and {@code set} (absolute value). */
+    public record StockCommand(Integer delta, Integer set) {
     }
 
     public record ProductCommand(String name, Double price, Integer stock, String category, byte[] photo,
@@ -117,7 +130,8 @@ public class ProductService {
     public Product update(String id, ProductCommand cmd) {
         Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
         String name = cmd.name() != null && !cmd.name().isBlank() ? cmd.name().trim() : current.name();
-        double price = cmd.price() != null ? cmd.price() : current.price();
+        // With variants, price and stock are derived from them and cannot be edited here.
+        double price = cmd.price() != null && !current.hasVariants() ? cmd.price() : current.price();
         ProductDetails details = merge(id, name, current.details(), cmd.details(), price);
         String photo = current.photo();
         if (cmd.photo() != null) {
@@ -127,7 +141,7 @@ public class ProductService {
         List<String> gallery = cmd.details().images() == null || cmd.details().images().isEmpty()
                 ? oldGallery : storeAll(cmd.details().images());
         Product saved = products.save(new Product(id, name, photo, price,
-                cmd.stock() != null ? cmd.stock() : current.stock(),
+                cmd.stock() != null && !current.hasVariants() ? cmd.stock() : current.stock(),
                 cmd.category() != null && !cmd.category().isBlank()
                         ? Product.normalizeCategory(cmd.category()) : current.category(),
                 current.createdAt(), details.withImages(gallery)));
@@ -148,6 +162,74 @@ public class ProductService {
         storage.delete(current.photo());
         current.details().images().forEach(storage::delete);
         events.publishEvent(new ProductChangedEvent());
+    }
+
+    /**
+     * Replaces the option axes and variants of a product (an empty command removes them). Existing variants are
+     * matched by id and keep their live stock; the product's price and stock are re-derived.
+     */
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    public Product replaceVariants(String id, VariantsCommand cmd) {
+        if (!props.variantsEnabled()) {
+            throw ApiException.forbidden("Product variants are not enabled yet");
+        }
+        Product saved = products.updateVariants(id, current -> {
+            ProductDetails d = current.details();
+            ProductVariants built = VariantRules.build(d.variants(), cmd.axes(), cmd.variants(),
+                    d.sku() != null ? d.sku() : d.slug(), d.sku(), () -> UUID.randomUUID().toString()
+                            .replace("-", "").substring(0, 12));
+            for (Variant v : built.items()) {
+                if (takenBySomeoneElse(products.findBySku(v.sku()), id)) {
+                    throw ApiException.conflict("sku: '" + v.sku() + "' is already in use");
+                }
+            }
+            return current.withVariants(built);
+        }).orElseThrow(() -> ApiException.notFound("Product not found"));
+        events.publishEvent(new ProductChangedEvent());
+        return saved;
+    }
+
+    /** Changes one variant's stock atomically, without touching the rest of the product. */
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    public Product adjustVariantStock(String id, String variantId, StockCommand cmd) {
+        if ((cmd.delta() == null) == (cmd.set() == null)) {
+            throw ApiException.badRequest("stock: send exactly one of delta or set");
+        }
+        if (cmd.set() != null && (cmd.set() < 0 || cmd.set() > VariantRules.MAX_STOCK)) {
+            throw ApiException.badRequest("stock: set must be between 0 and " + VariantRules.MAX_STOCK);
+        }
+        if (cmd.delta() != null && Math.abs((long) cmd.delta()) > VariantRules.MAX_STOCK) {
+            throw ApiException.badRequest("stock: delta must be between -" + VariantRules.MAX_STOCK + " and "
+                    + VariantRules.MAX_STOCK);
+        }
+        Product current = get(id, variantId);
+        if (cmd.delta() != null) {
+            if (!products.adjustVariantStock(id, variantId, cmd.delta())) {
+                throw ApiException.conflict("stock: cannot go below zero");
+            }
+        } else {
+            boolean done = false;
+            Variant variant = current.details().variants().find(variantId).orElseThrow();
+            for (int attempt = 0; attempt < 3 && !done; attempt++) {
+                done = products.compareAndSetVariantStock(id, variantId, variant.stock(), cmd.set());
+                if (!done) {
+                    variant = get(id, variantId).details().variants().find(variantId).orElseThrow();
+                }
+            }
+            if (!done) {
+                throw ApiException.conflict("stock: changed while saving, please try again");
+            }
+        }
+        events.publishEvent(new ProductChangedEvent());
+        return products.findById(id).orElseThrow();
+    }
+
+    private Product get(String id, String variantId) {
+        Product p = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
+        if (p.details().variants().find(variantId).isEmpty()) {
+            throw ApiException.notFound("Variant not found");
+        }
+        return p;
     }
 
     public int pageSize() {
@@ -202,7 +284,7 @@ public class ProductService {
                 mrp, c.taxRate() != null ? c.taxRate() : cur.taxRate(), pick(c.hsn(), cur.hsn()),
                 hasText(c.status()) ? ProductStatus.parse(c.status()) : cur.status(),
                 c.tags() != null && !c.tags().isEmpty() ? normalizeTags(c.tags()) : cur.tags(),
-                cur.images(), categoryId);
+                cur.images(), categoryId, pick(c.countryOfOrigin(), cur.countryOfOrigin()), cur.variants());
     }
 
     private String freeSlug(String base, String selfId) {

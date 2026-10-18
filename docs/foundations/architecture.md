@@ -87,6 +87,17 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-18: ADR-019 **Variants embedded in the product document as generic option axes plus a variants array;
+  product `price`/`stock` are derived and stored.** Rejected: fixed size/colour fields (dead end for other axes),
+  one product per variant (duplicated content, noisy search), a separate variants collection (cross-document
+  consistency for a single-store app). Stock changes are single-document atomic updates that move the variant and
+  the product total together, so every existing reader of `stock` keeps working. A variant-structure save
+  re-reads the product and writes only variants/price/stock under a revision check (`rev`, bumped by every stock
+  change), retrying on conflict, so it cannot overwrite a concurrent sale; a plain `save` leaves those fields
+  alone for variant products. Variant ids are server-generated and stable; they are stored as `variantId`
+  because a field named `id` would map to `_id`. Variant SKUs are always set (generated when blank) so the sparse
+  unique index never sees nulls. Gated by `app.products.variants-enabled` (default off) until checkout, orders and
+  the storefront support variants. Still active.
 - 2026-10-18: ADR-018 **Coupon rules in an additive nested `CouponRules`; one pure `Coupon.evaluate`; redemption
   counted at order creation.** Old coupons (a code and an amount) load as always-active flat coupons, so no
   migration. The same method decides eligibility for the cart preview and for checkout, and returns the reason a
