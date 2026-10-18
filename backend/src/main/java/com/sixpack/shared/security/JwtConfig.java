@@ -1,6 +1,7 @@
 package com.sixpack.shared.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.sixpack.shared.tenant.TenantProperties;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -20,15 +21,18 @@ class JwtConfig {
     static final String ISSUER = "sixpack";
 
     private final SecretKey key;
+    private final TenantProperties tenantProps;
 
-    JwtConfig(SecurityProperties props) {
+    JwtConfig(SecurityProperties props, TenantProperties tenantProps) {
         this.key = new SecretKeySpec(props.jwtSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        this.tenantProps = tenantProps;
     }
 
     @Bean
     JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(ISSUER)));
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(ISSUER), new TenantClaimValidator(tenantProps)));
         return decoder;
     }
 
