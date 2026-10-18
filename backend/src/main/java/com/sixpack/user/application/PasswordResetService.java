@@ -1,9 +1,13 @@
 package com.sixpack.user.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
 import com.sixpack.shared.ApiException;
 import com.sixpack.user.domain.MailSender;
 import com.sixpack.user.domain.PasswordResetToken;
 import com.sixpack.user.domain.PasswordResetTokenRepository;
+import com.sixpack.user.domain.User;
 import com.sixpack.user.domain.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,27 +33,35 @@ public class PasswordResetService {
     private final MailSender mail;
     private final PasswordEncoder encoder;
     private final UserProperties props;
+    private final AuditTrail audit;
 
     PasswordResetService(UserRepository users, PasswordResetTokenRepository tokens, MailSender mail,
-                         PasswordEncoder encoder, UserProperties props) {
+                         PasswordEncoder encoder, UserProperties props, AuditTrail audit) {
         this.users = users;
         this.tokens = tokens;
         this.mail = mail;
         this.encoder = encoder;
         this.props = props;
+        this.audit = audit;
     }
 
     /** Always succeeds from the caller's view so the endpoint cannot be used to discover accounts. */
     public void requestReset(String email) {
-        users.findByEmail(AuthService.normalizeEmail(email)).ifPresent(user -> {
-            byte[] raw = new byte[32];
-            RANDOM.nextBytes(raw);
-            String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
-            tokens.deleteByUserId(user.id());
-            tokens.save(new PasswordResetToken(null, user.id(), sha256(token), Instant.now().plus(TOKEN_TTL)));
-            String base = props.frontendUrl() == null ? "" : props.frontendUrl().replaceAll("/+$", "");
-            mail.sendPasswordReset(user.email(), user.name(), base + "/forgot-password?token=" + token);
-        });
+        String normalized = AuthService.normalizeEmail(email);
+        Optional<User> found = users.findByEmail(normalized);
+        found.ifPresent(this::sendResetLink);
+        AuditEvent event = AuditEvent.of(AuditAction.PASSWORD_RESET_REQUESTED).aboutSubject(normalized);
+        audit.record(found.map(u -> event.on("user", u.id())).orElse(event));
+    }
+
+    private void sendResetLink(User user) {
+        byte[] raw = new byte[32];
+        RANDOM.nextBytes(raw);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
+        tokens.deleteByUserId(user.id());
+        tokens.save(new PasswordResetToken(null, user.id(), sha256(token), Instant.now().plus(TOKEN_TTL)));
+        String base = props.frontendUrl() == null ? "" : props.frontendUrl().replaceAll("/+$", "");
+        mail.sendPasswordReset(user.email(), user.name(), base + "/forgot-password?token=" + token);
     }
 
     public void reset(String token, String newPassword) {
@@ -58,6 +71,8 @@ public class PasswordResetService {
         var user = users.findById(stored.userId())
                 .orElseThrow(() -> ApiException.badRequest("Reset link is invalid or has expired"));
         users.save(user.withPasswordHash(encoder.encode(newPassword)));
+        audit.record(AuditEvent.of(AuditAction.PASSWORD_RESET_COMPLETED).on("user", user.id())
+                .by(user.id(), user.role().name()));
     }
 
     static String sha256(String value) {

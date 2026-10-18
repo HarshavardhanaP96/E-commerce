@@ -1,5 +1,9 @@
 package com.sixpack.consent.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.FieldChange;
 import com.sixpack.consent.ConsentEvidence;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
@@ -31,11 +35,13 @@ public class ConsentService implements ConsentLedger {
     private final ConsentRepository records;
     private final LegalProperties legal;
     private final EvidenceHasher hasher;
+    private final AuditTrail audit;
 
-    ConsentService(ConsentRepository records, LegalProperties legal, EvidenceHasher hasher) {
+    ConsentService(ConsentRepository records, LegalProperties legal, EvidenceHasher hasher, AuditTrail audit) {
         this.records = records;
         this.legal = legal;
         this.hasher = hasher;
+        this.audit = audit;
     }
 
     @Override
@@ -91,6 +97,10 @@ public class ConsentService implements ConsentLedger {
                             + "Delete your account instead.");
         }
         append(userId, purpose, granted, source, evidence);
+        // The ledger is the legal proof; this entry only puts the decision in the admin audit view.
+        audit.record(AuditEvent.of(AuditAction.CONSENT_CHANGED).on("user", userId).changing(List.of(
+                FieldChange.of("purpose", null, purpose.wireValue()), FieldChange.of("granted", null, granted),
+                FieldChange.of("version", null, currentVersion(purpose)))));
         return state(userId, admin);
     }
 

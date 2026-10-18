@@ -1,5 +1,9 @@
 package com.sixpack.user.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.shared.ApiException;
 import com.sixpack.user.domain.Address;
 import com.sixpack.user.domain.AddressBook;
@@ -25,15 +29,20 @@ public class ProfileService {
     }
 
     private final UserRepository users;
+    private final AuditTrail audit;
 
-    ProfileService(UserRepository users) {
+    ProfileService(UserRepository users, AuditTrail audit) {
         this.users = users;
+        this.audit = audit;
     }
 
     public User updateProfile(String userId, ProfileCommand c) {
-        user(userId);
+        User before = user(userId);
         users.updateProfile(userId, trimOrNull(c.name()), trimOrNull(c.phone()), trimOrNull(c.locale()));
-        return user(userId);
+        User after = user(userId);
+        audit.record(AuditEvent.of(AuditAction.PROFILE_UPDATED).on("user", userId)
+                .changing(Changes.diff(UserAudit.profile(before), UserAudit.profile(after), UserAudit.PROFILE)));
+        return after;
     }
 
     public List<Address> addresses(String userId) {
@@ -43,17 +52,20 @@ public class ProfileService {
     public Address addAddress(String userId, AddressCommand c) {
         Address created = c.toAddress(UUID.randomUUID().toString());
         users.replaceAddresses(userId, AddressBook.add(addresses(userId), created));
+        audit.record(AuditEvent.of(AuditAction.ADDRESS_ADDED).on("address", created.id()));
         return created;
     }
 
     public Address updateAddress(String userId, String addressId, AddressCommand c) {
         List<Address> next = AddressBook.update(addresses(userId), addressId, c.toAddress(addressId));
         users.replaceAddresses(userId, next);
+        audit.record(AuditEvent.of(AuditAction.ADDRESS_UPDATED).on("address", addressId));
         return next.stream().filter(a -> a.id().equals(addressId)).findFirst().orElseThrow();
     }
 
     public void deleteAddress(String userId, String addressId) {
         users.replaceAddresses(userId, AddressBook.remove(addresses(userId), addressId));
+        audit.record(AuditEvent.of(AuditAction.ADDRESS_DELETED).on("address", addressId));
     }
 
     private User user(String userId) {
