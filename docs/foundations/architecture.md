@@ -19,7 +19,8 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 
 | Module      | Public API (root package)                         | Internals |
 |-------------|---------------------------------------------------|-----------|
-| `shared`    | (open module) error model, security config, JWT, rate limit, web config | — |
+| `shared`    | (open module) error model, security config, JWT, rate limit, web config; `shared.tenant`: `TenantContext`, `TenantMongo`, `TenantOwned`, `BackfillTarget` | — |
+| `tenant`    | — (others use `shared.tenant`)                    | tenants (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, `GET /tenant/config` |
 | `user`      | `UserDirectory` (look up name / exists), `UserDeletedEvent`, `AccountDeletionGuard` (other modules can veto a deletion) | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
 | `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering; also owns `Category` (`/category`) |
 | `coupon`    | `CouponLookup` (discount for a code)              | same layering |
@@ -87,6 +88,21 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-18: ADR-020 **Tenancy foundation: host-resolved tenant, a fail-closed `TenantMongo` wrapper, and a
+  guard that can only shrink.** A filter ahead of Spring Security maps the request host (after the
+  forwarded-header filter) to a tenant and binds it to the thread; unknown host is 404 and a suspended tenant is
+  403. Tenant-owned data is reached through `TenantMongo` (in the open `shared` module, so no module depends on
+  `tenant`), which adds the tenant to every query, stamps it on every save, refuses to overwrite another tenant's
+  document and throws when no tenant is in context. `TenantIsolationArchitectureTest` forbids `MongoTemplate`
+  outside the wrapper and the tenant module, with an allowlist of the repositories not yet migrated that must
+  shrink (it also fails on stale entries). While exactly one tenant exists every host resolves to it, so existing
+  deployments need no configuration; a second tenant switches to exact-host matching. Access tokens carry a
+  `tid` claim and are valid only for that tenant; tokens from before the change are honoured for the default
+  tenant only, until they expire (24 h). `tenants` is platform-global data and stays on `MongoTemplate`.
+  Limitation: users are still global, so no second real tenant may be created before the identity migration.
+  Rejected: a Mongo-level interceptor that rewrites every query (invisible, and it would also touch global
+  data), a database per tenant now (no dedicated-storage requirement, but `TenantMongo` is the single seam where
+  one could be chosen), and per-tenant signing keys (more key management with no stated need). Still active.
 - 2026-10-18: ADR-018 **Coupon rules in an additive nested `CouponRules`; one pure `Coupon.evaluate`; redemption
   counted at order creation.** Old coupons (a code and an amount) load as always-active flat coupons, so no
   migration. The same method decides eligibility for the cart preview and for checkout, and returns the reason a
