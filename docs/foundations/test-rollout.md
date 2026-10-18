@@ -29,7 +29,12 @@
 ## Rollback / monitoring
 - Signals: 5xx rate, p95 latency, readiness failures, `sixpack.checkout.failed`, ERROR logs containing
   `paid_but_unfulfilled`.
-- Alert on `sixpack.audit.write{result="failure"}` increasing: audit entries are being dropped. Changing the audit retention needs a code change in `AuditDocument` and, on a database that already has the `at` TTL index, that index dropped first (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place.
+- Alert on `sixpack.audit.write{result="failure"}` increasing (rule `SixpackAuditWriteFailing` in `infra/observability/k8s/alerts.yaml`): audit entries are being dropped. Changing the audit retention needs a code change in `AuditDocument` and, on a database that already has the `at` TTL index, that index dropped first (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place.
 - Revert with `kubectl rollout undo deployment/backend-deploy -n prod-env`. The data model is
-  backward-compatible with the Node backend (only additive collections and an optional `payment` field), so
-  the old image can be redeployed if it's ever needed.
+  backward-compatible with the Node backend (only additive collections and an optional `payment` field).
+- Rolling back past the admin agreement and audit trail is different: once any admin has accepted the agreement,
+  `consents` holds `purpose: "admin_aup"` rows, and the previous build's `Purpose.fromWire` throws on them (HTTP 500 on
+  `/consent/me` and checkout for those accounts). Either roll forward, or, before redeploying the old image, run
+  `db.consents.deleteMany({purpose: "admin_aup"})`. Admins then accept the agreement again on the next deploy.
+- Deploy the frontend first or together with the backend. An old frontend served against the new backend would
+  show an admin the agreement prompt without a link to the agreement text.

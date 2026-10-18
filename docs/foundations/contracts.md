@@ -112,14 +112,14 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 ### Legal & consent
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /legal/versions` | 🔓 | — | `{success, versions:{terms, privacy}}` |
+| `GET /legal/versions` | 🔓 | — | `{success, versions:{terms, privacy, admin_aup}}` |
 | `GET /consent/me` | 👤 | — | `{success, consents:{<purpose>:{granted, version, at}}, pending:[purpose], history:[{purpose, granted, version, source, at}]}`. `pending` lists the required policies not yet accepted at the current version; the SPA blocks with a prompt while it's non-empty |
-| `POST /consent` | 👤 | `{purpose, granted, source: reprompt\|settings}` | same as `GET /consent/me`. 400 for withdrawing terms or privacy (delete the account instead) |
+| `POST /consent` | 👤 | `{purpose, granted, source: reprompt\|settings}` | same as `GET /consent/me`. 400 for withdrawing terms or privacy (delete the account instead), for a non-admin granting `admin_aup`, and for withdrawing `admin_aup` |
 
 ### Audit — `/admin/audit`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /admin/audit` | 🛡 | `?entityType=&entityId=&actorId=&action=&outcome=success\|failure&from=&to=&page=` (`from`/`to` are ISO-8601 instants; 100 entries per page) | `{success, entries: [{_id, at, actorId?, actorRole, action, entityType?, entityId?, outcome, changes: [{field, before?, after?, redacted}], requestId?}], totalPage}`, newest first. 400 for an unknown `action`, `outcome` or malformed date. `ipHash`, `subjectHash` and `userAgent` are not returned |
+| `GET /admin/audit` | 🛡 | `?entityType=&entityId=&actorId=&action=&outcome=success\|failure&from=&to=&page=` (`from`/`to` are ISO-8601 date-times, e.g. `2026-10-18T00:00:00Z`, not bare dates; 100 entries per page) | `{success, entries: [{_id, at, actorId?, actorRole, action, entityType?, entityId?, outcome, changes: [{field, before?, after?, redacted}], requestId?}], totalPage}`, newest first. 400 for an unknown `action`, `outcome` or malformed date. `ipHash`, `subjectHash` and `userAgent` are not returned |
 
 `action` is one of: `PRODUCT_CREATED/UPDATED/DELETED`, `CATEGORY_CREATED/UPDATED/DELETED`, `COUPON_CREATED/UPDATED/DELETED`,
 `ORDER_PLACED`, `ORDER_STATUS_CHANGED`, `ORDER_DELETED`, `USER_REGISTERED`, `USER_ROLE_CHANGED`, `USER_STATUS_CHANGED`,
@@ -128,7 +128,8 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 
 Product-variant writes (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED`, with `variantPrices`
 and `variantStocks` (maps keyed by SKU) in the change set. Registration consents are not duplicated into the audit
-log; the `consents` ledger is the proof.
+log; the `consents` ledger is the proof. "Who failed to log in as X" is answerable only for existing accounts, by
+searching on the account's record id: the attempted-email hash (`subjectHash`) is not returned or searchable.
 
 Admin endpoints (every route a JWT with role ADMIN reaches, except `/user/me/**`, `/consent/**` and `/legal/**`)
 return **403** until the admin has accepted the current acceptable-use agreement (`POST /consent` with

@@ -62,7 +62,7 @@ state that purpose in P2 and take consent for it.
 | C9 | **Before loading Razorpay checkout.js** | Covered by C8. Razorpay sets its own cookies for fraud checks. List them in P6 as strictly necessary. | None needed | 🔴 (disclose) | No | No |
 | C10 | **Profile photo upload** | "Optional. Shown on your account only." | Inline hint, covered by P2 | 🟢 | No | No |
 | C11 | **Forgot password** | Link to Privacy Policy | Notice | 🟢 | No | No |
-| C12 | **Admin first login / AUP version change** | Admin acceptable-use (P8) | Blocking clickwrap | 🟢 | Yes, for `/admin/*` | Yes: `admin_aup` |
+| C12 | **Admin first login / AUP version change** | Admin acceptable-use (P8) | Blocking clickwrap | 🟢 | Yes, for every `/api/v1/**` request made with an admin token, except `/user/me/**`, `/consent/**` and `/legal/**` | Yes: `admin_aup` |
 | C13 | **Account settings → Privacy** (new page) | Current consents with toggles, cookie preferences, "Download my data", "Delete my account" | Self-service. Withdrawing must take as few steps as granting. | 🔴 | n/a | Yes, every change |
 | C14 | **Footer, every page** | Terms · Privacy · Refunds · Shipping · Contact · Cookie settings | Links. **There is no footer today, so we need to add one.** | 🔴 | n/a | n/a |
 
@@ -167,8 +167,8 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 | Consent records | Account lifetime + 3 years (proof) | Delete |
 | Server and access logs | **At least 1 year** (DPDP Rules), then delete | Loki retention config |
 | `payment_intents`, `password_reset_tokens` | Already TTL'd (24 h / 15 min) | Already handled |
-| Audit log (`audit_log`) | 365 days, then deleted by a TTL index. The period is fixed in `AuditDocument` (`@Indexed(expireAfter = "365d")`); changing it needs a code change plus dropping the existing `at` index (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place. Holds actor ids, record ids and field names; personal values are never stored. | Deleted automatically |
-| Attempted-login email hash (`subjectHash`) | Same as the audit log. It is a salted hash, so it is pseudonymous; it can't be reversed without the salt (`CONSENT_IP_SALT`, which must be set in production). | Deleted automatically |
+| Audit log (`audit_log`) | 365 days, then deleted by a TTL index. The period is fixed in `AuditDocument` (`@Indexed(expireAfter = "365d")`); changing it needs a code change plus dropping the existing `at` index (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place. Holds actor ids, record ids, the names of changed fields, non-personal values (prices, statuses, roles), a salted hash of the IP and the browser user-agent; personal values (name, email, phone, address) are never stored. | Deleted automatically |
+| Attempted-login email hash (`subjectHash`) | Same as the audit log. It is a salted hash, so it is pseudonymous. It can't be reversed without the salt, but that holds only when `CONSENT_IP_SALT` is set. The salt defaults to empty, in which case the hash is plain SHA-256 and the backend logs a startup warning; set it in every real environment. | Deleted automatically |
 
 ## 8. Implementation options
 
@@ -208,10 +208,13 @@ I'll go with **Option A** unless you object.
 ## 10. Audit trail
 
 Every change an admin or customer makes to products, categories, coupons, orders and users, and every sign-in
-attempt, password reset and consent decision, is recorded in the append-only `audit_log` collection (ADR-019).
+attempt, password reset and consent change after registration (the `consents` ledger holds the registration consents), is recorded in the append-only `audit_log` collection (ADR-019).
 Admins read it at **Admin → Audit log**. The log never stores personal values: personal fields (name, phone,
-and so on) are recorded as "changed" only, emails are never stored, and the IP is a salted hash. Because it
-holds only opaque ids, erasing an account needs no change to the log. Reads of personal data are not logged.
+and so on) are recorded as "changed" only, emails are never stored, and the IP is a salted hash. It does keep
+actor and record ids, changed field names, non-personal values (prices, statuses, roles), the browser user-agent and,
+for failed logins and reset requests, a salted hash of the attempted email. Because it holds no personal values,
+erasing an account needs no change to the log. "Who failed to log in as X" is answerable only for existing accounts
+(through the account's record id): the attempted-email hash is not returned by the API and cannot be searched. Reads of personal data are not logged.
 The Admin Acceptable Use Agreement tells admins that their activity is recorded.
 
 ## Open questions

@@ -108,7 +108,7 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   `AuditTrail.record(AuditEvent)` after a successful write; the
   actor, IP hash and trace id are read from the request by `AuditService`, so callers cannot forge or forget
   them. Each entity has a `FieldPolicy`: only listed fields are logged, and personal fields are recorded as
-  "changed" without values, so the log holds no personal data and erasure needs no log rewrite. The product-variant
+  "changed" without values, so the log holds no personal values (only pseudonymous salted hashes of the IP and of an attempted login email) and erasure needs no log rewrite. The product-variant
   write paths (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED` with `variantPrices` and
   `variantStocks` maps keyed by SKU. A failed audit
   write is logged and counted (`sixpack.audit.write{result=failure}`) and never fails the action. The admin
