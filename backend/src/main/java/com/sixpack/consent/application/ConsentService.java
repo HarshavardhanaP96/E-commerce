@@ -7,12 +7,9 @@ import com.sixpack.consent.domain.ConsentRecord;
 import com.sixpack.consent.domain.ConsentRecord.Source;
 import com.sixpack.consent.domain.ConsentRepository;
 import com.sixpack.shared.ApiException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import com.sixpack.shared.security.EvidenceHasher;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -33,10 +30,12 @@ public class ConsentService implements ConsentLedger {
 
     private final ConsentRepository records;
     private final LegalProperties legal;
+    private final EvidenceHasher hasher;
 
-    ConsentService(ConsentRepository records, LegalProperties legal) {
+    ConsentService(ConsentRepository records, LegalProperties legal, EvidenceHasher hasher) {
         this.records = records;
         this.legal = legal;
+        this.hasher = hasher;
     }
 
     @Override
@@ -99,7 +98,7 @@ public class ConsentService implements ConsentLedger {
         String userAgent = evidence.userAgent() == null ? ""
                 : evidence.userAgent().substring(0, Math.min(evidence.userAgent().length(), MAX_USER_AGENT));
         records.append(new ConsentRecord(null, userId, purpose, granted, currentVersion(purpose), source,
-                hashIp(evidence.ip()), userAgent, null));
+                hasher.hash(evidence.ip()), userAgent, null));
     }
 
     private boolean isCurrentGrant(ConsentRecord record) {
@@ -110,18 +109,5 @@ public class ConsentService implements ConsentLedger {
         Map<Purpose, ConsentRecord> latest = new EnumMap<>(Purpose.class);
         newestFirst.forEach(r -> latest.putIfAbsent(r.purpose(), r));
         return latest;
-    }
-
-    private String hashIp(String ip) {
-        if (ip == null || ip.isBlank()) {
-            return "";
-        }
-        try {
-            MessageDigest sha = MessageDigest.getInstance("SHA-256");
-            String salt = legal.ipHashSalt() == null ? "" : legal.ipHashSalt();
-            return HexFormat.of().formatHex(sha.digest((salt + ip).getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }
