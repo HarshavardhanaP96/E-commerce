@@ -29,8 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 class ConsentController {
 
     record DecisionRequest(
-            @NotBlank @Pattern(regexp = "(?i)terms|privacy|marketing_email",
-                    message = "must be terms, privacy or marketing_email") String purpose,
+            @NotBlank @Pattern(regexp = "(?i)terms|privacy|marketing_email|admin_aup",
+                    message = "must be terms, privacy, marketing_email or admin_aup") String purpose,
             @NotNull Boolean granted,
             @NotBlank @Pattern(regexp = "(?i)reprompt|settings", message = "must be reprompt or settings")
             String source) {
@@ -64,13 +64,15 @@ class ConsentController {
 
     @GetMapping("/api/v1/consent/me")
     Map<String, Object> mine(@AuthenticationPrincipal Jwt jwt) {
-        return view(consents.state(AuthUser.from(jwt).id()));
+        AuthUser caller = AuthUser.from(jwt);
+        return view(consents.state(caller.id(), caller.admin()));
     }
 
     @PostMapping("/api/v1/consent")
     Map<String, Object> decide(@Valid @RequestBody DecisionRequest request, @AuthenticationPrincipal Jwt jwt,
                                HttpServletRequest http) {
-        return view(consents.decide(AuthUser.from(jwt).id(), Purpose.fromWire(request.purpose()),
+        AuthUser caller = AuthUser.from(jwt);
+        return view(consents.decide(caller.id(), caller.admin(), Purpose.fromWire(request.purpose()),
                 request.granted(), Source.fromWire(request.source()), evidence(http)));
     }
 

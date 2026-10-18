@@ -54,34 +54,45 @@ public class ConsentService implements ConsentLedger {
     @Override
     public String currentVersion(Purpose purpose) {
         // Marketing consent is described in the Privacy Policy, so it follows that version.
-        return purpose == Purpose.TERMS ? legal.termsVersion() : legal.privacyVersion();
+        return switch (purpose) {
+            case TERMS -> legal.termsVersion();
+            case ADMIN_AUP -> legal.adminAupVersion();
+            case PRIVACY, MARKETING_EMAIL -> legal.privacyVersion();
+        };
     }
 
     public Map<Purpose, String> currentVersions() {
-        return Map.of(Purpose.TERMS, legal.termsVersion(), Purpose.PRIVACY, legal.privacyVersion());
+        return Map.of(Purpose.TERMS, legal.termsVersion(), Purpose.PRIVACY, legal.privacyVersion(),
+                Purpose.ADMIN_AUP, legal.adminAupVersion());
     }
 
-    public ConsentState state(String userId) {
+    /** @param admin whether the caller holds the ADMIN role (taken from the JWT; {@code consent} can't call {@code user}) */
+    public ConsentState state(String userId, boolean admin) {
         List<ConsentRecord> history = records.findByUser(userId);
         Map<Purpose, ConsentRecord> latest = latest(history);
         List<Purpose> pending = Arrays.stream(Purpose.values())
-                .filter(Purpose::required)
+                .filter(p -> p.requiredFor(admin))
                 .filter(p -> !isCurrentGrant(latest.get(p)))
                 .toList();
         return new ConsentState(latest, pending, history);
     }
 
-    public ConsentState decide(String userId, Purpose purpose, boolean granted, Source source,
+    public ConsentState decide(String userId, boolean admin, Purpose purpose, boolean granted, Source source,
                                ConsentEvidence evidence) {
         if (source == Source.REGISTER) {
             throw ApiException.badRequest("source: must be reprompt or settings");
         }
+        if (purpose.adminOnly() && !admin) {
+            throw ApiException.badRequest("purpose: only admins can accept this agreement");
+        }
         if (purpose.required() && !granted) {
-            throw ApiException.badRequest("The Terms and Privacy Policy can't be withdrawn while you have an "
-                    + "account. Delete your account instead.");
+            throw ApiException.badRequest(purpose.adminOnly()
+                    ? "The admin agreement can't be withdrawn while you are an admin."
+                    : "The Terms and Privacy Policy can't be withdrawn while you have an account. "
+                            + "Delete your account instead.");
         }
         append(userId, purpose, granted, source, evidence);
-        return state(userId);
+        return state(userId, admin);
     }
 
     private void append(String userId, Purpose purpose, boolean granted, Source source, ConsentEvidence evidence) {

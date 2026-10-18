@@ -85,7 +85,8 @@ public abstract class IntegrationTest {
         return body(res).get("user").get("_id").asText();
     }
 
-    protected String adminToken() throws Exception {
+    /** Logs the seeded admin in. The admin has NOT accepted the acceptable-use agreement yet. */
+    protected String adminTokenWithoutAgreement() throws Exception {
         if (users.findByEmail("admin@test.dev").isEmpty()) {
             users.save(new User(null, "Admin", "admin@test.dev", encoder.encode("admin-password-123"), "",
                     Role.ADMIN, Gender.MALE, LocalDate.of(1990, 1, 1), null));
@@ -95,6 +96,17 @@ public abstract class IntegrationTest {
                                 "password", "admin-password-123"))))
                 .andExpect(status().isOk()).andReturn();
         return body(res).get("token").asText();
+    }
+
+    /** Logs the seeded admin in and accepts the admin agreement, so admin endpoints work. */
+    protected String adminToken() throws Exception {
+        String token = adminTokenWithoutAgreement();
+        mvc.perform(post("/api/v1/consent").header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(
+                                Map.of("purpose", "admin_aup", "granted", true, "source", "reprompt"))))
+                .andExpect(status().isOk());
+        return token;
     }
 
     protected String createProduct(String adminToken, String name, double price, int stock, String category)

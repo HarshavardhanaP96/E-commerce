@@ -47,6 +47,7 @@ app:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).
     terms-version: ${LEGAL_TERMS_VERSION:2026-10-16}
     privacy-version: ${LEGAL_PRIVACY_VERSION:2026-10-16}
+    admin-aup-version: ${LEGAL_ADMIN_AUP_VERSION:2026-10-18}
     ip-hash-salt: ${CONSENT_IP_SALT:}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
