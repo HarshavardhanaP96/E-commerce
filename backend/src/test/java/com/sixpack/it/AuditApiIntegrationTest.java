@@ -106,7 +106,8 @@ class AuditApiIntegrationTest extends IntegrationTest {
         String admin = adminToken();
         audit.record(AuditEvent.of(AuditAction.LOGIN_FAILED).failed().aboutSubject("x@test.dev"));
 
-        String body = search(admin, "action", "LOGIN_FAILED").andExpect(status().isOk()).andReturn()
+        String body = search(admin, "action", "LOGIN_FAILED").andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries", hasSize(1))).andReturn()
                 .getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(body).doesNotContain("ipHash", "subjectHash", "userAgent");
     }

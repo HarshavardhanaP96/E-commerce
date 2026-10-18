@@ -12,6 +12,7 @@ import com.sixpack.shared.PageResult;
 import com.sixpack.shared.web.ApiResponse;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,7 +64,7 @@ class AuditController {
 
     private static Outcome parseOutcome(String value) {
         try {
-            return Outcome.valueOf(value.trim().toUpperCase());
+            return Outcome.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw ApiException.badRequest("outcome: must be success or failure");
         }

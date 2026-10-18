@@ -1,6 +1,7 @@
 package com.sixpack.audit;
 
 import com.sixpack.shared.ApiException;
+import java.util.Locale;
 
 /** Every kind of event the audit trail records. The name is what is stored and what the admin API filters on. */
 public enum AuditAction {
@@ -16,7 +17,7 @@ public enum AuditAction {
 
     public static AuditAction parse(String value) {
         try {
-            return valueOf(value.trim().toUpperCase());
+            return valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw ApiException.badRequest("action: unknown action");
         }

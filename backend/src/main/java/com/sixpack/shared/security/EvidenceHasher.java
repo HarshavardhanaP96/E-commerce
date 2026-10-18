@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,10 +16,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class EvidenceHasher {
 
+    private static final Logger log = LoggerFactory.getLogger(EvidenceHasher.class);
+
     private final String salt;
 
     EvidenceHasher(@Value("${app.legal.ip-hash-salt:}") String salt) {
         this.salt = salt == null ? "" : salt;
+        if (this.salt.isBlank()) {
+            log.warn("CONSENT_IP_SALT is not set: IP and attempted-login-email hashes stored for consent evidence "
+                    + "and the audit log are unsalted. Set it in every real environment.");
+        }
     }
 
     /** @return 64 hex characters, or the empty string for a null or blank input */
