@@ -29,7 +29,7 @@ class AuditDocument {
     /**
      * TTL index: entries are deleted this long after they were written. A constant, because Spring Data does not
      * resolve ${...} placeholders in index annotations here; changing it on an existing database needs the old
-     * {@code at_1} index dropped first.
+     * {@code at} index dropped first.
      */
     @Indexed(expireAfter = "365d")
     Instant at;

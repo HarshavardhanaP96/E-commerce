@@ -122,6 +122,7 @@ export const POLICIES: Record<PolicySlug, Policy> = {
           "Order and payment records: for as long as tax law requires (about 8 years). We remove your street address and PIN code once your account is deleted.",
           "Consent records: for the life of your account plus 3 years, as proof.",
           "Server logs: at least 1 year, then deleted.",
+          "Audit log: a record of changes to the store's data and of sign-in attempts is kept for 1 year. It holds ids and the names of the fields that changed, not your personal details.",
         ],
       },
       {

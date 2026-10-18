@@ -1,6 +1,6 @@
 # Admin acceptable-use agreement and the audit trail — design
 
-Status: **draft for review.** Date: 2026-10-18. Branch: `feat/multi-tenancy` (work is independent of tenancy; see §7).
+Status: approved; implemented by `docs/superpowers/plans/2026-10-18-admin-agreement-and-audit.md`. Date: 2026-10-18. Branch: `feat/multi-tenancy` (work is independent of tenancy; see §7).
 
 ## 1. Intent
 
@@ -42,7 +42,7 @@ Reuse the consent ledger and `ConsentPrompt`. No second mechanism.
 | `ConsentService.state(userId, isAdmin)` | `consent` cannot call `user` (user already depends on consent). The caller passes the role it already has from the JWT (`AuthUser.admin()`). A user promoted to admin gets the claim, and so the prompt, on their next login. |
 | `decide` | `admin_aup` can be granted only by an admin (400 otherwise) and, being required, cannot be withdrawn. |
 | Enforcement | A `HandlerInterceptor` in `consent.web`, registered for `/api/v1/**`. For a JWT with role ADMIN it calls `hasAcceptedCurrent(ADMIN_AUP)`; if false it throws `ApiException.forbidden("Please accept the admin acceptable-use agreement")`. **Exempt:** `/api/v1/user/me/**`, `/api/v1/consent/**`, `/api/v1/legal/**`, so the dialog can load and be answered. It runs after authentication, so it sees the verified role. Cost: one indexed read per admin request, acceptable at admin traffic. Note it also covers an admin acting as a shopper; their dialog blocks the UI in any case. |
-| Policy text | `POLICIES.adminAup` in `ecommerce-frontend/src/legal/policies.ts`, page at `/legal/admin-aup` (the existing `/legal/:slug` route; `compliance-consent.md` proposed `/admin/legal/aup`, and this corrects it). Covers: use customer data only for the task at hand, no export or sharing outside the business, report suspected breaches to the Grievance Officer, no shared credentials, activity is logged and reviewed. **Draft text, needs the owner's or a lawyer's review.** |
+| Policy text | `POLICIES["admin-aup"]` in `ecommerce-frontend/src/legal/policies.ts`, page at `/legal/admin-aup` (the existing `/legal/:slug` route; `compliance-consent.md` proposed `/admin/legal/aup`, and this corrects it). Covers: use customer data only for the task at hand, no export or sharing outside the business, report suspected breaches to the Grievance Officer, no shared credentials, activity is logged and reviewed. **Draft text, needs the owner's or a lawyer's review.** |
 | Frontend | `consentAPI` adds `admin_aup` to `ConsentPurpose`; `ConsentPrompt.POLICY_OF` maps it to `adminAup`. Nothing else in the dialog changes. |
 | Validation | `ConsentController.DecisionRequest.purpose` pattern adds `admin_aup`. |
 
@@ -80,18 +80,19 @@ audit/
 
 - `actorId`, role and request context are read from the `SecurityContext` and `RequestContextHolder` by `AuditService`; callers do not
   pass them, so a caller cannot forge or forget them. Outside a request (bootstrap, scheduled work) the actor is `SYSTEM`.
-- `ipHash` uses the same salted SHA-256 as consent evidence; the hashing moves to `shared.security.IpHasher` so both modules share one
+- `ipHash` uses the same salted SHA-256 as consent evidence; the hashing moves to `shared.security.EvidenceHasher` so both modules share one
   implementation. The raw IP is never stored.
 - `requestId` is the trace id from the logging MDC when present, otherwise empty. The plan verifies what the app actually puts in MDC.
 - Indexes: `(entityType, entityId, at desc)`, `(actorId, at desc)`, `(action, at desc)`, and a **TTL index on `at`** from
-  `app.audit.retention-days` (default **365**, matching the one-year log rule in `compliance-consent.md` §7). Mirrors how
-  `payment_intents` and `password_reset_tokens` get their TTL.
+  a fixed **365 days** in `AuditDocument` (`@Indexed(expireAfter = "365d")`, matching the one-year log rule in `compliance-consent.md` §7); a configurable
+  property was tried and broke startup, so it is a constant. Changing it needs a code change plus `db.audit_log.dropIndex("at")`, because MongoDB
+  refuses to change an index's options in place. Mirrors how `payment_intents` and `password_reset_tokens` get their TTL.
 
 ### 3.3 What gets recorded
 
 | Area | Actions | Written from |
 |---|---|---|
-| Catalogue | `PRODUCT_CREATED/UPDATED/DELETED`, `CATEGORY_CREATED/UPDATED/DELETED` (admin writes only; checkout stock decrements are not audited) | `ProductService`, `CategoryService` |
+| Catalogue | `PRODUCT_CREATED/UPDATED/DELETED`, `CATEGORY_CREATED/UPDATED/DELETED` (admin writes only; checkout stock decrements are not audited; the product-variant writes `replaceVariants` and `adjustVariantStock` are audited as `PRODUCT_UPDATED` with `variantPrices` and `variantStocks` maps keyed by SKU in the change set) | `ProductService`, `CategoryService` |
 | Coupons | `COUPON_CREATED/UPDATED/DELETED` (redemptions are not audited; the redemption counters already are the record) | `CouponService` |
 | Orders | `ORDER_PLACED`, `ORDER_STATUS_CHANGED` (before/after status), `ORDER_DELETED` | `CheckoutService`, `OrderService` |
 | Users | `USER_REGISTERED`, `USER_ROLE_CHANGED`, `USER_STATUS_CHANGED`, `USER_ERASED` (by admin or `ACCOUNT_DELETED_SELF`), `PROFILE_UPDATED`, `ADDRESS_ADDED/UPDATED/DELETED` | `AuthService`, `UserAdminService`, `AccountService`, `ProfileService` |
@@ -124,7 +125,7 @@ that visible. Writes are synchronous on the request thread, because the volume i
 ### 3.6 Reading the log
 
 `GET /api/v1/admin/audit` (🛡) with `entityType, entityId, actorId, action, outcome, from, to, page`; response
-`{success, entries, totalPage}`, newest first, same page size style as products. `SecurityConfig` adds
+`{success, entries, totalPage}`, newest first, 100 entries per page. `SecurityConfig` adds
 `/api/v1/admin/**` → `hasRole(ADMIN)`. The admin SPA gets an **Audit log** page (filter bar + table + expandable change set) in the
 existing admin surface and design tokens. Reading the log is not itself audited.
 
@@ -153,14 +154,14 @@ existing admin surface and design tokens. Reading the log is not itself audited.
   - an `AuditRepository` failure does not fail a product update;
   - the repository port exposes no update or delete.
 - **Architecture:** `ModularityTests` passes with the new module.
-- **Frontend:** the consent dialog shows the AUP for an admin and not for a customer; the audit page renders and filters.
+- **Frontend:** no test runner exists in the repo, so verify with `npm run build`, `npm run lint` and a manual browser check (admin sees the dialog on first login; a customer doesn't; the audit page lists and filters).
 
 ## 6. Documentation to update with the code
 
 `compliance-consent.md` (tick P8/C12, add `admin_aup` to the purposes and §6 model, add `audit_log` and `subjectHash` to the retention
 table, fix the AUP route), `contracts.md` (`audit_log`, `GET /admin/audit`, `admin_aup`), `architecture.md` (ADR-019: explicit audit
 port, redaction by allowlist, server-enforced admin agreement; rejected: events, persistence callbacks), `requirements.md`,
-`test-rollout.md` (new env vars, alert on `sixpack.audit.write{result=failure}`), and `policies.ts` (retention wording for the
+`test-rollout.md` (the new `LEGAL_ADMIN_AUP_VERSION` variable, alert on `sixpack.audit.write{result=failure}`), and `policies.ts` (retention wording for the
 audit log).
 
 ## 7. Multi-tenancy readiness
@@ -171,6 +172,6 @@ other two. Nothing here depends on tenancy being approved.
 
 ## 8. Defaults I picked (change any of these)
 
-1. Retention 365 days for every audit action. It is the stated minimum for logs, and one TTL keeps it simple.
+1. Retention is a fixed 365 days for every audit action, set in `AuditDocument`. It is the stated minimum for logs, and one TTL keeps it simple.
 2. Draft AUP wording is short and generic; it ships behind your review.
 3. Stock changes are audited only when an admin edits a product; the automatic decrements at checkout stay out of the log.

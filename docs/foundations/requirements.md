@@ -18,6 +18,8 @@
 - [ ] FR9: Admin dashboard: stats, pie, bar and line charts, optionally scoped by productId, category or userId.
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
+- [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.
+- [ ] FR13: Data changes (products, categories, coupons, orders, users) and security events (logins, password resets, consent changes) are recorded in an append-only audit log that admins can search, without storing personal values.
 
 ## Non-functional requirements
 - Performance: p95 under 200 ms for catalogue reads at 50 rps on one pod. Catalogue reads and dashboard queries are cached (Caffeine, short TTL).

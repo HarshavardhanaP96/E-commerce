@@ -101,6 +101,26 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   is reserved and released per `StockLine(productId, variantId, qty)`; a sale of a variant needs the variant to be
   sellable and in stock, and a sale without a variant never matches a product that has variants. `OrderItem` and the
   payment intent snapshot the variant id, label and options. Still active.
+- 2026-10-18: ADR-019 **Audit trail through an explicit `AuditTrail` port; redaction by allowlist; the admin
+  agreement enforced on the server.** A new `audit` module owns the append-only `audit_log` collection (TTL
+  retention, fixed at 365 days in `AuditDocument`; changing it needs a code change plus
+  `db.audit_log.dropIndex("at")`, because MongoDB refuses to change an index's options in place). Services call
+  `AuditTrail.record(AuditEvent)` after a successful write; the
+  actor, IP hash and trace id are read from the request by `AuditService`, so callers cannot forge or forget
+  them. Each entity has a `FieldPolicy`: only listed fields are logged, and personal fields are recorded as
+  "changed" without values, so the log holds no personal data and erasure needs no log rewrite. The product-variant
+  write paths (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED` with `variantPrices` and
+  `variantStocks` maps keyed by SKU. A failed audit
+  write is logged and counted (`sixpack.audit.write{result=failure}`) and never fails the action. The admin
+  acceptable-use agreement is a new consent purpose (`admin_aup`, required for admins only) enforced by an
+  interceptor that returns 403 on admin requests until it is accepted; the role comes from the JWT because
+  `consent` cannot depend on `user`. Rejected: domain events (they would all need widening with actor and
+  diff, and could lose the actor), persistence callbacks (no actor, and they miss the targeted `$set` updates
+  of ADR-016), and a prompt-only agreement (bypassable through the API). Reads of personal data and a hash-chain
+  for tamper evidence are out of scope; revisit if DPDP accountability or an audit requires them. Known gaps:
+  `AdminBootstrap`'s admin creation at startup is not audited. The trail is keyed to the request's JWT, so
+  system-driven writes appear as SYSTEM. `CONSENT_IP_SALT` must be set in production, because the attempted-login
+  email hash (`subjectHash`) is only as strong as that salt (it defaults to empty). Still active.
 - 2026-10-18: ADR-018 **Coupon rules in an additive nested `CouponRules`; one pure `Coupon.evaluate`; redemption
   counted at order creation.** Old coupons (a code and an amount) load as always-active flat coupons, so no
   migration. The same method decides eligibility for the cart preview and for checkout, and returns the reason a
