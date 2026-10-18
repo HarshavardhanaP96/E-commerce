@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CellProps, Column } from "react-table";
 import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
+import { errorMessage } from "../../redux/api/baseQuery";
 import { AUDIT_ACTIONS, AuditChange, AuditEntry, useAuditLogQuery } from "../../redux/api/auditAPI";
 
 const ENTITY_TYPES = ["product", "category", "coupon", "order", "user", "address"];
@@ -36,7 +37,8 @@ const AuditLog = () => {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isFetching } = useAuditLogQuery({
+  // currentData (not data) so rows from a previous filter are never shown for the current one.
+  const { currentData, isLoading, isFetching, isError, error } = useAuditLogQuery({
     entityType,
     action,
     outcome,
@@ -45,13 +47,18 @@ const AuditLog = () => {
     page,
   });
 
-  const rows: Row[] = (data?.entries ?? []).map((e) => ({
-    ...e,
-    actor: e.actorId ? `${e.actorRole} ${e.actorId.slice(-6)}` : e.actorRole,
-    entity: e.entityType ? `${e.entityType} ${e.entityId ?? ""}`.trim() : "—",
-    summary: summarise(e.changes),
-  }));
-  const totalPage = data?.totalPage ?? 1;
+  const rows: Row[] = useMemo(
+    () =>
+      (currentData?.entries ?? []).map((e) => ({
+        ...e,
+        actor: e.actorId ? `${e.actorRole} ${e.actorId.slice(-6)}` : e.actorRole,
+        entity: e.entityType ? `${e.entityType} ${e.entityId ?? ""}`.trim() : "—",
+        summary: summarise(e.changes),
+      })),
+    [currentData]
+  );
+  const totalPage = currentData?.totalPage ?? 1;
+  const failure = isError ? errorMessage(error, "Could not load the audit log") : null;
 
   // Changing a filter returns to the first page.
   const filter = (set: (value: string) => void) => (value: string) => {
@@ -61,12 +68,19 @@ const AuditLog = () => {
 
   return (
     <AdminLayout>
+      {failure && (
+        <p className="red" role="alert">
+          {failure}
+        </p>
+      )}
+      {/* Remount on every query change so the table's own page index and search/sort start fresh. */}
       <DataTable
+        key={`${entityType}|${action}|${outcome}|${from}|${to}|${page}`}
         columns={columns}
         data={rows}
         isLoading={isLoading || isFetching}
         searchPlaceholder="Search this page…"
-        emptyText="No audit entries match these filters"
+        emptyText={failure ?? "No audit entries match these filters"}
         filters={
           <>
             <select value={entityType} onChange={(e) => filter(setEntityType)(e.target.value)} aria-label="Record type">
