@@ -46,12 +46,32 @@ class TenantIsolationArchitectureTest {
                 .isEmpty();
     }
 
+    /** Collections that deliberately belong to no tenant. */
+    private static final Set<String> GLOBAL_DOCUMENTS = Set.of(
+            "com.sixpack.tenant.infra.mongo.TenantDocument",
+            "com.sixpack.tenant.infra.mongo.PlatformAdminDocument");
+
     @Test
     void theAllowlistOnlyContainsClassesThatStillNeedIt() {
         Set<String> stale = new TreeSet<>(NOT_YET_MIGRATED);
         stale.removeAll(classesUsingMongoTemplate());
         assertThat(stale)
                 .as("These no longer use MongoTemplate: delete them from NOT_YET_MIGRATED")
+                .isEmpty();
+    }
+
+    @Test
+    void everyStoredDocumentIsOwnedByATenantOrDeclaredGlobal() {
+        Set<String> offenders = new ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                .importPackages("com.sixpack").stream()
+                .filter(c -> c.isAnnotatedWith(org.springframework.data.mongodb.core.mapping.Document.class))
+                .filter(c -> !c.isAssignableTo(com.sixpack.shared.tenant.TenantOwned.class))
+                .map(JavaClass::getName)
+                .filter(name -> !GLOBAL_DOCUMENTS.contains(name))
+                .collect(Collectors.toCollection(TreeSet::new));
+        assertThat(offenders)
+                .as("A new collection must extend TenantDocument (tenant data) or be listed in GLOBAL_DOCUMENTS "
+                        + "(platform data) so nobody forgets to decide")
                 .isEmpty();
     }
 }

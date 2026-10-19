@@ -8,11 +8,31 @@
   confirm with the `fake` gateway including out-of-stock rollback, coupon CRUD, a dashboard smoke test, coupon rules (`CouponDomainTest`, `CouponPersistenceIntegrationTest`, `CouponAdminIntegrationTest`, `CouponCheckoutIntegrationTest`), order and payment fields (`OrderDomainTest`, `PriceCalculatorTest` tax parity, `OrderDetailsPersistenceIntegrationTest`, `OrderCheckoutDetailsIntegrationTest`, `OrderHistoryIntegrationTest`, `OrderErasureIntegrationTest`), user profile, address book and suspension (`UserDomainTest`, `UserDetailsPersistenceIntegrationTest`, `UserProfileIntegrationTest`, `UserStatusIntegrationTest`), catalogue fields and visibility
   (`ProductDetailsIntegrationTest`), and category CRUD with its tree rules (`CategoryIntegrationTest`).
   These tests need Docker. CI's `ubuntu-latest` has it.
+- Tenant isolation matrix: `TenantCatalogueIsolationIntegrationTest`, `TenantCommerceIsolationIntegrationTest`, `TenantIdentityIsolationIntegrationTest` (two tenants, same shapes, every entity), `TenantConfigurationIntegrationTest`, `PlatformAdminIntegrationTest`, and the rehearsal `LegacyMigrationIntegrationTest` (a single-tenant database upgraded in place).
 - Tenancy: `TenantContextTest`, `TenantMongoIntegrationTest` (two tenants, same shapes), `TenantBootstrapIntegrationTest`, `TenantResolutionIntegrationTest`, `TenantTokenIntegrationTest`, and `TenantIsolationArchitectureTest` (no raw `MongoTemplate` outside the wrapper, with a shrinking allowlist). Tests that need a second tenant extend `TenantIntegrationTest`.
 - Architecture: `ModularityTests` (`ApplicationModules.of(SixPackApplication.class).verify()`) fails the build
   on illegal cross-module access, and writes module docs to `target/spring-modulith-docs`.
 - Frontend: `tsc` + ESLint in CI. E2E with Playwright against `docker compose` is TBD; add it when the UI
   stabilises after this migration.
+
+## Multi-tenancy rollout (run before the first deploy that contains it)
+1. Back up the database. Restore the backup into a scratch database and start the new build against it (`MONGO_DB=<scratch>`).
+2. At startup it creates the `default` tenant, assigns every existing document to it (`TenantBackfill`) and drops the old
+   global unique indexes (`LegacyIndexCleanup`). The log lines say how many documents and which indexes. A second start must
+   report zero of both.
+3. Verify against the scratch copy: a document count per collection before and after; none without `tenantId`
+   (`db.<collection>.countDocuments({tenantId:{$exists:false}})` is 0 for users, products, categories, coupons,
+   coupon_redemptions, orders, payment_intents, password_reset_tokens, consents, audit_log); a known customer can log in; the
+   catalogue, an old order and a coupon show up; checkout works.
+4. Environment: nothing is required for a single store (with one tenant every host resolves to it). Before creating a
+   second tenant set `TENANT_DEFAULT_DOMAINS` to the current production hosts, add `PLATFORM_ADMIN_EMAIL` and
+   `PLATFORM_ADMIN_PASSWORD`, and add each tenant's `TENANT_SECRET_<REF>` to the sealed secret.
+5. Deploy. The tenant is chosen from the request host (`X-Forwarded-Host` when present), so the ingress must set that header
+   itself and not pass on a value sent by the client (ingress-nginx does this by default). Tokens issued before the deploy keep
+   working on the default tenant until they expire (24 h).
+6. Rollback: redeploy the previous image. It ignores `tenantId` and the new indexes. The old global unique indexes are not
+   recreated by it, which is harmless while only the default tenant exists. Roll back **before** creating a second tenant:
+   two tenants' data cannot live under the old single-tenant constraints.
 
 ## Rollout plan
 1. Merge the branch, which runs CI and deploys to `test-env` automatically from the branch push.

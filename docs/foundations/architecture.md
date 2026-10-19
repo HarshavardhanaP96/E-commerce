@@ -20,7 +20,7 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | Module      | Public API (root package)                         | Internals |
 |-------------|---------------------------------------------------|-----------|
 | `shared`    | (open module) error model, security config, JWT, rate limit, web config; `shared.tenant`: `TenantContext`, `TenantMongo`, `TenantOwned`, `BackfillTarget` | — |
-| `tenant`    | — (others use `shared.tenant`)                    | tenants (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, `GET /tenant/config` |
+| `tenant`    | — (others use `shared.tenant`)                    | tenants and platform administrators (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, legacy index cleanup, tenant settings, `/tenant/config` and `/platform/**` |
 | `user`      | `UserDirectory` (look up name / exists), `UserDeletedEvent`, `AccountDeletionGuard` (other modules can veto a deletion) | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
 | `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering; also owns `Category` (`/category`) |
 | `coupon`    | `CouponLookup` (discount for a code)              | same layering |
@@ -88,6 +88,24 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-19: ADR-021 **Multi-tenancy completed: every collection on `TenantMongo`, accounts per tenant, per-tenant
+  settings, a separate platform administrator.** All tenant-owned documents extend `TenantDocument`; the guard test
+  forbids `MongoTemplate` outside the wrapper and the tenant module (its allowlist is now empty) and requires every stored
+  document to be tenant-owned or declared global (`tenants`, `platform_admins`). Unique indexes are per tenant (partial
+  filters for optional fields); `LegacyIndexCleanup` drops the old global ones at startup because Spring Data only adds
+  indexes, and `TenantBackfill` gives existing documents to the default tenant. Users are per tenant (the same email is a
+  separate account in each store), so reset tokens, consents, the audit log and the dashboard follow. Caches are keyed by
+  tenant in one `CacheManager` decorator that fails closed; uploads go to `uploads/<tenantId>/`; rate limits include the
+  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details) sit on the `Tenant`
+  and fall back to `app.*` properties, so the default tenant keeps running on today's environment; payment secrets are
+  never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
+  gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
+  and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an
+  explicitly empty tenant. Rejected: one global user table with memberships (the questions on shared customers were left
+  open and separate accounts are the safer default), per-tenant signing keys (more key management, no stated need), and
+  a database per tenant (`TenantMongo` stays the single seam where one could be chosen). Known limits: platform
+  administrator actions are logged but not yet written to `audit_log` (it is tenant-scoped); there is no cross-tenant
+  dashboard or audit view; custom-domain verification and self-serve signup are not built. Still active.
 - 2026-10-18: ADR-020 **Tenancy foundation: host-resolved tenant, a fail-closed `TenantMongo` wrapper, and a
   guard that can only shrink.** A filter ahead of Spring Security maps the request host (after the
   forwarded-header filter) to a tenant and binds it to the thread; unknown host is 404 and a suspended tenant is

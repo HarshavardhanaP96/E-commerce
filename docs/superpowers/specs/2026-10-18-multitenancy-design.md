@@ -1,6 +1,6 @@
 # Multi-tenancy — draft design and open questions
 
-Status: **draft, reviewed 2026-10-18 (see §8); implementation of the foundation has started on the assumptions in §8.2.** Date: 2026-10-18. Branch: `feat/multi-tenancy` (from `main` at `bcdc23f`).
+Status: **implemented 2026-10-19 on the assumptions in §8.2 (plans 5 and 6; ADR-020 and ADR-021). Open questions Q1, Q4, Q5, Q7, Q14 were answered by default, not by the owner; see §9.** Date: 2026-10-18. Branch: `feat/multi-tenancy` (from `main` at `bcdc23f`).
 Supersedes the unreviewed appendix in `2026-10-17-richer-entities-design.md`, which pre-dates the four entity plans.
 
 ## 1. What changes since the first draft
@@ -164,3 +164,22 @@ New questions from this review:
 4. **Legacy tokens.** Tokens issued before the change have no `tid`. They stay valid for the default tenant only, until they expire (24 hours).
 5. **Known foundation-phase limit.** Users are still global until step 5, so a login on a second tenant's domain would succeed with a global
    user. No second real tenant should be created before the identity migration; only tests create one.
+
+## 9. As built (2026-10-19)
+
+All of §5 steps 1 to 8 are built except the items below. The `default` tenant keeps today's behaviour with no new configuration.
+
+| Question | What was built |
+|---|---|
+| Q1 customers | Not shared: accounts are unique per `(tenant, email)`. |
+| Q3 admins | `PLATFORM_ADMIN` in its own collection and login; per-tenant `ADMIN`s; no cross-tenant admin. |
+| Q4 legal | Policy versions per tenant (fallback `app.legal.*`); business details per tenant (`storefront`); the policy **text** is shared and rebuilt with the tenant's name and details. |
+| Q5 payments | Own Razorpay account per tenant; secret from `TENANT_SECRET_<REF>`; only the default tenant may use the platform gateway. |
+| Q6 JWT | One signing secret, `tid` claim. |
+| Q8 platform reporting | Not built (per-tenant dashboards only). |
+| Q11 mail | Link base per tenant; there is still no real mail provider. |
+| Q12 domains | Several exact domains per tenant; no wildcard or custom-domain verification. |
+| Q17 audit | Each tenant admin sees only their tenant's log; a cross-tenant view and audit of platform actions are not built. |
+
+Not built: self-serve signup, tenant offboarding (export then delete), per-tenant policy **text**, object storage for uploads,
+dedicated databases, platform-level reporting.

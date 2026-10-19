@@ -26,6 +26,7 @@
 - Security: every write and every non-catalogue read needs a JWT. Admin routes need `ROLE_ADMIN`. `JWT_SECRET` must be ≥ 32 bytes or startup fails. Passwords are bcrypt. Login is rate-limited. Uploads are checked by magic bytes and served with `nosniff`. Regex search input is escaped. Clients never send prices or totals. CORS is restricted to `CLIENT_URL`. Containers run as non-root.
 - Scalability: the backend is stateless apart from the in-process cache and local uploads (see ADR-007/008 for the multi-replica path).
 - Observability: `/actuator/health/{liveness,readiness}`, `/actuator/prometheus`, OTLP traces, and JSON (ECS) logs carrying trace ids.
+- Tenant lifecycle: platform administrators create, edit, suspend and reactivate tenants (domains, theme, legal versions, payment account reference, email link base, storefront details); a store is rendered from its own config; a suspended store is unavailable.
 - Tenancy: tenant-owned data is reachable only through `TenantMongo` (enforced by `TenantIsolationArchitectureTest`, with a shrinking allowlist during the migration). A request resolves to exactly one tenant from its host, and an access token is valid only for the tenant that issued it.
 - Compliance: DPDP Act 2023 + Rules 2025, Consumer Protection (E-Commerce) Rules 2020, dark-pattern guidelines, and Razorpay's required policy pages. See `compliance-consent.md` for the policies, consent points, cookie inventory and handling. Razorpay keeps card data; we store only order and payment ids.
 

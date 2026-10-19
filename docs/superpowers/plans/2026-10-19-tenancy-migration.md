@@ -1,5 +1,7 @@
 # Multi-tenancy migration (steps 3 to 8) — plan 6
 
+**Status: built 2026-10-19 (steps A to G). Differences from this plan: the dashboard moved to Step C together with users; Step D added `storefront` details and Step F served them; a collection guard and a legacy-migration rehearsal test were added in Step G.**
+
 **Goal:** Finish multi-tenancy on top of the foundation (plan 5): move every tenant-owned collection onto `TenantMongo`, make users, consents and login per tenant, give each tenant its own configuration (legal versions, payment keys, mail links), add a platform administrator, let the storefront render per tenant, and ship the migration and a cross-tenant leak test suite.
 
 **Base:** `feat/tenancy-foundation` merged with `main` (audit log, admin agreement, variants backend). Baseline: 255 backend tests green.

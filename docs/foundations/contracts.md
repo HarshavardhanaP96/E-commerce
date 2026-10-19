@@ -1,6 +1,9 @@
 # Data Model & Interface Contracts
 
 ## Data model (MongoDB, database `Ecommerce_2024`)
+Every collection except `tenants` and `platform_admins` carries `tenantId`; uniqueness (user email, product slug/sku/variant sku,
+category slug, coupon code, order number, provider order id, reset token hash, coupon redemption) is per tenant.
+
 The collection names and field names match the old Mongoose models, so existing data loads unchanged.
 
 | Collection | Shape |
@@ -134,6 +137,28 @@ searching on the account's record id: the attempted-email hash (`subjectHash`) i
 Admin endpoints (every route a JWT with role ADMIN reaches, except `/user/me/**`, `/consent/**` and `/legal/**`)
 return **403** until the admin has accepted the current acceptable-use agreement (`POST /consent` with
 `purpose=admin_aup`).
+
+### Tenant — `/tenant` and `/platform`
+Every request outside `/`, `/actuator/**`, `/api-docs/**`, `/swagger-ui/**` and `/api/v1/platform/**` belongs to the tenant
+whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store not found` once there are two or more tenants
+(with exactly one, every host maps to it); a suspended tenant is 403 `This store is currently unavailable`. Tokens carry a
+`tid` claim and work only on that tenant's domains; tokens from before tenancy work on the default tenant only.
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}}}` |
+| `POST /platform/login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token}`. Platform credentials only; the token has role `PLATFORM_ADMIN` and no tenant |
+| `GET /platform/tenants`, `GET /platform/tenants/{id}` | 🏛 | — | `{success, tenants}` / `{success, tenant}` |
+| `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, admin?:{name,email,password}}` | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
+| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront` (omitted keeps; a nested object replaces the previous one) | `{success, message, tenant}` |
+| `POST /platform/tenants/{id}/suspend` / `/activate` | 🏛 | — | `{success, message, tenant}`. The default tenant cannot be suspended |
+
+🏛 = `PLATFORM_ADMIN`. Platform tokens are refused on every store endpoint (even public ones), and store tokens (admin or
+customer) are refused on `/platform/**`.
+`tenant.legal = {termsVersion?, privacyVersion?, adminAupVersion?}` (unset falls back to `app.legal.*`),
+`tenant.payment = {provider (razorpay|fake), keyId, secretRef}` (the secret is the environment entry `TENANT_SECRET_<secretRef>`),
+`tenant.mail = {baseUrl?}` (reset links; default `https://<first domain>`). A tenant other than the default with no payment account
+gets 503 `Payments are not configured for this store` at checkout. Theme tokens are CSS custom properties (`--name`: value).
 
 ### Dashboard — `/dashboard` (🛡, all accept `?productId=&category=&userId=`)
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`
