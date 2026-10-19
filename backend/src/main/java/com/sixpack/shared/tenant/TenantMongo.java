@@ -90,8 +90,9 @@ public class TenantMongo {
         return mongo.findDistinct(scoped(query), field, entity, result);
     }
 
+    /** A copy of the query limited to the current tenant, so callers may reuse their own query object. */
     private static Query scoped(Query query) {
-        return query.addCriteria(Criteria.where(FIELD).is(TenantContext.require().id()));
+        return Query.of(query).addCriteria(Criteria.where(FIELD).is(TenantContext.require().id()));
     }
 
     private static void rejectTenantChange(UpdateDefinition update) {

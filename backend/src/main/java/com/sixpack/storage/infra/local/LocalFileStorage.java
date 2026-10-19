@@ -1,6 +1,7 @@
 package com.sixpack.storage.infra.local;
 
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.storage.ImageType;
 import java.io.IOException;
@@ -36,7 +37,8 @@ class LocalFileStorage implements FileStorage {
         ImageType type = ImageType.detect(content)
                 .orElseThrow(() -> ApiException.badRequest("photo: only JPEG, PNG, GIF or WEBP images are allowed"));
         LocalDate today = LocalDate.now();
-        String relative = "%d/%02d/%02d/%s.%s".formatted(today.getYear(), today.getMonthValue(),
+        String tenantFolder = TenantContext.current().map(t -> t.id() + "/").orElse("");
+        String relative = "%s%d/%02d/%02d/%s.%s".formatted(tenantFolder, today.getYear(), today.getMonthValue(),
                 today.getDayOfMonth(), UUID.randomUUID(), type.extension());
         Path target = root.resolve(relative);
         try {
@@ -53,7 +55,12 @@ class LocalFileStorage implements FileStorage {
         if (path == null || !path.startsWith(PUBLIC_PREFIX)) {
             return; // external URL or legacy value we did not create
         }
-        Path target = root.resolve(path.substring(PUBLIC_PREFIX.length())).normalize();
+        String relative = path.substring(PUBLIC_PREFIX.length());
+        if (belongsToAnotherTenant(relative)) {
+            log.warn("Refusing to delete another tenant's file: {}", path);
+            return;
+        }
+        Path target = root.resolve(relative).normalize();
         if (!target.startsWith(root)) {
             log.warn("Refusing to delete path outside storage root: {}", path);
             return;
@@ -63,6 +70,16 @@ class LocalFileStorage implements FileStorage {
         } catch (IOException e) {
             log.warn("Could not delete {}", path, e);
         }
+    }
+
+    /** Tenant uploads live under {@code <tenantId>/…}; legacy files start with the year. */
+    private static boolean belongsToAnotherTenant(String relative) {
+        int slash = relative.indexOf('/');
+        String first = slash < 0 ? relative : relative.substring(0, slash);
+        if (!first.matches("[0-9a-f]{24}")) {
+            return false;
+        }
+        return TenantContext.current().map(t -> !t.id().equals(first)).orElse(false);
     }
 
     Path root() {

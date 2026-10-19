@@ -65,6 +65,35 @@ public abstract class IntegrationTest {
     @Autowired
     protected PasswordEncoder encoder;
 
+    @Autowired
+    protected com.sixpack.tenant.domain.TenantRepository tenantRepository;
+
+    @Autowired
+    protected com.sixpack.tenant.application.TenantRegistry tenantRegistry;
+
+    @Autowired
+    private com.sixpack.tenant.application.TenantBackfill tenantBackfill;
+
+    private com.sixpack.shared.tenant.TenantContext.Scope defaultTenantScope;
+
+    /** Direct repository calls in tests run as the default tenant, like a request on localhost would. */
+    @BeforeEach
+    void bindDefaultTenant() {
+        var tenant = tenantRepository.findBySlug("default").orElseThrow();
+        defaultTenantScope = com.sixpack.shared.tenant.TenantContext.open(
+                new com.sixpack.shared.tenant.TenantRef(tenant.id(), tenant.slug()));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void unbindDefaultTenant() {
+        defaultTenantScope.close();
+    }
+
+    /** What a real migration does to documents inserted by hand without a tenant. */
+    protected void backfillLegacy() {
+        tenantBackfill.backfill();
+    }
+
     @BeforeEach
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",

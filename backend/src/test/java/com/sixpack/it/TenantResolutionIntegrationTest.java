@@ -70,11 +70,13 @@ class TenantResolutionIntegrationTest extends TenantIntegrationTest {
     void theContextNeverOutlivesARequest() throws Exception {
         createTenant("acme", "Acme Shop", "shop.acme.test");
 
+        var before = TenantContext.current();
         mvc.perform(get("/api/v1/tenant/config").with(host("shop.acme.test"))).andExpect(status().isOk());
         mvc.perform(get("/api/v1/tenant/config").with(host("nope.example.org"))).andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/tenant/config")).andExpect(status().isOk());
 
-        assertThat(TenantContext.current()).isEmpty();
+        // Requests restore whatever was bound on the thread before them (here: the test's default tenant).
+        assertThat(TenantContext.current()).isEqualTo(before);
     }
 
     @Test

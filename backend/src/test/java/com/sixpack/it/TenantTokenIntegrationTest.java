@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sixpack.shared.security.TokenService;
+import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.tenant.domain.Tenant;
 import java.util.Base64;
 import java.util.Map;
@@ -55,7 +56,10 @@ class TenantTokenIntegrationTest extends TenantIntegrationTest {
     void tokensIssuedBeforeTheChangeKeepWorkingOnTheDefaultTenantOnly() throws Exception {
         String userId = userId(register("legacy@test.dev"));
         // Issued outside any request, so it has no tid claim, like a token from before this change.
-        String legacy = tokens.issue(userId, "USER");
+        String legacy;
+        try (var none = TenantContext.open(null)) {
+            legacy = tokens.issue(userId, "USER");
+        }
         assertThat(claims(legacy).has("tid")).isFalse();
 
         mvc.perform(get("/api/v1/user/me").header("Authorization", bearer(legacy))).andExpect(status().isOk());

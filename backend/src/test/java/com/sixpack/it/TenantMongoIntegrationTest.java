@@ -63,9 +63,25 @@ class TenantMongoIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void aQueryObjectCanBeReusedAcrossCalls() {
+        saveAs(A, "one", "x");
+        saveAs(A, "two", "x");
+        Query shared = Query.query(Criteria.where("kind").is("x"));
+
+        TenantContext.runAs(A, () -> {
+            assertThat(tenantMongo.count(shared, Probe.class)).isEqualTo(2);
+            assertThat(tenantMongo.find(shared.limit(1), Probe.class)).hasSize(1);
+            assertThat(tenantMongo.exists(shared, Probe.class)).isTrue();
+        });
+    }
+
+    @Test
     void failsClosedWithoutATenant() {
-        assertThatThrownBy(() -> tenantMongo.find(new Query(), Probe.class)).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> tenantMongo.save(new Probe("x", "y"))).isInstanceOf(IllegalStateException.class);
+        try (var none = TenantContext.open(null)) {
+            assertThatThrownBy(() -> tenantMongo.find(new Query(), Probe.class))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> tenantMongo.save(new Probe("x", "y"))).isInstanceOf(IllegalStateException.class);
+        }
     }
 
     @Test

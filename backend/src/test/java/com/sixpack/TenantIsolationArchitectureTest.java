@@ -20,15 +20,14 @@ class TenantIsolationArchitectureTest {
 
     /** Repositories still on raw MongoTemplate. Remove each as it moves to TenantMongo. */
     private static final Set<String> NOT_YET_MIGRATED = Set.of(
-            "com.sixpack.product.infra.mongo.MongoProductRepository",
-            "com.sixpack.product.infra.mongo.MongoCategoryRepository",
             "com.sixpack.order.infra.mongo.MongoOrderRepository",
             "com.sixpack.order.infra.mongo.MongoPaymentIntentRepository",
             "com.sixpack.coupon.infra.mongo.MongoCouponRepository",
             "com.sixpack.consent.infra.mongo.MongoConsentRepository",
             "com.sixpack.user.infra.mongo.MongoUserRepository",
             "com.sixpack.user.infra.mongo.MongoPasswordResetTokenRepository",
-            "com.sixpack.dashboard.infra.mongo.MongoDashboardReadAdapter");
+            "com.sixpack.dashboard.infra.mongo.MongoDashboardReadAdapter",
+            "com.sixpack.audit.infra.mongo.MongoAuditRepository");
 
     private static Set<String> classesUsingMongoTemplate() {
         return new ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
