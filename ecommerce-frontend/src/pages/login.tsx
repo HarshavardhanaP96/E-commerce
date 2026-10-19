@@ -1,3 +1,4 @@
+import { brand } from "../tenant/tenant";
 import { ChangeEvent, useState } from "react";
 import toast from "react-hot-toast";
 import { useLoginMutation, useRegisterMutation } from "../redux/api/userAPI";
@@ -101,7 +102,7 @@ const Login = () => {
     <div className="login">
       <main>
         <h1 className="heading">{isRegister ? "Create account" : "Welcome back"}</h1>
-        <p className="login__sub">{isRegister ? "Join 6Pack in under a minute." : "Sign in to continue to 6Pack."}</p>
+        <p className="login__sub">{isRegister ? `Join ${brand.name} in under a minute.` : `Sign in to continue to ${brand.name}.`}</p>
 
         <form onSubmit={isRegister ? handleRegister : handleLogin}>
           {isRegister && (

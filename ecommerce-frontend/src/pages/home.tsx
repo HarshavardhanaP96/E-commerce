@@ -1,3 +1,4 @@
+import { brand } from "../tenant/tenant";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { LuArrowRight, LuPackageOpen } from "react-icons/lu";
@@ -29,7 +30,7 @@ const Home = () => {
       <section className="hero">
         <div className="hero__copy">
           <p className="eyebrow">New arrivals every week</p>
-          <h1>Welcome to 6Pack Store</h1>
+          <h1>Welcome to {brand.name} Store</h1>
           <p>Discover the latest trends in tech and fashion. Quality products, best prices.</p>
           <Link to="/search" className="hero__cta">
             Shop all products <LuArrowRight />

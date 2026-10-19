@@ -1,3 +1,4 @@
+import { brand } from "../tenant/tenant";
 import { Link, useLocation } from "react-router-dom";
 import { POLICIES, POLICY_LINKS, policyPath } from "../legal/policies";
 
@@ -16,7 +17,7 @@ const Footer = () => {
           </Link>
         ))}
       </nav>
-      <small>© {new Date().getFullYear()} 6Pack. Payments secured by Razorpay.</small>
+      <small>© {new Date().getFullYear()} {brand.name}. Payments secured by Razorpay.</small>
     </footer>
   );
 };
