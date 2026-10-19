@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CellProps, Column } from "react-table";
 import { LuUser } from "react-icons/lu";
+import StatusBadge from "../../components/admin/StatusBadge";
 import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import { useAllUsersQuery } from "../../redux/api/userAPI";
@@ -25,6 +26,12 @@ const columns: Column<User>[] = [
     accessor: "role",
     width: 100,
     Cell: ({ value }: CellProps<User>) => <span className={`badge badge--${value}`}>{value}</span>,
+  } as Column<User>,
+  {
+    Header: "Status",
+    accessor: "status",
+    width: 110,
+    Cell: ({ value }: CellProps<User>) => <StatusBadge status={value ?? "ACTIVE"} />,
   } as Column<User>,
   { Header: "Joined", accessor: "createdAt", width: 130, Cell: ({ value }: CellProps<User>) => formatDate(value) } as Column<User>,
 ];

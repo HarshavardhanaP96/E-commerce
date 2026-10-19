@@ -9,8 +9,13 @@ export type ProductFormValues = {
   mrp: string;
   status: string;
   tags: string;
+  categoryId: string;
   photo?: File;
+  /** New gallery pictures. Sending any replaces the whole gallery. */
+  images: File[];
 };
+
+export const MAX_GALLERY = 5;
 
 export const emptyProductForm: ProductFormValues = {
   name: "",
@@ -23,7 +28,9 @@ export const emptyProductForm: ProductFormValues = {
   mrp: "",
   status: "ACTIVE",
   tags: "",
+  categoryId: "",
   photo: undefined,
+  images: [],
 };
 
 export const toFormData = (v: ProductFormValues) => {
@@ -38,6 +45,8 @@ export const toFormData = (v: ProductFormValues) => {
   if (v.mrp !== "") fd.set("mrp", v.mrp);
   if (v.status) fd.set("status", v.status);
   if (v.tags) fd.set("tags", v.tags);
+  if (v.categoryId) fd.set("categoryId", v.categoryId);
   if (v.photo) fd.set("photo", v.photo);
+  v.images.forEach((file) => fd.append("images", file));
   return fd;
 };

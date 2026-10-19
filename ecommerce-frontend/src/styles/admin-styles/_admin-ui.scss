@@ -86,7 +86,11 @@
   &--processing { background: var(--warning-subtle); color: var(--warning); }
   &--shipped { background: var(--info-subtle); color: var(--info); }
   &--delivered { background: var(--success-subtle); color: var(--success); }
-  &--active { background: var(--success-subtle); color: var(--success); }
+  &--active,
+  &--paid { background: var(--success-subtle); color: var(--success); }
+  &--suspended,
+  &--partially_refunded { background: var(--warning-subtle); color: var(--warning); }
+  &--refunded { background: $color-bg-tertiary; color: $color-text-secondary; }
   &--scheduled { background: var(--info-subtle); color: var(--info); }
   &--expired,
   &--exhausted,
@@ -971,5 +975,86 @@
 
   .data-table__footer label {
     display: none;
+  }
+}
+
+
+// ---------- product gallery ----------
+.gallery {
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: grid;
+  gap: $spacing-sm;
+
+  legend {
+    @include text(label);
+    padding-inline: 0.25rem;
+  }
+
+  &__thumbs {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+
+    img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: $radius-sm;
+      border: 1px solid $color-border;
+    }
+  }
+
+  small {
+    color: $color-text-muted;
+  }
+}
+
+.form-grid label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    width: auto !important;
+  }
+}
+
+// ---------- payments & refunds ----------
+.refund-list {
+  list-style: none;
+  margin-block: $spacing-sm;
+  display: grid;
+  gap: $spacing-xs;
+  @include text(body-sm);
+
+  li {
+    display: grid;
+    gap: 0.125rem;
+    padding: $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+  }
+
+  small,
+  span {
+    color: $color-text-muted;
+  }
+}
+
+.refund-form {
+  display: grid;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+
+  label {
+    @include flex(column, flex-start, stretch, 0.375rem);
+    @include text(label);
+  }
+
+  input {
+    width: 100%;
   }
 }

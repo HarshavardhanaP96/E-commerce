@@ -54,6 +54,8 @@ const valueAxis = {
 };
 const categoryAxis = { border: { display: false }, grid: { display: false }, ticks: { color: "#475569" } };
 
+const axisTitle = (text: string) => ({ display: true, text, color: "#475569", font: { size: 12, weight: 600 } });
+
 const months = ["January", "February", "March", "April", "May", "June", "July"];
 
 interface BarChartProps {
@@ -99,7 +101,18 @@ export const BarChart = ({
     scales: horizontal
       ? { x: valueAxis, y: categoryAxis }
       : dualAxis
-        ? { x: categoryAxis, y: valueAxis, y1: { ...valueAxis, position: "right", grid: { drawOnChartArea: false } } }
+        ? {
+            x: categoryAxis,
+            y: { ...valueAxis, title: axisTitle(title_1) },
+            // Counts are whole numbers; the left axis keeps the compact money format.
+            y1: {
+              ...valueAxis,
+              position: "right",
+              grid: { drawOnChartArea: false },
+              title: axisTitle(title_2),
+              ticks: { precision: 0, maxTicksLimit: 6 },
+            },
+          }
         : { x: categoryAxis, y: valueAxis },
   };
 

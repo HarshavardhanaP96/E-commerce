@@ -6,6 +6,7 @@ import AdminLayout from "../../../components/admin/AdminLayout";
 import DataTable from "../../../components/admin/DataTable";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import { errorMessage } from "../../../redux/api/baseQuery";
+import { useAdminProductsQuery, useCategoriesQuery } from "../../../redux/api/productAPI";
 import {
   useAllCouponsQuery,
   useDeleteCouponMutation,
@@ -30,6 +31,9 @@ type Form = {
   expiresAt: string;
   usageLimit: string;
   perUserLimit: string;
+  productIds: string[];
+  categories: string[];
+  firstOrderOnly: boolean;
 };
 
 const emptyForm: Form = {
@@ -42,6 +46,9 @@ const emptyForm: Form = {
   expiresAt: "",
   usageLimit: "",
   perUserLimit: "",
+  productIds: [],
+  categories: [],
+  firstOrderOnly: false,
 };
 
 const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -52,8 +59,23 @@ const describe = (c: CouponType) =>
     ? `${c.amount}% off${c.maxDiscount ? ` (max ${formatINR(c.maxDiscount)})` : ""}`
     : `${formatINR(c.amount)} off`;
 
+/** Who and what a coupon applies to, in a few words for the table. */
+const scopeText = (c: CouponType) => {
+  const parts: string[] = [];
+  const categories = c.categories ?? [];
+  const products = c.productIds ?? [];
+  if (categories.length) parts.push(categories.length === 1 ? `category ${categories[0]}` : `${categories.length} categories`);
+  if (products.length) parts.push(`${products.length} ${products.length === 1 ? "product" : "products"}`);
+  const items = parts.length ? parts.join(" + ") : "All items";
+  return c.firstOrderOnly ? `${items} · first order only` : items;
+};
+
+const selected = (e: { target: HTMLSelectElement }) => Array.from(e.target.selectedOptions, (o) => o.value);
+
 const Coupon = () => {
   const { data, isLoading } = useAllCouponsQuery();
+  const { data: productData } = useAdminProductsQuery();
+  const { data: categoryData } = useCategoriesQuery();
   const [newCoupon, { isLoading: creating }] = useNewCouponMutation();
   const [updateCoupon] = useUpdateCouponMutation();
   const [deleteCoupon] = useDeleteCouponMutation();
@@ -64,6 +86,7 @@ const Coupon = () => {
   const columns: Column<CouponType>[] = [
     { Header: "Code", accessor: "coupon" },
     { Header: "Discount", accessor: "amount", width: 190, Cell: ({ row }: CellProps<CouponType>) => describe(row.original) } as Column<CouponType>,
+    { Header: "Applies to", id: "scope", width: 210, disableSortBy: true, Cell: ({ row }: CellProps<CouponType>) => scopeText(row.original) } as Column<CouponType>,
     { Header: "Min order", accessor: "minOrderValue", width: 110, Cell: ({ value }: CellProps<CouponType>) => (value ? formatINR(value) : "—") } as Column<CouponType>,
     {
       Header: "Valid",
@@ -129,6 +152,9 @@ const Coupon = () => {
       expiresAt: iso(form.expiresAt),
       usageLimit: num(form.usageLimit),
       perUserLimit: num(form.perUserLimit),
+      productIds: form.productIds,
+      categories: form.categories,
+      firstOrderOnly: form.firstOrderOnly,
     };
     const res = await newCoupon(body);
     if ("error" in res) return toast.error(errorMessage(res.error));
@@ -197,6 +223,33 @@ const Coupon = () => {
               <label>
                 Uses per customer (optional)
                 <input type="number" min={1} value={form.perUserLimit} onChange={set("perUserLimit")} />
+              </label>
+              <label className="span-2">
+                Only these categories (optional; hold Ctrl or Cmd to pick several)
+                <select multiple size={4} value={form.categories}
+                        onChange={(e) => setForm((p) => ({ ...p, categories: selected(e) }))}>
+                  {(categoryData?.categories ?? []).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="span-2">
+                Only these products (optional)
+                <select multiple size={5} value={form.productIds}
+                        onChange={(e) => setForm((p) => ({ ...p, productIds: selected(e) }))}>
+                  {(productData?.products ?? []).map((p) => (
+                    <option key={p._id} value={p._id}>{p.name}</option>
+                  ))}
+                </select>
+              </label>
+              <small className="span-2">
+                With a category or product picked, the discount counts only matching items in the cart. Picking both
+                matches either. The minimum order still looks at the whole cart.
+              </small>
+              <label className="span-2 check">
+                <input type="checkbox" checked={form.firstOrderOnly}
+                       onChange={(e) => setForm((p) => ({ ...p, firstOrderOnly: e.target.checked }))} />
+                First order only (customers who have ordered before can't use it)
               </label>
               <button type="submit" className="btn btn--primary span-2" disabled={creating}>
                 Create coupon

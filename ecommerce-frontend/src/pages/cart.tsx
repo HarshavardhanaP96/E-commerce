@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import CartItems from "../components/cartItems";
 import { errorMessage } from "../redux/api/baseQuery";
-import { useLazyDiscountQuery } from "../redux/api/couponAPI";
+import { useQuoteMutation } from "../redux/api/orderAPI";
 import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { CartItem } from "../types/types";
@@ -17,7 +17,7 @@ const Cart = () => {
   );
   const dispatch = useDispatch();
   const [couponCode, setCouponCode] = useState(coupon);
-  const [checkDiscount, { isFetching }] = useLazyDiscountQuery();
+  const [quote, { isLoading: isFetching }] = useQuoteMutation();
   const [couponMessage, setCouponMessage] = useState("");
 
   const incrementHandler = (item: CartItem) => {
@@ -30,27 +30,29 @@ const Cart = () => {
   };
   const removeHandler = (productId: string) => dispatch(removeCartItem(productId));
 
-  // Validate the coupon with the server after the user stops typing, and again when the subtotal changes
-  // (percent coupons and minimum order values depend on it).
+  // Price the cart with the server after the user stops typing, and again when the cart changes: a coupon can be
+  // limited to some products, so its discount depends on what is in the cart, not just the subtotal.
+  const lines = JSON.stringify(cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })));
   useEffect(() => {
     const code = couponCode.trim();
-    if (!code) {
+    if (!code || cartItems.length === 0) {
       setCouponMessage("");
       dispatch(applyCoupon({ coupon: "", discount: 0 }));
       return;
     }
     const t = setTimeout(async () => {
-      const res = await checkDiscount({ coupon: code, subtotal });
+      const res = await quote({ items: JSON.parse(lines), coupon: code });
       if (res.data) {
         setCouponMessage("");
-        dispatch(applyCoupon({ coupon: code, discount: res.data.discount }));
+        dispatch(applyCoupon({ coupon: code, discount: res.data.quote.discount }));
       } else {
         setCouponMessage(errorMessage(res.error, "Invalid coupon"));
         dispatch(applyCoupon({ coupon: "", discount: 0 }));
       }
     }, 600);
     return () => clearTimeout(t);
-  }, [couponCode, subtotal, checkDiscount, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `lines` is the serialised cartItems; depending on both would re-run on every quantity render
+  }, [couponCode, lines, quote, dispatch]);
 
   const itemCount = cartItems.reduce((n, i) => n + i.quantity, 0);
   const valid = !!coupon && coupon === couponCode.trim() && discount > 0;

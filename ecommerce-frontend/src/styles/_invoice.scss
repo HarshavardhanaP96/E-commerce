@@ -1,0 +1,126 @@
+// A printable invoice. On screen it is a card; when printed only the invoice is left on the page.
+.invoice-page {
+  max-width: 52rem;
+  padding-block: 1.5rem;
+}
+
+.invoice__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.invoice {
+  background: var(--surface, #fff);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
+
+  h1 {
+    font-size: 1.75rem;
+    margin: 0;
+  }
+
+  h4 {
+    margin: 0 0 0.25rem;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #475569);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    text-align: right;
+    padding: 0.5rem 0.625rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+  }
+
+  caption {
+    text-align: left;
+    font-weight: 600;
+    padding-bottom: 0.375rem;
+  }
+
+  &__head,
+  &__parties,
+  &__bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  &__seller {
+    display: grid;
+    gap: 0.125rem;
+    justify-items: end;
+    text-align: right;
+  }
+
+  &__totals {
+    justify-self: end;
+    min-width: 14rem;
+
+    dd {
+      text-align: right;
+    }
+  }
+
+  &__foot {
+    color: var(--text-muted, #475569);
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .invoice {
+    padding: 1rem;
+
+    &__head,
+    &__parties,
+    &__bottom {
+      grid-template-columns: 1fr;
+    }
+
+    &__seller {
+      justify-items: start;
+      text-align: left;
+    }
+  }
+}
+
+@media print {
+  .header,
+  .bottom-nav,
+  .footer,
+  .invoice__toolbar,
+  .consent-prompt,
+  .verify-banner {
+    display: none !important;
+  }
+
+  .invoice {
+    border: 0;
+    padding: 0;
+  }
+}

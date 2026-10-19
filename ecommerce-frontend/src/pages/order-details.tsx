@@ -75,11 +75,23 @@ const OrderDetails = () => {
           </dl>
           {o.payment?.status && (
             <p>
-              Payment {o.payment.status.toLowerCase()}
+              Payment {o.payment.status.replace(/_/g, " ").toLowerCase()}
+              {o.payment.method ? ` by ${o.payment.method}` : ""}
               {o.payment.paidAt ? ` on ${formatDateTime(o.payment.paidAt)}` : ""}
               {o.couponCode ? ` · coupon ${o.couponCode}` : ""}
             </p>
           )}
+          {(o.payment?.refunds ?? []).length > 0 && (
+            <ul className="refund-list">
+              {o.payment!.refunds!.map((r) => (
+                <li key={`${r.at}-${r.amount}`}>
+                  <strong>Refunded {formatINR(r.amount)}</strong> <small>{formatDateTime(r.at)}</small>
+                  <span>{r.reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p><Link to={`/order/${o._id}/invoice`}>View invoice</Link></p>
           {o.statusHistory.length > 0 && (
             <>
               <h4>Order timeline</h4>

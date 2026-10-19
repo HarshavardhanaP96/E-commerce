@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { LuTrash2, LuUser } from "react-icons/lu";
+import { LuTrash2, LuUser, LuUserCheck, LuUserX } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import DetailLayout from "../../../components/admin/DetailLayout";
@@ -8,7 +8,12 @@ import Loader from "../../../components/admin/Loader";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import { useAllOrdersQuery } from "../../../redux/api/orderAPI";
-import { useDeleteUserMutation, useUpdateUserRoleMutation, useUserDetailsQuery } from "../../../redux/api/userAPI";
+import {
+  useDeleteUserMutation,
+  useUpdateUserRoleMutation,
+  useUpdateUserStatusMutation,
+  useUserDetailsQuery,
+} from "../../../redux/api/userAPI";
 import { RootState } from "../../../redux/store";
 import { Role } from "../../../types/types";
 import { formatDate, formatINR, transformImage } from "../../../utils/features";
@@ -20,6 +25,7 @@ const CustomerManagement = () => {
   const { data, isLoading, isError } = useUserDetailsQuery(id);
   const { data: orders } = useAllOrdersQuery({});
   const [updateRole, { isLoading: saving }] = useUpdateUserRoleMutation();
+  const [updateStatus, { isLoading: changingStatus }] = useUpdateUserStatusMutation();
   const [deleteUser, { isLoading: deleting }] = useDeleteUserMutation();
   const [role, setRole] = useState<Role>("user");
 
@@ -47,6 +53,18 @@ const CustomerManagement = () => {
     toast.success(res.data.message);
   };
 
+  const suspended = user.status === "SUSPENDED";
+  const toggleSuspended = async () => {
+    const verb = suspended ? "Reactivate" : "Suspend";
+    const effect = suspended
+      ? "They will be able to sign in again."
+      : "They are signed out right away and can't sign in until you reactivate them.";
+    if (!confirm(`${verb} ${user.name}? ${effect}`)) return;
+    const res = await updateStatus({ userId: id, status: suspended ? "ACTIVE" : "SUSPENDED" });
+    if ("error" in res) return toast.error(errorMessage(res.error));
+    toast.success(res.data.message);
+  };
+
   const remove = async () => {
     if (!confirm(`Delete ${user.name}'s account? This cannot be undone.`)) return;
     const res = await deleteUser(id);
@@ -63,6 +81,10 @@ const CustomerManagement = () => {
         <>
           <button className="btn btn--primary" onClick={save} disabled={saving || role === user.role}>
             {saving ? "Saving…" : "Save"}
+          </button>
+          <button className="btn" onClick={toggleSuspended} disabled={changingStatus || isSelf}
+                  title={isSelf ? "You cannot suspend your own account" : undefined}>
+            {suspended ? <LuUserCheck /> : <LuUserX />} {suspended ? "Reactivate" : "Suspend"}
           </button>
           <button className="btn btn--danger" onClick={remove} disabled={deleting || isSelf}
                   title={isSelf ? "You cannot delete your own account" : undefined}>
@@ -81,6 +103,7 @@ const CustomerManagement = () => {
           <h3>{user.name}</h3>
           <span>{user.email}</span>
           <span className={`badge badge--${user.role}`}>{user.role}</span>
+          {suspended && <StatusBadge status="SUSPENDED" />}
         </section>
 
         <section className="card">
@@ -88,6 +111,9 @@ const CustomerManagement = () => {
             <dt>Gender</dt><dd>{user.gender ?? "Not given"}</dd>
             <dt>Date of birth</dt><dd>{formatDate(user.dob)} ({user.age} yrs)</dd>
             <dt>Joined</dt><dd>{formatDate(user.createdAt)}</dd>
+            <dt>Last sign-in</dt><dd>{user.lastLoginAt ? formatDate(user.lastLoginAt) : "Never"}</dd>
+            <dt>Email</dt><dd>{user.emailVerified ? "Verified" : "Not verified"}</dd>
+            <dt>Account</dt><dd>{suspended ? "Suspended" : "Active"}</dd>
             <dt>Orders</dt><dd>{userOrders.length} · {formatINR(spent)} spent</dd>
             <dt>Role</dt>
             <dd>

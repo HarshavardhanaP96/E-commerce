@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { CouponsResponse, DiscountResponse, MessageResponse } from "../../types/api-types";
+import { CouponsResponse, MessageResponse } from "../../types/api-types";
 import { NewCouponInput } from "../../types/types";
 import { authedBaseQuery } from "./baseQuery";
 
@@ -8,9 +8,6 @@ export const couponAPI = createApi({
   baseQuery: authedBaseQuery("payment/"),
   tagTypes: ["coupons"],
   endpoints: (builder) => ({
-    discount: builder.query<DiscountResponse, { coupon: string; subtotal: number }>({
-      query: ({ coupon, subtotal }) => ({ url: "discount", params: { coupon, subtotal } }),
-    }),
     allCoupons: builder.query<CouponsResponse, void>({
       query: () => "coupon/all",
       providesTags: ["coupons"],
@@ -31,7 +28,6 @@ export const couponAPI = createApi({
 });
 
 export const {
-  useLazyDiscountQuery,
   useAllCouponsQuery,
   useNewCouponMutation,
   useUpdateCouponMutation,

@@ -36,6 +36,7 @@ const ProductManagement = () => {
         mrp: product.mrp != null ? String(product.mrp) : "",
         status: product.status ?? "ACTIVE",
         tags: (product.tags ?? []).join(", "),
+        categoryId: product.categoryId ?? "",
       });
     }
   }, [product]);
@@ -54,7 +55,7 @@ const ProductManagement = () => {
     const res = await updateProduct({ productId: id, formData: toFormData(values) });
     if ("error" in res) return toast.error(errorMessage(res.error));
     toast.success(res.data.message);
-    setValues((v) => ({ ...v, photo: undefined }));
+    setValues((v) => ({ ...v, photo: undefined, images: [] }));
   };
 
   const remove = async () => {
@@ -80,7 +81,7 @@ const ProductManagement = () => {
         </>
       }
     >
-      <ProductForm values={values} onChange={setValues} onSubmit={save} currentPhoto={product.photo} />
+      <ProductForm values={values} onChange={setValues} onSubmit={save} currentPhoto={product.photo} currentImages={product.images} />
     </DetailLayout>
   );
 };
