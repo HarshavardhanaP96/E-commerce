@@ -5,6 +5,7 @@ import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderItem;
 import com.sixpack.order.domain.PaymentInfo;
+import com.sixpack.order.domain.Refund;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.order.domain.StatusEntry;
 import java.time.Instant;
@@ -40,19 +41,28 @@ record OrderView(
         }
     }
 
-    /** Provider order and payment ids stay server-side. */
-    record PaymentView(String provider, String status, Double amount, String currency, Instant paidAt) {
-        static PaymentView from(PaymentInfo p) {
-            return p == null ? null : new PaymentView(p.provider(), p.status(), p.amount(), p.currency(), p.paidAt());
+    record RefundView(double amount, String reason, String status, Instant at) {
+        static RefundView from(Refund r) {
+            return new RefundView(r.amount(), r.reason(), r.status(), r.at());
         }
     }
 
-    static OrderView from(Order o, Map<String, String> userNames) {
+    /** Provider order, payment and refund ids stay server-side, and so does {@code failureReason} for customers. */
+    record PaymentView(String provider, String status, Double amount, String currency, Instant paidAt,
+                       String method, double refunded, List<RefundView> refunds, String failureReason) {
+        static PaymentView from(PaymentInfo p, boolean admin) {
+            return p == null ? null : new PaymentView(p.provider(), p.status(), p.amount(), p.currency(), p.paidAt(),
+                    p.method(), p.refunded(), p.refunds().stream().map(RefundView::from).toList(),
+                    admin ? p.failureReason() : null);
+        }
+    }
+
+    static OrderView from(Order o, Map<String, String> userNames, boolean admin) {
         return new OrderView(o.id(), new UserRef(o.userId(), userNames.getOrDefault(o.userId(), "Deleted user")),
                 o.shippingInfo(), o.items(), o.quote().subtotal(), o.quote().tax(), o.quote().shippingCharges(),
                 o.quote().discount(), o.quote().total(), o.status().wireValue(), o.createdAt(),
                 o.details().orderNumber(), o.details().billingInfo(), o.details().customer(),
                 o.details().statusHistory().stream().map(HistoryView::from).toList(), o.details().couponCode(),
-                o.details().notes(), PaymentView.from(o.payment()));
+                o.details().notes(), PaymentView.from(o.payment(), admin));
     }
 }

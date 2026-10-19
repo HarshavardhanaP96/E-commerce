@@ -184,6 +184,7 @@ public class CheckoutService {
         }
 
         Instant now = Instant.now();
+        String method = paymentMethod(paymentId);
         Order order;
         boolean couponRedeemed = false;
         try {
@@ -194,7 +195,7 @@ public class CheckoutService {
             order = orders.save(new Order(null, userId, details.shipping(), intent.items(), intent.quote(),
                     OrderStatus.PROCESSING,
                     new PaymentInfo(intent.provider(), providerOrderId, paymentId, "PAID", intent.quote().total(),
-                            intent.currency() == null ? "INR" : intent.currency(), now),
+                            intent.currency() == null ? "INR" : intent.currency(), now, method, null, 0, null),
                     consents.currentVersion(Purpose.TERMS), null,
                     new OrderDetails(OrderNumbers.generate(now, ThreadLocalRandom.current()), details.billing(),
                             new Customer(contact.name(), contact.email(), contact.phone()),
@@ -214,6 +215,16 @@ public class CheckoutService {
                 .changing(List.of(FieldChange.of("status", null, OrderStatus.PROCESSING.name()),
                         FieldChange.of("total", null, intent.quote().total()))));
         return order.id();
+    }
+
+    /** How the customer paid. The money is already taken, so a provider hiccup must not fail the order. */
+    private String paymentMethod(String paymentId) {
+        try {
+            return gateway.fetchPayment(paymentId).method();
+        } catch (RuntimeException e) {
+            log.warn("Could not look up the payment method for {}: {}", paymentId, e.getMessage());
+            return null;
+        }
     }
 
     private static Map<LineKey, Integer> mergeLines(List<CartLine> lines) {

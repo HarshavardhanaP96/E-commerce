@@ -13,12 +13,14 @@ import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.user.UserDirectory;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,6 +55,11 @@ class OrderController {
     }
 
     record QuoteRequest(@NotEmpty @Size(max = 50) List<@Valid CartLineRequest> items, @Size(max = 32) String coupon) {
+    }
+
+    /** {@code amount} in rupees; leave it out to refund everything that is left. */
+    record RefundRequest(@Positive @DecimalMax("10000000") Double amount,
+                         @NotBlank @Size(max = 200) String reason) {
     }
 
     record ShippingRequest(
@@ -131,19 +138,21 @@ class OrderController {
 
     @GetMapping("/my")
     Map<String, Object> mine(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.of("orders", views(orders.mine(AuthUser.from(jwt).id())));
+        return ApiResponse.of("orders", views(orders.mine(AuthUser.from(jwt).id()), false));
     }
 
     @GetMapping("/all")
     Map<String, Object> all(@RequestParam(required = false)
                             @Pattern(regexp = "(?i)processing|shipped|delivered") String status) {
-        return ApiResponse.of("orders", views(orders.all(status == null ? null : OrderStatus.fromWire(status))));
+        return ApiResponse.of("orders", views(orders.all(status == null ? null : OrderStatus.fromWire(status)), true));
     }
 
     @GetMapping("/{id}")
     Map<String, Object> get(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
-        Order order = orders.get(id, AuthUser.from(jwt));
-        return ApiResponse.of("order", OrderView.from(order, users.namesByIds(List.of(order.userId()))));
+        AuthUser caller = AuthUser.from(jwt);
+        Order order = orders.get(id, caller);
+        return ApiResponse.of("order", OrderView.from(order, users.namesByIds(List.of(order.userId())),
+                caller.admin()));
     }
 
     @PutMapping("/{id}")
@@ -151,6 +160,14 @@ class OrderController {
         Order order = orders.advance(id, AuthUser.from(jwt).id());
         return ApiResponse.of("message", "Order marked as " + order.status().wireValue(),
                 "status", order.status().wireValue());
+    }
+
+    @PostMapping("/{id}/refund")
+    Map<String, Object> refund(@PathVariable String id, @Valid @RequestBody RefundRequest request,
+                               @AuthenticationPrincipal Jwt jwt) {
+        Order order = orders.refund(id, request.amount(), request.reason().trim(), AuthUser.from(jwt).id());
+        return ApiResponse.of("message", "Refund issued",
+                "payment", OrderView.PaymentView.from(order.payment(), true));
     }
 
     @DeleteMapping("/{id}")
@@ -171,8 +188,8 @@ class OrderController {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
-    private List<OrderView> views(List<Order> list) {
+    private List<OrderView> views(List<Order> list, boolean admin) {
         Map<String, String> names = users.namesByIds(list.stream().map(Order::userId).collect(Collectors.toSet()));
-        return list.stream().map(o -> OrderView.from(o, names)).toList();
+        return list.stream().map(o -> OrderView.from(o, names, admin)).toList();
     }
 }
