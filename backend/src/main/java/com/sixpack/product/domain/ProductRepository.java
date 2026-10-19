@@ -22,6 +22,9 @@ public interface ProductRepository {
     /** Categories of public (ACTIVE) products only. */
     List<String> distinctCategories();
 
+    /** Option names and values of public products that have variants. */
+    List<OptionFacet> optionFacets();
+
     /** Public (ACTIVE) products only. */
     PageResult<Product> search(ProductSearch search);
 

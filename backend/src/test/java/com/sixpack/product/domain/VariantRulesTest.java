@@ -94,6 +94,12 @@ class VariantRulesTest {
     }
 
     @Test
+    void axisNamesCannotContainTheSearchSeparator() {
+        assertRejected(List.of(new AxisInput("Size: EU", null, List.of(new ValueInput("1", null, null)))),
+                List.of(variant(null, 10, 1, "Size: EU", "1")), "':'");
+    }
+
+    @Test
     void twentyOneValuesOnAnAxisAreRejected() {
         var values = new java.util.ArrayList<ValueInput>();
         for (int i = 0; i < 21; i++) {

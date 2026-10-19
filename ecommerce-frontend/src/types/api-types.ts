@@ -1,4 +1,4 @@
-import { Bar, Category, Coupon, Invoice, Line, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
+import { Bar, Category, Coupon, Invoice, Line, OptionFacet, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
 
 export type MessageResponse = { success: boolean; message: string };
 
@@ -21,6 +21,7 @@ export type VariantsRequest = {
     status: "ACTIVE" | "DISABLED";
   }[];
 };
+export type OptionFacetsResponse = { success: boolean; options: OptionFacet[] };
 export type CategoriesResponse = { success: boolean; categories: string[] };
 export type SearchProductsResponse = ProductsResponse & { totalPage: number; total: number };
 export type SearchProductsRequest = {
@@ -29,6 +30,8 @@ export type SearchProductsRequest = {
   category: string;
   search: string;
   sort: string;
+  /** Selected options as "Name:Value"; one variant must match all of them. */
+  options?: string[];
 };
 
 export type OrdersResponse = { success: boolean; orders: Order[] };

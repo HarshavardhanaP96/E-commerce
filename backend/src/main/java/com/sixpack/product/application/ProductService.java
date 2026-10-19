@@ -4,12 +4,15 @@ import static com.sixpack.shared.config.CacheConfig.PRODUCTS_ADMIN;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_BY_ID;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_CATEGORIES;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_LATEST;
+import static com.sixpack.shared.config.CacheConfig.PRODUCTS_OPTIONS;
 
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.Changes;
 import com.sixpack.product.ProductChangedEvent;
+import com.sixpack.product.domain.OptionFacet;
+import com.sixpack.product.domain.OptionFilter;
 import com.sixpack.product.domain.Product;
 import com.sixpack.product.domain.ProductRepository;
 import com.sixpack.product.domain.ProductSearch;
@@ -109,13 +112,40 @@ public class ProductService {
         return products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
     }
 
-    public PageResult<Product> search(String search, Double maxPrice, String category, String sort, int page) {
-        Boolean sortAsc = sort == null || sort.isBlank() ? null : "asc".equalsIgnoreCase(sort);
-        return products.search(new ProductSearch(blankToNull(search), maxPrice,
-                Product.normalizeCategory(blankToNull(category)), sortAsc, Math.max(page, 1), props.pageSize()));
+    @Cacheable(PRODUCTS_OPTIONS)
+    public List<OptionFacet> optionFacets() {
+        return products.optionFacets();
     }
 
-    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    /** @param options each {@code Name:Value}, split at the first colon */
+    public PageResult<Product> search(String search, Double maxPrice, String category, String sort, int page,
+                                      List<String> options) {
+        Boolean sortAsc = sort == null || sort.isBlank() ? null : "asc".equalsIgnoreCase(sort);
+        return products.search(new ProductSearch(blankToNull(search), maxPrice,
+                Product.normalizeCategory(blankToNull(category)), sortAsc, Math.max(page, 1), props.pageSize(),
+                optionFilters(options)));
+    }
+
+    private static List<OptionFilter> optionFilters(List<String> raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        if (raw.size() > 3) {
+            throw ApiException.badRequest("option: at most 3 filters");
+        }
+        return raw.stream().map(o -> {
+            int colon = o.indexOf(':');
+            String name = colon < 0 ? "" : o.substring(0, colon).trim();
+            String value = colon < 0 ? "" : o.substring(colon + 1).trim();
+            if (name.isEmpty() || value.isEmpty()) {
+                throw ApiException.badRequest("option: use Name:Value, e.g. Size:M");
+            }
+            return new OptionFilter(name, value);
+        }).toList();
+    }
+
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
     public Product create(ProductCommand cmd) {
         if (cmd.photo() == null) {
             throw ApiException.badRequest("photo: is required");
@@ -138,7 +168,8 @@ public class ProductService {
         }
     }
 
-    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
     public Product update(String id, ProductCommand cmd) {
         Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
         String name = cmd.name() != null && !cmd.name().isBlank() ? cmd.name().trim() : current.name();
@@ -174,7 +205,8 @@ public class ProductService {
         return saved;
     }
 
-    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
     public void delete(String id) {
         Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
         products.deleteById(id);
@@ -189,7 +221,8 @@ public class ProductService {
      * Replaces the option axes and variants of a product (an empty command removes them). Existing variants are
      * matched by id and keep their live stock; the product's price and stock are re-derived.
      */
-    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
     public Product replaceVariants(String id, VariantsCommand cmd) {
         if (!props.variantsEnabled()) {
             throw ApiException.forbidden("Product variants are not enabled yet");
@@ -221,7 +254,8 @@ public class ProductService {
     }
 
     /** Changes one variant's stock atomically, without touching the rest of the product. */
-    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
     public Product adjustVariantStock(String id, String variantId, StockCommand cmd) {
         if ((cmd.delta() == null) == (cmd.set() == null)) {
             throw ApiException.badRequest("stock: send exactly one of delta or set");

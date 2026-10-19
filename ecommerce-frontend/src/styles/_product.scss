@@ -455,3 +455,17 @@
     position: static;
   }
 }
+
+// ---- option filters on the search page ----
+.search-options {
+  .chip {
+    min-width: 2.5rem;
+    height: 2.25rem;
+    padding: 0 0.625rem;
+  }
+
+  .swatch {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+}

@@ -2,7 +2,7 @@
 
 **Goal:** Let one product be sold in several variants (size, colour, and any other option such as material, storage or pack size), each with its own SKU, stock and optionally price, while products without variants keep working exactly as they do today.
 
-**Status:** Phases 1-4 built on `feat/product-variants` (see "as built" sections below). Phase 5 in progress. Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
+**Status:** Phases 1-4 and the search-filter part of Phase 5 are built on `feat/product-variants` (see "as built" sections below). The rest of Phase 5 is deliberately left out (see its list). Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
 
 ## What the code does today (why this is a big change)
 
@@ -155,6 +155,12 @@ Verified with `npm run lint`, `npm run build` and a real browser run against an 
 - Bug found only in a real browser (MockMvc cannot see it): `PATCH` was missing from the CORS allow-list, so the stock edit returned 403. Fixed with a preflight regression test.
 - Admin help guide "Sizes, colours and other variants".
 - `app.products.variants-enabled` now defaults to true (`PRODUCT_VARIANTS_ENABLED=false` blocks creating new variants; existing ones keep selling).
+
+## Phase 5 as built (2026-10-19): search filters only
+
+- `GET /product/all?option=Size:M&option=Colour:Black` (up to 3): one variant that is sellable and in stock must match every filter, so "M" and "White" do not match a product that has M/Black and S/White. `GET /product/options` lists option names, types, values and swatch colours of public products (cached 60 s with the other catalogue caches, evicted on product changes). Option names may not contain `:`.
+- Search page: option groups (chips, colour swatches), one value per option, replaced on a second click.
+- Not done, on purpose: per-variant dashboard analytics, per-variant low-stock alerts, size-chart table, per-variant tax override, CSV import/export. The last two depend on the open questions about GST slabs and bulk stock editing, which were never answered. Each is additive on the current model.
 
 ## Risks and mitigations
 

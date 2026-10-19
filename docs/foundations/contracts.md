@@ -53,7 +53,8 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 |---|---|---|---|
 | `GET /latest` | 🔓 | — | `{success, products}` (5 newest public) |
 | `GET /categories` | 🔓 | — | `{success, categories}` (distinct category strings of public products) |
-| `GET /all` | 🔓 | `?search=&price=&category=&sort=asc\|dsc&page=` | `{success, products, totalPage}` |
+| `GET /options` | 🔓 | — | `{success, options:[{name, type: TEXT\|COLOUR, values:[{label, hex}]}]}` (option names and values of public products with variants, for search filters) |
+| `GET /all` | 🔓 | `?search=&price=&category=&sort=asc\|dsc&page=&option=Name:Value` (`option` repeatable, up to 3; one sellable in-stock variant must match all of them; malformed is 400) | `{success, products, totalPage}` |
 | `GET /{id}` | 🔓 | — | `{success, product}` (any status, so admin edit and direct links work) |
 | `GET /admin-products` | 🛡 | — | `{success, products}` (every status) |
 | `POST /new` | 🛡 | multipart: name, price, stock, category, photo, plus the optional catalogue fields below | 201 `{success, message, product}`. 409 on duplicate `sku`/`slug`, 400 on invalid fields |
@@ -63,7 +64,7 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 | `DELETE /{id}` | 🛡 | — | `{success, message}` |
 
 `product = {_id, name, photo, price, stock, category, createdAt, slug, sku, description, brand, mrp, taxRate, hsn, status, tags, images, categoryId, countryOfOrigin, variants:{axes:[{name, type: TEXT\|COLOUR, values:[{label, hex, images}]}], items:[{id, sku, label, options:[{name, value}], price, mrp, stock, status}]}}`.
-A product without variants has `variants:{axes:[], items:[]}`. With variants, `price` is the lowest sellable variant price and `stock` the sum of variant stock; both are kept in step by every stock change. Limits: 3 axes, 20 values per axis, 100 variants. Blank variant SKUs are generated (`<product sku or slug>-<VALUES>`); SKUs are unique across all products and variants.
+A product without variants has `variants:{axes:[], items:[]}`. With variants, `price` is the lowest sellable variant price and `stock` the sum of variant stock; both are kept in step by every stock change. Limits: 3 axes, 20 values per axis, 100 variants; option names cannot contain `:`; colour images must be paths from the product's own gallery. Blank variant SKUs are generated (`<product sku or slug>-<VALUES>`); SKUs are unique across all products and variants.
 The new fields are optional (null or empty for older products; `status` defaults to `ACTIVE`).
 
 Optional catalogue fields on `POST /new` and `PUT /{id}`:

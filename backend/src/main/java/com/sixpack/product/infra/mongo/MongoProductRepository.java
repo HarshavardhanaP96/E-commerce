@@ -1,6 +1,8 @@
 package com.sixpack.product.infra.mongo;
 
 import com.sixpack.product.domain.OptionAxis;
+import com.sixpack.product.domain.OptionFacet;
+import com.sixpack.product.domain.OptionFilter;
 import com.sixpack.product.domain.OptionChoice;
 import com.sixpack.product.domain.OptionType;
 import com.sixpack.product.domain.OptionValue;
@@ -15,7 +17,11 @@ import com.sixpack.product.domain.VariantStatus;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
@@ -78,11 +84,43 @@ class MongoProductRepository implements ProductRepository {
         if (s.category() != null) {
             query.addCriteria(Criteria.where("category").is(s.category()));
         }
+        if (!s.options().isEmpty()) {
+            Criteria variant = Criteria.where("status").ne(VariantStatus.DISABLED.name()).and("stock").gt(0)
+                    .andOperator(s.options().stream().map(MongoProductRepository::optionMatch)
+                            .toArray(Criteria[]::new));
+            query.addCriteria(Criteria.where("variants.items").elemMatch(variant));
+        }
         long total = mongo.count(query, ProductDocument.class);
         Sort sort = s.sortAsc() == null ? NEWEST_FIRST
                 : Sort.by(s.sortAsc() ? Sort.Direction.ASC : Sort.Direction.DESC, "price");
         query.with(sort).skip((long) (s.page() - 1) * s.size()).limit(s.size());
         return new PageResult<>(find(query), total);
+    }
+
+    @Override
+    public List<OptionFacet> optionFacets() {
+        Query query = new Query(publicOnly()).addCriteria(Criteria.where("variants").exists(true));
+        query.fields().include("variants.axes");
+        // name -> type and value label -> hex, in first-seen order
+        Map<String, OptionType> types = new TreeMap<>();
+        Map<String, Map<String, String>> values = new HashMap<>();
+        for (ProductDocument d : mongo.find(query, ProductDocument.class)) {
+            for (ProductDocument.AxisDoc axis : orEmpty(d.variants == null ? null : d.variants.axes)) {
+                types.putIfAbsent(axis.name, OptionType.fromStored(axis.type));
+                Map<String, String> known = values.computeIfAbsent(axis.name, k -> new LinkedHashMap<>());
+                for (ProductDocument.ValueDoc v : orEmpty(axis.values)) {
+                    known.merge(v.label, v.hex == null ? "" : v.hex, (a, b) -> a.isEmpty() ? b : a);
+                }
+            }
+        }
+        return types.entrySet().stream().map(e -> new OptionFacet(e.getKey(), e.getValue(),
+                values.get(e.getKey()).entrySet().stream()
+                        .map(v -> new OptionFacet.Value(v.getKey(), v.getValue().isEmpty() ? null : v.getValue()))
+                        .toList())).toList();
+    }
+
+    private static Criteria optionMatch(OptionFilter f) {
+        return Criteria.where("options").elemMatch(Criteria.where("name").is(f.name()).and("value").is(f.value()));
     }
 
     @Override

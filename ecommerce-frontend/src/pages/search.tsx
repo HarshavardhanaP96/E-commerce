@@ -3,6 +3,7 @@ import { LuChevronLeft, LuChevronRight, LuSearch, LuSearchX } from "react-icons/
 import ProductCard from "../components/productCard";
 import {
   useCategoriesQuery,
+  useOptionFacetsQuery,
   useSearchProductsQuery,
 } from "../redux/api/productAPI";
 import toast from "react-hot-toast";
@@ -19,6 +20,8 @@ const Search = () => {
   const [maxPrice, setMaxPrice] = useState(100000);
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(1);
+  // Picked option values, one per option name: { Size: "M", Colour: "Black" }.
+  const [picked, setPicked] = useState<Record<string, string>>({});
 
   const dispatch = useDispatch();
 
@@ -27,7 +30,9 @@ const Search = () => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
   }, [searchInput]);
-  useEffect(() => setPage(1), [search, sort, category, maxPrice]);
+  const options = Object.entries(picked).map(([name, value]) => `${name}:${value}`);
+  const optionsKey = options.join("|");
+  useEffect(() => setPage(1), [search, sort, category, maxPrice, optionsKey]);
 
   const {
     isLoading: productsLoading,
@@ -40,9 +45,16 @@ const Search = () => {
     category,
     page,
     price: maxPrice,
+    options,
   });
 
   const { data: categoriesResponse } = useCategoriesQuery();
+  const { data: facetsResponse } = useOptionFacetsQuery();
+  const togglePick = (name: string, value: string) =>
+    setPicked((p) => {
+      const { [name]: current, ...rest } = p;
+      return current === value ? rest : { ...rest, [name]: value };
+    });
 
   const addToCartHandler = (cartItem: CartItem) => {
     if (cartItem.stock < 1) return toast.error("Out of Stock");
@@ -93,6 +105,29 @@ const Search = () => {
             ))}
           </select>
         </div>
+
+        {facetsResponse?.options.map((facet) => (
+          <div key={facet.name} className="search-options">
+            <h4>{facet.name}</h4>
+            <div className={facet.type === "COLOUR" ? "swatches" : "chips"} role="group" aria-label={facet.name}>
+              {facet.values.map((v) => {
+                const on = picked[facet.name] === v.label;
+                return (
+                  <button
+                    key={v.label}
+                    aria-pressed={on}
+                    title={v.label}
+                    className={`${facet.type === "COLOUR" && v.hex ? "swatch" : "chip"}${on ? " is-on" : ""}`}
+                    style={facet.type === "COLOUR" && v.hex ? { background: v.hex } : undefined}
+                    onClick={() => togglePick(facet.name, v.label)}
+                  >
+                    {facet.type === "COLOUR" && v.hex ? <span className="sr-only">{v.label}</span> : v.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </aside>
 
       <main>

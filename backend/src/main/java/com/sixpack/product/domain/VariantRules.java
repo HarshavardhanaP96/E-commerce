@@ -78,6 +78,9 @@ public final class VariantRules {
         Set<String> names = new HashSet<>();
         for (AxisInput in : inputs) {
             String name = text(in.name(), "axes.name", MAX_LABEL);
+            if (name.contains(":")) {
+                throw bad("axes.name: must not contain ':' (it separates name and value in search filters)");
+            }
             if (!names.add(key(name))) {
                 throw bad("axes: duplicate axis '" + name + "'");
             }

@@ -61,10 +61,16 @@ class ProductController {
             @RequestParam(required = false) @PositiveOrZero Double price,
             @RequestParam(required = false) @Size(max = 50) String category,
             @RequestParam(required = false) @Pattern(regexp = "(?i)asc|dsc|desc|") String sort,
-            @RequestParam(defaultValue = "1") @Min(1) @Max(10_000) int page) {
-        PageResult<Product> result = service.search(search, price, category, sort, page);
+            @RequestParam(defaultValue = "1") @Min(1) @Max(10_000) int page,
+            @RequestParam(required = false) @Size(max = 3) List<@Size(max = 70) String> option) {
+        PageResult<Product> result = service.search(search, price, category, sort, page, option);
         long totalPage = (long) Math.ceil(result.total() / (double) service.pageSize());
         return ApiResponse.of("products", views(result.items()), "totalPage", totalPage, "total", result.total());
+    }
+
+    @GetMapping("/options")
+    Map<String, Object> options() {
+        return ApiResponse.of("options", service.optionFacets().stream().map(OptionFacetView::from).toList());
     }
 
     @GetMapping("/admin-products")

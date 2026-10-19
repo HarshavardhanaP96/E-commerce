@@ -18,6 +18,7 @@ public class CacheConfig {
 
     public static final String PRODUCTS_LATEST = "products.latest";
     public static final String PRODUCTS_CATEGORIES = "products.categories";
+    public static final String PRODUCTS_OPTIONS = "products.options";
     public static final String PRODUCTS_BY_ID = "products.byId";
     public static final String PRODUCTS_ADMIN = "products.admin";
     public static final String DASHBOARD = "dashboard";
@@ -28,7 +29,8 @@ public class CacheConfig {
         manager.setAllowNullValues(false);
         Caffeine<Object, Object> catalog = Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(60)).maximumSize(5_000).recordStats();
-        for (String name : new String[] {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_BY_ID, PRODUCTS_ADMIN}) {
+        for (String name : new String[] {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_BY_ID,
+                PRODUCTS_ADMIN}) {
             manager.registerCustomCache(name, catalog.build());
         }
         manager.registerCustomCache(DASHBOARD, Caffeine.newBuilder()

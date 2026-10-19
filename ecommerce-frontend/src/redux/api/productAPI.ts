@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import {
   CategoriesResponse,
+  OptionFacetsResponse,
   MessageResponse,
   ProductResponse,
   ProductSavedResponse,
@@ -29,11 +30,19 @@ export const productAPI = createApi({
       query: () => "categories",
       providesTags: ["product"],
     }),
+    optionFacets: builder.query<OptionFacetsResponse, void>({
+      query: () => "options",
+      providesTags: ["product"],
+    }),
     searchProducts: builder.query<SearchProductsResponse, SearchProductsRequest>({
-      query: ({ price, search, sort, category, page }) => ({
-        url: "all",
-        params: clean({ search, sort, category, page, price: price || undefined }),
-      }),
+      query: ({ price, search, sort, category, page, options }) => {
+        const params = new URLSearchParams();
+        Object.entries(clean({ search, sort, category, page, price: price || undefined })).forEach(([k, v]) =>
+          params.set(k, String(v))
+        );
+        options?.forEach((o) => params.append("option", o));
+        return `all?${params}`;
+      },
       providesTags: ["product"],
     }),
     productDetails: builder.query<ProductResponse, string>({
@@ -74,6 +83,7 @@ export const {
   useLatestProductsQuery,
   useAdminProductsQuery,
   useCategoriesQuery,
+  useOptionFacetsQuery,
   useSearchProductsQuery,
   useProductDetailsQuery,
   useNewProductMutation,

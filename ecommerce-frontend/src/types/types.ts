@@ -48,6 +48,12 @@ export type Variant = {
 };
 export type ProductVariants = { axes: OptionAxis[]; items: Variant[] };
 
+export type OptionFacet = {
+  name: string;
+  type: "TEXT" | "COLOUR";
+  values: { label: string; hex?: string | null }[];
+};
+
 export type Product = {
   _id: string;
   name: string;
