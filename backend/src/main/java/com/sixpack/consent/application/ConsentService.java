@@ -12,6 +12,8 @@ import com.sixpack.consent.domain.ConsentRecord.Source;
 import com.sixpack.consent.domain.ConsentRepository;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.security.EvidenceHasher;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -31,6 +33,8 @@ public class ConsentService implements ConsentLedger {
     }
 
     private static final int MAX_USER_AGENT = 256;
+    /** How long proof of consent outlives the account (compliance-consent.md §7). */
+    static final Duration RETENTION_AFTER_ERASURE = Duration.ofDays(3 * 365);
 
     private final ConsentRepository records;
     private final LegalProperties legal;
@@ -64,6 +68,11 @@ public class ConsentService implements ConsentLedger {
             case ADMIN_AUP -> legal.adminAupVersion();
             case PRIVACY, MARKETING_EMAIL -> legal.privacyVersion();
         };
+    }
+
+    @Override
+    public void startRetentionClock(String userId) {
+        records.expireAllAt(userId, Instant.now().plus(RETENTION_AFTER_ERASURE));
     }
 
     public Map<Purpose, String> currentVersions() {

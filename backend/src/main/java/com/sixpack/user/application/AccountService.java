@@ -3,6 +3,7 @@ package com.sixpack.user.application;
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
+import com.sixpack.consent.ConsentLedger;
 import com.sixpack.shared.ApiException;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.user.AccountDeletionGuard;
@@ -26,10 +27,11 @@ public class AccountService {
     private final ApplicationEventPublisher events;
     private final AuditTrail audit;
     private final UserAccountAccess access;
+    private final ConsentLedger consents;
 
     AccountService(UserRepository users, PasswordEncoder encoder, FileStorage storage,
                    List<AccountDeletionGuard> guards, ApplicationEventPublisher events, AuditTrail audit,
-                   UserAccountAccess access) {
+                   UserAccountAccess access, ConsentLedger consents) {
         this.users = users;
         this.encoder = encoder;
         this.storage = storage;
@@ -37,6 +39,7 @@ public class AccountService {
         this.events = events;
         this.audit = audit;
         this.access = access;
+        this.consents = consents;
     }
 
     public void deleteOwnAccount(String userId, String password) {
@@ -60,6 +63,7 @@ public class AccountService {
         storage.delete(user.photo());
         users.deleteById(user.id());
         access.evict(user.id());
+        consents.startRetentionClock(user.id());
         events.publishEvent(new UserDeletedEvent(user.id()));
     }
 }

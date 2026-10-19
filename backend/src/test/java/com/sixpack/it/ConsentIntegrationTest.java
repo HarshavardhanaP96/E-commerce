@@ -131,6 +131,28 @@ class ConsentIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void erasedAccountsKeepConsentProofForThreeYearsThenMongoDeletesIt() throws Exception {
+        String token = register("proof@test.dev");
+        String userId = userId(token);
+        org.assertj.core.api.Assertions.assertThat(mongo.getCollection("consents").find().into(new java.util.ArrayList<>()))
+                .isNotEmpty().allSatisfy(d -> org.assertj.core.api.Assertions.assertThat(d).doesNotContainKey("expireAt"));
+
+        deleteMe(token, "password123").andExpect(status().isOk());
+
+        java.time.Instant expected = java.time.Instant.now().plus(java.time.Duration.ofDays(3 * 365));
+        List<Document> records = mongo.getCollection("consents").find(new Document("userId", userId))
+                .into(new java.util.ArrayList<>());
+        org.assertj.core.api.Assertions.assertThat(records).isNotEmpty().allSatisfy(d ->
+                org.assertj.core.api.Assertions.assertThat(d.getDate("expireAt").toInstant())
+                        .isBetween(expected.minusSeconds(3600), expected.plusSeconds(3600)));
+        org.assertj.core.api.Assertions.assertThat(mongo.getCollection("consents").listIndexes()
+                        .into(new java.util.ArrayList<>()))
+                .anySatisfy(i -> org.assertj.core.api.Assertions.assertThat(i.get("key", Document.class))
+                        .containsKey("expireAt"))
+                .anySatisfy(i -> org.assertj.core.api.Assertions.assertThat(i.get("expireAfterSeconds")).isEqualTo(0));
+    }
+
+    @Test
     void adminsCannotDeleteThemselvesThroughSelfService() throws Exception {
         deleteMe(adminToken(), "admin-password-123").andExpect(status().isBadRequest());
     }

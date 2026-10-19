@@ -22,4 +22,7 @@ class ConsentDocument {
     String userAgent;
     @CreatedDate
     Instant createdAt;
+    /** Set once the account is erased; MongoDB's TTL monitor then deletes the record. */
+    @Indexed(expireAfter = "0s")
+    Instant expireAt;
 }
