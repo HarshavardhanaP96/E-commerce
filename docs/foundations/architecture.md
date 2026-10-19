@@ -134,8 +134,8 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   change), retrying on conflict, so it cannot overwrite a concurrent sale; a plain `save` leaves those fields
   alone for variant products. Variant ids are server-generated and stable; they are stored as `variantId`
   because a field named `id` would map to `_id`. Variant SKUs are always set (generated when blank) so the sparse
-  unique index never sees nulls. Gated by `app.products.variants-enabled` (default off) until checkout, orders and
-  the storefront support variants. Checkout resolves each cart line through `ProductCatalog.resolveLine`, and stock
+  unique index never sees nulls. Creation is switchable with `app.products.variants-enabled` (default on once checkout, orders, the storefront
+  and the admin editor supported variants; off blocks new variants, existing ones keep selling). Checkout resolves each cart line through `ProductCatalog.resolveLine`, and stock
   is reserved and released per `StockLine(productId, variantId, qty)`; a sale of a variant needs the variant to be
   sellable and in stock, and a sale without a variant never matches a product that has variants. `OrderItem` and the
   payment intent snapshot the variant id, label and options. Still active.

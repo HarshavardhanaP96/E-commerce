@@ -309,6 +309,10 @@
     &.is-out {
       color: var(--danger);
     }
+
+    &.is-hint {
+      color: var(--text-muted);
+    }
   }
 
   &__buy {

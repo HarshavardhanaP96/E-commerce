@@ -127,7 +127,27 @@ export const GUIDES: Guide[] = [
       { type: "tip", text: "To stop selling something without deleting it, set its stock to 0. The store shows it as sold out." },
       { type: "warn", text: "Delete removes the product permanently, after a confirmation." },
     ],
-    related: ["add-product", "products"],
+    related: ["add-product", "product-variants", "products"],
+  },
+  {
+    slug: "product-variants",
+    group: "Catalogue",
+    title: "Sizes, colours and other variants",
+    summary: "Sell one product in several sizes, colours or other options, each with its own stock and price.",
+    body: [
+      { type: "p", text: "A variant is one buyable combination, such as size M in Black. Each variant has its own SKU, price, optional MRP, stock and status. Customers pick their options on the product page." },
+      { type: "steps", title: "Set up variants", items: [
+        "Open the product and choose the Variants tab.",
+        "Click Size, Colour or Add option, then type the values separated by commas (S, M, L). Press Enter to add them.",
+        "For a colour option, pick each swatch colour. Upload the product's images first (Details tab, Gallery images), then use the image button next to a colour to choose which images show when it is picked.",
+        "Fill in the table that appears: price, optional MRP and stock for every combination. Leave SKU as auto to have one made for you.",
+        "Click Save variants.",
+      ] },
+      { type: "tip", text: "Changing a stock number in the table saves as soon as you leave the field, and it never overwrites sales that happened in the meantime. Everything else needs Save variants." },
+      { type: "tip", text: "Set a variant to Disabled to stop selling it without losing its history. Disabled variants show as sold out." },
+      { type: "warn", text: "With variants, the product's own price and stock are worked out for you: the store shows the lowest variant price and the total stock. Removing an option merges or drops existing variants, and uploading a new gallery removes the images you set on colours." },
+    ],
+    related: ["edit-product", "add-product", "products"],
   },
   {
     slug: "categories",

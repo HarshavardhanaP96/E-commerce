@@ -3,6 +3,8 @@ package com.sixpack.it;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -321,5 +323,77 @@ class ProductVariantsIntegrationTest extends IntegrationTest {
         assertThat(sold.get()).isEqualTo(150);
         assertThat(after.stock()).isEqualTo(1000 - 150);
         assertThat(after.details().variants().totalStock()).isEqualTo(850);
+    }
+
+    private Map<String, Object> colourAxisWithImages(List<String> images) {
+        return Map.of("name", "Colour", "type", "colour", "values",
+                List.of(Map.of("label", "Black", "hex", "#111111", "images", images)));
+    }
+
+    private Map<String, Object> blackOnly() {
+        var m = new java.util.HashMap<String, Object>();
+        m.put("price", 100.0);
+        m.put("stock", 1);
+        m.put("options", List.of(Map.of("name", "Colour", "value", "Black")));
+        return m;
+    }
+
+    private JsonNode createWithGallery(String token, int images) throws Exception {
+        var req = multipart("/api/v1/product/new")
+                .file(new MockMultipartFile("photo", "p.png", "image/png", com.sixpack.storage.TestImages.png()));
+        for (int i = 0; i < images; i++) {
+            req.file(new MockMultipartFile("images", "g" + i + ".png", "image/png",
+                    com.sixpack.storage.TestImages.png()));
+        }
+        req.param("name", "Gallery Shirt").param("price", "100").param("stock", "1").param("category", "misc")
+                .header("Authorization", bearer(token));
+        return body(mvc.perform(req).andExpect(status().isCreated()).andReturn()).get("product");
+    }
+
+    @Test
+    void colourImagesMustComeFromTheProductsOwnGallery() throws Exception {
+        String token = adminToken();
+        JsonNode created = createWithGallery(token, 2);
+        String id = created.get("_id").asText();
+        String first = created.get("images").get(0).asText();
+
+        putVariants(token, id, Map.of("axes", List.of(colourAxisWithImages(List.of("uploads/not-mine.png"))),
+                "variants", List.of(blackOnly()))).andExpect(status().isBadRequest());
+        putVariants(token, id, Map.of("axes", List.of(colourAxisWithImages(List.of(first))),
+                "variants", List.of(blackOnly()))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.variants.axes[0].values[0].images[0]").value(first));
+    }
+
+    @Test
+    void replacingTheGalleryDropsColourImagesThatNoLongerExist() throws Exception {
+        String token = adminToken();
+        JsonNode created = createWithGallery(token, 1);
+        String id = created.get("_id").asText();
+        String old = created.get("images").get(0).asText();
+        putVariants(token, id, Map.of("axes", List.of(colourAxisWithImages(List.of(old))),
+                "variants", List.of(blackOnly()))).andExpect(status().isOk());
+
+        mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id)
+                        .file(new MockMultipartFile("images", "n.png", "image/png",
+                                com.sixpack.storage.TestImages.png()))
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk());
+
+        JsonNode after = product(id);
+        assertThat(after.get("images").get(0).asText()).isNotEqualTo(old);
+        assertThat(after.get("variants").get("axes").get(0).get("values").get(0).get("images")).isEmpty();
+        assertThat(after.get("variants").get("items")).hasSize(1);
+    }
+
+    @Test
+    void browsersMayPreflightThePatchStockEndpoint() throws Exception {
+        // Without PATCH in the CORS allow-list a browser gets 403 for the stock edit even though MockMvc passes.
+        mvc.perform(options("/api/v1/product/abc/variants/def/stock")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "PATCH")
+                        .header("Access-Control-Request-Headers", "authorization,content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Methods",
+                        org.hamcrest.Matchers.containsString("PATCH")));
     }
 }

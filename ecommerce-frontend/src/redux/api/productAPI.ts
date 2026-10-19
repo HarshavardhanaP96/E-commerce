@@ -3,6 +3,8 @@ import {
   CategoriesResponse,
   MessageResponse,
   ProductResponse,
+  ProductSavedResponse,
+  VariantsRequest,
   ProductsResponse,
   SearchProductsRequest,
   SearchProductsResponse,
@@ -46,6 +48,21 @@ export const productAPI = createApi({
       query: ({ productId, formData }) => ({ url: productId, method: "PUT", body: formData }),
       invalidatesTags: ["product"],
     }),
+    replaceVariants: builder.mutation<ProductSavedResponse, { productId: string; body: VariantsRequest }>({
+      query: ({ productId, body }) => ({ url: `${productId}/variants`, method: "PUT", body }),
+      invalidatesTags: ["product"],
+    }),
+    adjustVariantStock: builder.mutation<
+      ProductSavedResponse,
+      { productId: string; variantId: string; set: number }
+    >({
+      query: ({ productId, variantId, set }) => ({
+        url: `${productId}/variants/${variantId}/stock`,
+        method: "PATCH",
+        body: { set },
+      }),
+      invalidatesTags: ["product"],
+    }),
     deleteProduct: builder.mutation<MessageResponse, string>({
       query: (productId) => ({ url: productId, method: "DELETE" }),
       invalidatesTags: ["product"],
@@ -61,5 +78,7 @@ export const {
   useProductDetailsQuery,
   useNewProductMutation,
   useUpdateProductMutation,
+  useReplaceVariantsMutation,
+  useAdjustVariantStockMutation,
   useDeleteProductMutation,
 } = productAPI;

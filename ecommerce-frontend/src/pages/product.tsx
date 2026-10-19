@@ -57,7 +57,7 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
 
   // What is on sale for the current choice (the product itself when it has no variants).
   const line = withVariants ? variant : { price: product.price, mrp: product.mrp, stock: product.stock, id: undefined };
-  const range = priceRange(product);
+  const range = priceRange(product, selection);
   const missing = axes.filter((a) => !selection[a.name]).map((a) => a.name.toLowerCase());
   const key = cartKey({ productId: product._id, variantId: variant?.id });
   const inCart = withVariants && !variant ? 0 : quantityInCart(cart, key);
@@ -173,7 +173,10 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
             </fieldset>
           ))}
 
-          <p className={`product-info__stock${soldOut ? " is-out" : ""}`} aria-live="polite">
+          <p
+            className={`product-info__stock${soldOut ? " is-out" : ""}${withVariants && !variant ? " is-hint" : ""}`}
+            aria-live="polite"
+          >
             {withVariants && !variant
               ? `Choose ${missing.join(" and ")} to see availability`
               : soldOut

@@ -22,6 +22,8 @@ import com.sixpack.product.domain.Variant;
 import com.sixpack.product.domain.VariantRules;
 import com.sixpack.product.domain.VariantRules.AxisInput;
 import com.sixpack.product.domain.VariantRules.VariantInput;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -160,6 +162,11 @@ public class ProductService {
         }
         if (gallery != oldGallery) {
             oldGallery.forEach(storage::delete);
+            if (saved.hasVariants()) {
+                // Colour images that pointed into the replaced gallery would dangle.
+                products.updateVariants(id, p -> p.withVariants(
+                        p.details().variants().retainingImages(galleryOf(p))));
+            }
         }
         events.publishEvent(new ProductChangedEvent());
         audit.record(AuditEvent.of(AuditAction.PRODUCT_UPDATED).on("product", id)
@@ -194,6 +201,12 @@ public class ProductService {
             ProductVariants built = VariantRules.build(d.variants(), cmd.axes(), cmd.variants(),
                     d.sku() != null ? d.sku() : d.slug(), d.sku(), () -> UUID.randomUUID().toString()
                             .replace("-", "").substring(0, 12));
+            Set<String> gallery = galleryOf(current);
+            for (String image : built.imagePaths()) {
+                if (!gallery.contains(image)) {
+                    throw ApiException.badRequest("axes.images: pick images from the product's own gallery");
+                }
+            }
             for (Variant v : built.items()) {
                 if (takenBySomeoneElse(products.findBySku(v.sku()), id)) {
                     throw ApiException.conflict("sku: '" + v.sku() + "' is already in use");
@@ -243,6 +256,13 @@ public class ProductService {
         audit.record(AuditEvent.of(AuditAction.PRODUCT_UPDATED).on("product", id)
                 .changing(Changes.diff(CatalogAudit.view(current), CatalogAudit.view(saved), CatalogAudit.PRODUCT)));
         return saved;
+    }
+
+    /** Images a colour may use: the product's gallery and its main photo. */
+    private static Set<String> galleryOf(Product p) {
+        Set<String> paths = new HashSet<>(p.details().images());
+        paths.add(p.photo());
+        return paths;
     }
 
     private Product get(String id, String variantId) {

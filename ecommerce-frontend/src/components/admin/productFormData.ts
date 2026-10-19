@@ -10,6 +10,7 @@ export type ProductFormValues = {
   status: string;
   tags: string;
   categoryId: string;
+  countryOfOrigin: string;
   photo?: File;
   /** New gallery pictures. Sending any replaces the whole gallery. */
   images: File[];
@@ -29,6 +30,7 @@ export const emptyProductForm: ProductFormValues = {
   status: "ACTIVE",
   tags: "",
   categoryId: "",
+  countryOfOrigin: "",
   photo: undefined,
   images: [],
 };
@@ -46,6 +48,7 @@ export const toFormData = (v: ProductFormValues) => {
   if (v.status) fd.set("status", v.status);
   if (v.tags) fd.set("tags", v.tags);
   if (v.categoryId) fd.set("categoryId", v.categoryId);
+  if (v.countryOfOrigin) fd.set("countryOfOrigin", v.countryOfOrigin);
   if (v.photo) fd.set("photo", v.photo);
   v.images.forEach((file) => fd.append("images", file));
   return fd;

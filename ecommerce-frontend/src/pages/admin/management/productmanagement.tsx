@@ -4,6 +4,7 @@ import { LuTrash2 } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import ProductForm from "../../../components/admin/ProductForm";
+import VariantEditor from "../../../components/admin/VariantEditor";
 import { ProductFormValues, emptyProductForm, toFormData } from "../../../components/admin/productFormData";
 import Loader from "../../../components/admin/Loader";
 import { errorMessage } from "../../../redux/api/baseQuery";
@@ -20,6 +21,7 @@ const ProductManagement = () => {
   const [updateProduct, { isLoading: saving }] = useUpdateProductMutation();
   const [deleteProduct, { isLoading: deleting }] = useDeleteProductMutation();
   const [values, setValues] = useState<ProductFormValues>(emptyProductForm);
+  const [tab, setTab] = useState<"details" | "variants">("details");
 
   const product = data?.product;
   useEffect(() => {
@@ -37,6 +39,7 @@ const ProductManagement = () => {
         status: product.status ?? "ACTIVE",
         tags: (product.tags ?? []).join(", "),
         categoryId: product.categoryId ?? "",
+        countryOfOrigin: product.countryOfOrigin ?? "",
       });
     }
   }, [product]);
@@ -72,16 +75,42 @@ const ProductManagement = () => {
       subtitle={`ID ${product._id}`}
       actions={
         <>
-          <button form="product-form" type="submit" className="btn btn--primary" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </button>
+          {tab === "details" && (
+            <button form="product-form" type="submit" className="btn btn--primary" disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
           <button className="btn btn--danger" onClick={remove} disabled={deleting}>
             <LuTrash2 /> Delete
           </button>
         </>
       }
     >
-      <ProductForm values={values} onChange={setValues} onSubmit={save} currentPhoto={product.photo} currentImages={product.images} />
+      <div className="tabs" role="tablist">
+        {(["details", "variants"] as const).map((t) => (
+          <button
+            key={t}
+            role="tab"
+            aria-selected={tab === t}
+            className={tab === t ? "is-active" : ""}
+            onClick={() => setTab(t)}
+          >
+            {t === "details" ? "Details" : `Variants${product.variants?.items.length ? ` (${product.variants.items.length})` : ""}`}
+          </button>
+        ))}
+      </div>
+      {tab === "details" ? (
+        <ProductForm
+          values={values}
+          onChange={setValues}
+          onSubmit={save}
+          currentPhoto={product.photo}
+          currentImages={product.images}
+          derived={(product.variants?.items.length ?? 0) > 0}
+        />
+      ) : (
+        <VariantEditor key={product._id} product={product} />
+      )}
     </DetailLayout>
   );
 };

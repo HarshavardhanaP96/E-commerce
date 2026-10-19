@@ -10,12 +10,14 @@ type Props = {
   currentPhoto?: string;
   /** The gallery already saved on the product. */
   currentImages?: string[];
+  /** Price and stock come from the variants and cannot be edited here. */
+  derived?: boolean;
 };
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Two-column product editor: preview card on the left, fields on the right. Fits without scrolling. */
-const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages = [] }: Props) => {
+const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages = [], derived }: Props) => {
   const [preview, setPreview] = useState<string>("");
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const { data: categoryData } = useCategoryTreeQuery();
@@ -87,11 +89,29 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
         </label>
         <label>
           Price (₹)
-          <input type="number" min={1} step="0.01" value={values.price} onChange={set("price")} required={!currentPhoto} />
+          <input
+            type="number"
+            min={1}
+            step="0.01"
+            value={values.price}
+            onChange={set("price")}
+            required={!currentPhoto}
+            disabled={derived}
+            title={derived ? "Lowest variant price. Edit prices on the Variants tab." : undefined}
+          />
         </label>
         <label>
           Stock
-          <input type="number" min={0} step={1} value={values.stock} onChange={set("stock")} required={!currentPhoto} />
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={values.stock}
+            onChange={set("stock")}
+            required={!currentPhoto}
+            disabled={derived}
+            title={derived ? "Total of all variants. Edit stock on the Variants tab." : undefined}
+          />
         </label>
         <label>
           SKU
@@ -131,6 +151,10 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
           </select>
         </label>
         <label className="span-2">
+          Country of origin
+          <input value={values.countryOfOrigin} onChange={set("countryOfOrigin")} maxLength={56} placeholder="e.g. India" />
+        </label>
+        <label className="span-2">
           Photo (JPEG, PNG, WEBP or GIF, max 5 MB)
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPhoto} required={!currentPhoto} />
         </label>
@@ -156,7 +180,7 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
           ) : (
             <small>No gallery pictures yet.</small>
           )}
-          <small>Choosing new pictures replaces the whole gallery.</small>
+          <small>Choosing new pictures replaces the whole gallery and any images set on colours.</small>
         </fieldset>
       </form>
     </div>

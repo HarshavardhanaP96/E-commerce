@@ -2,6 +2,7 @@ package com.sixpack.product.domain;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /** The option axes of a product and the variants built from them. Legacy and simple products carry {@link #EMPTY}. */
 public record ProductVariants(List<OptionAxis> axes, List<Variant> items) {
@@ -29,5 +30,18 @@ public record ProductVariants(List<OptionAxis> axes, List<Variant> items) {
     public double lowestPrice() {
         return items.stream().filter(v -> v.status().isSellable()).mapToDouble(Variant::price).min()
                 .orElseGet(() -> items.stream().mapToDouble(Variant::price).min().orElse(0));
+    }
+
+    /** The same variants, with option-value images that are not in {@code allowed} dropped. */
+    public ProductVariants retainingImages(Set<String> allowed) {
+        return new ProductVariants(axes.stream().map(a -> new OptionAxis(a.name(), a.type(),
+                a.values().stream().map(v -> new OptionValue(v.label(), v.hex(),
+                        v.images().stream().filter(allowed::contains).toList())).toList())).toList(), items);
+    }
+
+    /** Every option-value image path used by these axes. */
+    public Set<String> imagePaths() {
+        return axes.stream().flatMap(a -> a.values().stream()).flatMap(v -> v.images().stream())
+                .collect(java.util.stream.Collectors.toSet());
     }
 }

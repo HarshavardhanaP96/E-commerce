@@ -10,9 +10,14 @@ const sellable = (v: Variant) => v.status === "ACTIVE";
 /** A cart line is a product plus, when it has variants, the chosen variant. */
 export const cartKey = (i: { productId: string; variantId?: string }) => `${i.productId}:${i.variantId ?? ""}`;
 
-/** Lowest and highest price a shopper can pay, over sellable variants (the product price when there are none). */
-export const priceRange = (p: Product): { min: number; max: number } => {
-  const prices = (p.variants?.items ?? []).filter(sellable).map((v) => v.price);
+/**
+ * Lowest and highest price a shopper can pay, over the sellable variants that fit the options picked so far
+ * (the product price when there are none).
+ */
+export const priceRange = (p: Product, selection: Selection = {}): { min: number; max: number } => {
+  const prices = (p.variants?.items ?? [])
+    .filter((v) => sellable(v) && v.options.every((o) => !selection[o.name] || selection[o.name] === o.value))
+    .map((v) => v.price);
   return prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : { min: p.price, max: p.price };
 };
 

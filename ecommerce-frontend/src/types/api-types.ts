@@ -8,6 +8,19 @@ export type AuthResponse = { success: boolean; message: string; token: string; u
 
 export type ProductsResponse = { success: boolean; products: Product[] };
 export type ProductResponse = { success: boolean; product: Product };
+export type ProductSavedResponse = ProductResponse & { message: string };
+export type VariantsRequest = {
+  axes: { name: string; type: "text" | "colour"; values: { label: string; hex?: string; images?: string[] }[] }[];
+  variants: {
+    id?: string;
+    sku?: string;
+    options: { name: string; value: string }[];
+    price: number;
+    mrp?: number;
+    stock?: number;
+    status: "ACTIVE" | "DISABLED";
+  }[];
+};
 export type CategoriesResponse = { success: boolean; categories: string[] };
 export type SearchProductsResponse = ProductsResponse & { totalPage: number; total: number };
 export type SearchProductsRequest = {

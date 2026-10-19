@@ -2,7 +2,7 @@
 
 **Goal:** Let one product be sold in several variants (size, colour, and any other option such as material, storage or pack size), each with its own SKU, stock and optionally price, while products without variants keep working exactly as they do today.
 
-**Status:** Phases 1 and 2 built on `feat/product-variants` (see "As built" below). Phases 3-5 not started. Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
+**Status:** Phases 1-4 built on `feat/product-variants` (see "as built" sections below). Phase 5 in progress. Tier 2 item from `docs/superpowers/specs/2026-10-17-richer-entities-design.md` §4 ("variants (size/colour) with per-variant stock and price"), which §4 flagged as an open decision because `PriceCalculator`, stock handling and `OrderItem` all change. This plan resolves that decision.
 
 ## What the code does today (why this is a big change)
 
@@ -137,6 +137,24 @@ Done and verified (`mvn verify`: 178 tests, Modulith boundary check green):
 - `CheckoutService`: `CartLine(productId, variantId, quantity)` (the 2-argument form still works), lines merged per product + variant, errors name the variant, rollback and confirm release per line.
 - `OrderItem`, `OrderItemDoc` (so payment intents too) and `OrderView` gain `variantId`, `variantLabel`, `options`; old orders load with nulls and an empty `options` list.
 - 9 integration tests: price/snapshot/decrement of one variant; two variants as two lines; merge of the same variant; line/variant mismatch rules; disabled variant; last-unit race; rollback of the other lines; simple sale never touches a variant product; legacy order loads.
+
+## Phase 3 as built (2026-10-19)
+
+Verified with `npm run lint`, `npm run build` and a real browser run against an isolated stack (own Mongo, backend and Vite).
+- New `/product/:id` page for every product: gallery that follows the picked colour, size chips, colour swatches, sold-out values struck through but still selectable, price that narrows as options are picked ("From ₹499" → "₹549"), MRP and discount, stock hint, quantity stepper capped by remaining stock, SKU and country of origin.
+- Cart lines are keyed by product + variant (`cartKey`); an old saved cart (no variant ids) still loaded and checked out.
+- Cards link to the page; variant products show "From" price, colour swatches and an options link instead of quick-add.
+- Cart, checkout request, order details and admin order details show the variant label and SKU.
+- Pure helpers (selection, availability, price range) live in `src/utils/variants.ts`.
+
+## Phase 4 as built (2026-10-19)
+
+- Admin product page gets Details / Variants tabs. The Variants tab: option axes with preset names (typing "Colour" switches to swatches), comma-separated values, auto-generated combination table (price, MRP, stock, status, SKU), per-colour images chosen from the product gallery, "Save variants" and "Remove all variants". Stock cells of saved variants save on leaving the field through the atomic stock endpoint.
+- Details tab: gallery upload and country of origin added; price and stock are disabled when the product has variants.
+- Backend hardening found while building: colour images must come from the product's own gallery (400 otherwise), and replacing the gallery drops colour images that no longer exist.
+- Bug found only in a real browser (MockMvc cannot see it): `PATCH` was missing from the CORS allow-list, so the stock edit returned 403. Fixed with a preflight regression test.
+- Admin help guide "Sizes, colours and other variants".
+- `app.products.variants-enabled` now defaults to true (`PRODUCT_VARIANTS_ENABLED=false` blocks creating new variants; existing ones keep selling).
 
 ## Risks and mitigations
 

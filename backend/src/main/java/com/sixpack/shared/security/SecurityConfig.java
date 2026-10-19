@@ -105,7 +105,7 @@ class SecurityConfig {
     private static CorsConfigurationSource corsSource(SecurityProperties props) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(props.corsAllowedOrigins());
-        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         cors.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
