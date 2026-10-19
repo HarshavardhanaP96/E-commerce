@@ -22,6 +22,25 @@ class TenantDocument {
     Map<String, String> theme;
     String locale;
     String currency;
+    LegalDoc legal;
+    PaymentDoc payment;
+    MailDoc mail;
+
+    static class LegalDoc {
+        String termsVersion;
+        String privacyVersion;
+        String adminAupVersion;
+    }
+
+    static class PaymentDoc {
+        String provider;
+        String keyId;
+        String secretRef;
+    }
+
+    static class MailDoc {
+        String baseUrl;
+    }
     @CreatedDate
     Instant createdAt;
 }

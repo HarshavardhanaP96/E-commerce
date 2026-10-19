@@ -1,5 +1,8 @@
 package com.sixpack.tenant.infra.mongo;
 
+import com.sixpack.shared.tenant.LegalSettings;
+import com.sixpack.shared.tenant.MailSettings;
+import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.tenant.domain.Tenant;
 import com.sixpack.tenant.domain.TenantRepository;
 import com.sixpack.tenant.domain.TenantStatus;
@@ -53,6 +56,16 @@ class MongoTenantRepository implements TenantRepository {
         doc.theme = t.theme();
         doc.locale = t.locale();
         doc.currency = t.currency();
+        doc.legal = new TenantDocument.LegalDoc();
+        doc.legal.termsVersion = t.legal().termsVersion();
+        doc.legal.privacyVersion = t.legal().privacyVersion();
+        doc.legal.adminAupVersion = t.legal().adminAupVersion();
+        doc.payment = new TenantDocument.PaymentDoc();
+        doc.payment.provider = t.payment().provider();
+        doc.payment.keyId = t.payment().keyId();
+        doc.payment.secretRef = t.payment().secretRef();
+        doc.mail = new TenantDocument.MailDoc();
+        doc.mail.baseUrl = t.mail().baseUrl();
         return toDomain(mongo.save(doc));
     }
 
@@ -62,6 +75,10 @@ class MongoTenantRepository implements TenantRepository {
 
     private static Tenant toDomain(TenantDocument d) {
         return new Tenant(d.id, d.slug, d.name, d.status == null ? TenantStatus.ACTIVE : TenantStatus.valueOf(d.status),
-                d.domains, d.theme, d.locale, d.currency, d.createdAt);
+                d.domains, d.theme, d.locale, d.currency, d.createdAt,
+                d.legal == null ? null : new LegalSettings(d.legal.termsVersion, d.legal.privacyVersion,
+                        d.legal.adminAupVersion),
+                d.payment == null ? null : new PaymentSettings(d.payment.provider, d.payment.keyId, d.payment.secretRef),
+                d.mail == null ? null : new MailSettings(d.mail.baseUrl));
     }
 }

@@ -30,7 +30,11 @@ class RazorpayGateway implements PaymentGateway {
     private final RestClient client;
 
     RazorpayGateway(PaymentProperties props, RestClient.Builder builder) {
-        this.config = props.razorpay();
+        this(props.razorpay(), builder);
+    }
+
+    RazorpayGateway(PaymentProperties.Razorpay razorpay, RestClient.Builder builder) {
+        this.config = razorpay;
         if (isBlank(config.keyId()) || isBlank(config.keySecret())) {
             throw new IllegalStateException("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required when PAYMENT_PROVIDER=razorpay");
         }

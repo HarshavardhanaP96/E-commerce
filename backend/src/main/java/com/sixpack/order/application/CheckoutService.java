@@ -25,6 +25,7 @@ import com.sixpack.order.domain.PriceCalculator;
 import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.payment.PaymentGateway;
+import com.sixpack.payment.PaymentGateways;
 import com.sixpack.payment.ProviderOrder;
 import com.sixpack.product.ProductCatalog;
 import com.sixpack.product.ProductSnapshot;
@@ -76,7 +77,7 @@ public class CheckoutService {
 
     private final ProductCatalog catalog;
     private final CouponLookup coupons;
-    private final PaymentGateway gateway;
+    private final PaymentGateways gateways;
     private final PaymentIntentRepository intents;
     private final OrderRepository orders;
     private final ConsentLedger consents;
@@ -85,13 +86,13 @@ public class CheckoutService {
     private final UserDirectory users;
     private final AuditTrail audit;
 
-    CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateway gateway,
+    CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateways gateways,
                     PaymentIntentRepository intents, OrderRepository orders, ConsentLedger consents,
                     ApplicationEventPublisher events, MeterRegistry meters, UserDirectory users,
                     AuditTrail audit) {
         this.catalog = catalog;
         this.coupons = coupons;
-        this.gateway = gateway;
+        this.gateways = gateways;
         this.intents = intents;
         this.orders = orders;
         this.consents = consents;
@@ -130,6 +131,7 @@ public class CheckoutService {
         if (quote.totalPaise() < 100) {
             throw ApiException.badRequest("Order total must be at least ₹1");
         }
+        PaymentGateway gateway = gateways.current();
         ProviderOrder providerOrder = gateway.createOrder(quote.totalPaise(), "rcpt_" + System.currentTimeMillis());
         intents.save(new PaymentIntent(null, userId, gateway.provider(), providerOrder.id(), items,
                 normalizedCoupon, quote, providerOrder.currency()));
@@ -142,7 +144,7 @@ public class CheckoutService {
         PaymentIntent intent = intents.findByProviderOrderId(providerOrderId)
                 .filter(i -> i.userId().equals(userId))
                 .orElseThrow(() -> ApiException.notFound("Checkout session not found"));
-        if (!gateway.verifySignature(providerOrderId, paymentId, signature)) {
+        if (!gateways.current().verifySignature(providerOrderId, paymentId, signature)) {
             meters.counter("sixpack.checkout.failed", "reason", "bad_signature").increment();
             throw ApiException.badRequest("Payment verification failed");
         }
