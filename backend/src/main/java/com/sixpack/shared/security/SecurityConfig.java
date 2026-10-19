@@ -46,7 +46,8 @@ class SecurityConfig {
                         .requestMatchers(GET, "/uploads/**").permitAll()
                         // user
                         .requestMatchers(POST, "/api/v1/user/register", "/api/v1/user/login",
-                                "/api/v1/user/forgot-password", "/api/v1/user/reset-password").permitAll()
+                                "/api/v1/user/forgot-password", "/api/v1/user/reset-password",
+                                "/api/v1/user/verify-email").permitAll()
                         .requestMatchers("/api/v1/user/me", "/api/v1/user/me/**").authenticated()
                         .requestMatchers("/api/v1/user/**").hasRole(ADMIN)
                         // legal & consent

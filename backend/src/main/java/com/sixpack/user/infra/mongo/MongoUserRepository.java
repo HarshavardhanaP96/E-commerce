@@ -121,6 +121,12 @@ class MongoUserRepository implements UserRepository {
     }
 
     @Override
+    public void markEmailVerified(String id) {
+        mongo.updateFirst(byId(id), new Update().set("emailVerified", true).currentDate("updatedAt"),
+                UserDocument.class);
+    }
+
+    @Override
     public void deleteById(String id) {
         mongo.remove(Query.query(Criteria.where("id").is(id)), UserDocument.class);
     }

@@ -27,6 +27,8 @@ public interface UserRepository {
 
     void setStatus(String id, UserStatus status);
 
+    void markEmailVerified(String id);
+
     User save(User user);
 
     void deleteById(String id);

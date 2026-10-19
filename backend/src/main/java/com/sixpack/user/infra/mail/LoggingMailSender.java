@@ -22,6 +22,15 @@ class LoggingMailSender implements MailSender {
     }
 
     @Override
+    public void sendEmailVerification(String email, String name, String verifyLink) {
+        if (props.mailLogLinks()) {
+            log.info("[dev-mail] email verification for {}: {}", email, verifyLink);
+        } else {
+            log.warn("No mail provider configured; verification email was not sent");
+        }
+    }
+
+    @Override
     public void sendPasswordReset(String email, String name, String resetLink) {
         if (props.mailLogLinks()) {
             log.info("[dev-mail] password reset for {}: {}", email, resetLink);
