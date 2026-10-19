@@ -12,7 +12,10 @@ import com.sixpack.user.domain.Role;
 import com.sixpack.user.domain.User;
 import com.sixpack.user.domain.UserRepository;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -33,7 +36,8 @@ import org.testcontainers.containers.MongoDBContainer;
         "app.security.auth-requests-per-minute=10000",
         "app.storage.local-dir=target/test-uploads",
         "app.payment.provider=fake",
-        "app.user.admin-email="
+        "app.user.admin-email=",
+        "app.products.variants-enabled=true"
 })
 @AutoConfigureMockMvc
 public abstract class IntegrationTest {
@@ -64,7 +68,7 @@ public abstract class IntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",
-                "password_reset_tokens", "consents", "categories", "coupon_redemptions"}) {
+                "password_reset_tokens", "consents", "categories", "coupon_redemptions", "audit_log"}) {
             mongo.getCollection(c).deleteMany(new org.bson.Document());
         }
     }
@@ -84,7 +88,8 @@ public abstract class IntegrationTest {
         return body(res).get("user").get("_id").asText();
     }
 
-    protected String adminToken() throws Exception {
+    /** Logs the seeded admin in. The admin has NOT accepted the acceptable-use agreement yet. */
+    protected String adminTokenWithoutAgreement() throws Exception {
         if (users.findByEmail("admin@test.dev").isEmpty()) {
             users.save(new User(null, "Admin", "admin@test.dev", encoder.encode("admin-password-123"), "",
                     Role.ADMIN, Gender.MALE, LocalDate.of(1990, 1, 1), null));
@@ -94,6 +99,17 @@ public abstract class IntegrationTest {
                                 "password", "admin-password-123"))))
                 .andExpect(status().isOk()).andReturn();
         return body(res).get("token").asText();
+    }
+
+    /** Logs the seeded admin in and accepts the admin agreement, so admin endpoints work. */
+    protected String adminToken() throws Exception {
+        String token = adminTokenWithoutAgreement();
+        mvc.perform(post("/api/v1/consent").header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(
+                                Map.of("purpose", "admin_aup", "granted", true, "source", "reprompt"))))
+                .andExpect(status().isOk());
+        return token;
     }
 
     protected String createProduct(String adminToken, String name, double price, int stock, String category)
@@ -109,6 +125,34 @@ public abstract class IntegrationTest {
 
     protected JsonNode body(MvcResult result) throws Exception {
         return json.readTree(result.getResponse().getContentAsString());
+    }
+
+    /** Audit entries with this action, newest first, read straight from the collection. */
+    protected List<Document> auditEntries(String action) {
+        return mongo.getCollection("audit_log").find(new Document("action", action))
+                .sort(new Document("at", -1).append("_id", -1)).into(new ArrayList<>());
+    }
+
+    /** The change recorded for one field of an audit entry. */
+    protected Document changeOf(Document entry, String field) {
+        return entry.getList("changes", Document.class).stream()
+                .filter(c -> field.equals(c.getString("field"))).findFirst().orElseThrow();
+    }
+
+    /** Checks out one unit of the product as this customer and confirms the fake payment. Returns the order id. */
+    protected String placeOrder(String token, String productId) throws Exception {
+        String providerOrderId = body(mvc.perform(post("/api/v1/order/checkout")
+                        .header("Authorization", bearer(token)).contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("items",
+                                List.of(Map.of("productId", productId, "quantity", 1))))))
+                .andExpect(status().isCreated()).andReturn()).get("checkout").get("providerOrderId").asText();
+        return body(mvc.perform(post("/api/v1/order/new").header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("providerOrderId", providerOrderId,
+                                "paymentId", "fake_pay_1", "signature", "fake",
+                                "shippingInfo", Map.of("address", "12 MG Road", "city", "Bengaluru",
+                                        "state", "Karnataka", "country", "India", "pinCode", "560001")))))
+                .andExpect(status().isCreated()).andReturn()).get("orderId").asText();
     }
 
     protected static String bearer(String token) {

@@ -3,7 +3,7 @@
  * launch, and fill in BUSINESS below — Razorpay won't activate the account without these details.
  *
  * Changing a policy: edit the text and its `updated` date. If the change is material (new purpose, new
- * recipient, changed refund terms), also bump LEGAL_TERMS_VERSION / LEGAL_PRIVACY_VERSION on the backend so
+ * recipient, changed refund terms), also bump LEGAL_TERMS_VERSION / LEGAL_PRIVACY_VERSION (or LEGAL_ADMIN_AUP_VERSION for the admin agreement) on the backend so
  * every user is asked to accept again.
  */
 
@@ -16,7 +16,14 @@ export const BUSINESS = {
   grievanceEmail: "[grievance@your-domain]",
 };
 
-export type PolicySlug = "terms" | "privacy" | "refunds" | "shipping" | "contact" | "cookies";
+export type PolicySlug =
+  | "terms"
+  | "privacy"
+  | "refunds"
+  | "shipping"
+  | "contact"
+  | "cookies"
+  | "admin-aup";
 
 export type Policy = {
   slug: PolicySlug;
@@ -115,6 +122,7 @@ export const POLICIES: Record<PolicySlug, Policy> = {
           "Order and payment records: for as long as tax law requires (about 8 years). We remove your street address and PIN code once your account is deleted.",
           "Consent records: for the life of your account plus 3 years, as proof.",
           "Server logs: at least 1 year, then deleted.",
+          "Audit log: a record of changes to the store's data and of sign-in attempts is kept for 1 year. It holds ids, the names of the fields that changed, hashed network details and the browser type, not your name, email, phone number or address.",
         ],
       },
       {
@@ -249,6 +257,49 @@ export const POLICIES: Record<PolicySlug, Policy> = {
         body: [
           "You can clear site data in your browser at any time. You'll be signed out and your cart will be emptied.",
           "If we ever add optional analytics or marketing tools, we'll ask for your consent first and give you a way to change your choice.",
+        ],
+      },
+    ],
+  },
+  "admin-aup": {
+    slug: "admin-aup",
+    title: "Admin Acceptable Use Agreement",
+    updated: "2026-10-18",
+    intro: `This agreement applies to everyone with an admin account on 6Pack, run by ${b.legalName}. Admins can see customers' personal data, so please read it before you continue.`,
+    sections: [
+      {
+        heading: "Using customer data",
+        body: [
+          "Use customer data only for the task in front of you, such as fulfilling an order, answering a support request or fixing a problem.",
+          "Don't copy, export, photograph or share customer data outside 6Pack, and don't look up people you have no work reason to look up.",
+          "Treat order contact details, addresses and phone numbers as confidential, even after you stop being an admin.",
+        ],
+      },
+      {
+        heading: "Keeping your account safe",
+        body: [
+          "Use your own account and a strong, unique password. Never share your login or let someone else use it.",
+          "Sign out on shared or public devices.",
+        ],
+      },
+      {
+        heading: "Reporting problems",
+        body: [
+          `If you think customer data has been exposed, or your account has been misused, tell the Grievance Officer straight away: ${b.grievanceOfficer}, ${b.grievanceEmail}.`,
+        ],
+      },
+      {
+        heading: "Activity is recorded",
+        body: [
+          "Changes you make to products, categories, coupons, orders and users, and sign-in attempts, are recorded in an audit log with your account, the time and what changed.",
+          "The log is kept for one year and is reviewed by other admins. It doesn't record personal details such as customers' names, emails or addresses.",
+        ],
+      },
+      {
+        heading: "Accepting this agreement",
+        body: [
+          "You must accept this agreement to use the admin area. You'll be asked again whenever it changes in a material way.",
+          "Misuse of customer data can lead to removal of admin access and, where the law requires, to legal action.",
         ],
       },
     ],

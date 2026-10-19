@@ -3,6 +3,7 @@ import { IconType } from "react-icons";
 import {
   LuBarChart3,
   LuBookOpen,
+  LuHistory,
   LuMenu,
   LuPackage,
   LuReceipt,
@@ -18,6 +19,7 @@ const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/customer", text: "Customers", Icon: LuUsers },
   { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
   { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },
+  { url: "/admin/audit", text: "Audit log", Icon: LuHistory },
 ];
 
 const SUPPORT: typeof NAV = [{ url: "/admin/help", text: "Help & guides", Icon: LuBookOpen }];

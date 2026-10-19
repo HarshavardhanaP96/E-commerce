@@ -67,6 +67,8 @@ class SecurityConfig {
                         .requestMatchers(PUT, "/api/v1/order/*").hasRole(ADMIN)
                         .requestMatchers(DELETE, "/api/v1/order/*").hasRole(ADMIN)
                         .requestMatchers("/api/v1/order/**").authenticated()
+                        // audit log
+                        .requestMatchers("/api/v1/admin/**").hasRole(ADMIN)
                         // dashboard
                         .requestMatchers("/api/v1/dashboard/**").hasRole(ADMIN)
                         .anyRequest().authenticated())

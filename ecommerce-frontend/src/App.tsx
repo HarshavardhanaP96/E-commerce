@@ -33,6 +33,7 @@ const Customers = lazy(() => import("./pages/admin/customers"));
 const Transaction = lazy(() => import("./pages/admin/transaction"));
 
 const Coupon = lazy(() => import("./pages/admin/apps/coupon"));
+const AuditLog = lazy(() => import("./pages/admin/audit"));
 
 
 const Analytics = lazy(() => import("./pages/admin/analytics"));
@@ -153,6 +154,7 @@ const App = () => {
             
             {/* Apps */}
             <Route path="/admin/app/coupon" element={<Coupon />} />
+            <Route path="/admin/audit" element={<AuditLog />} />
 
 
             {/* Management */}

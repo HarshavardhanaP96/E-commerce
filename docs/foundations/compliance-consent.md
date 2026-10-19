@@ -33,7 +33,7 @@ Have a lawyer review the policy text before going live.
 | P5 | **Contact Us + Grievance Officer** | 🔴 | `/legal/contact` | Notice only | Footer, privacy policy |
 | P6 | **Cookie & Storage Notice** | 🔴 (notice) / 🟡 (banner) | `/legal/cookies` | Notice today. Becomes an opt-in banner once non-essential storage exists (§5). | Footer, banner |
 | P7 | **Marketing communications consent** | 🟡 (only if we send promotional email, SMS or WhatsApp) | covered in P2 | Separate unticked opt-in | Register form, account settings |
-| P8 | **Admin acceptable-use & confidentiality** | 🟢 | `/admin/legal/aup` | Clickwrap on an admin's first login, and again whenever the version changes | Admin sidebar |
+| P8 | **Admin acceptable-use & confidentiality** | 🟢 | `/legal/admin-aup` | Clickwrap on an admin's first login, and again whenever the version changes | Admin sidebar |
 | P9 | **Data retention schedule** | 🟢 (internal) | this file, §7 | None. This is an internal document. | Referenced in P2 |
 
 **What the Privacy Policy (P2) must cover:** what we collect (name, email, password hash, photo, gender, DOB,
@@ -62,7 +62,7 @@ state that purpose in P2 and take consent for it.
 | C9 | **Before loading Razorpay checkout.js** | Covered by C8. Razorpay sets its own cookies for fraud checks. List them in P6 as strictly necessary. | None needed | 🔴 (disclose) | No | No |
 | C10 | **Profile photo upload** | "Optional. Shown on your account only." | Inline hint, covered by P2 | 🟢 | No | No |
 | C11 | **Forgot password** | Link to Privacy Policy | Notice | 🟢 | No | No |
-| C12 | **Admin first login / AUP version change** | Admin acceptable-use (P8) | Blocking clickwrap | 🟢 | Yes, for `/admin/*` | Yes: `admin_aup` |
+| C12 | **Admin first login / AUP version change** | Admin acceptable-use (P8) | Blocking clickwrap | 🟢 | Yes, for every `/api/v1/**` request made with an admin token, except `/user/me/**`, `/consent/**` and `/legal/**` | Yes: `admin_aup` |
 | C13 | **Account settings → Privacy** (new page) | Current consents with toggles, cookie preferences, "Download my data", "Delete my account" | Self-service. Withdrawing must take as few steps as granting. | 🔴 | n/a | Yes, every change |
 | C14 | **Footer, every page** | Terms · Privacy · Refunds · Shipping · Contact · Cookie settings | Links. **There is no footer today, so we need to add one.** | 🔴 | n/a | n/a |
 
@@ -125,7 +125,7 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared 
 
 ### Policy versioning
 - Policy text lives in `ecommerce-frontend/src/legal/policies.ts`, each with an `updated` date shown on the page.
-- The version users must accept is the backend's `LEGAL_TERMS_VERSION` / `LEGAL_PRIVACY_VERSION`, bumped
+- The version users must accept is the backend's `LEGAL_TERMS_VERSION` / `LEGAL_PRIVACY_VERSION` / `LEGAL_ADMIN_AUP_VERSION`, bumped
   only for a major change. `GET /api/v1/legal/versions` (🔓) returns them.
 - **Major change** (new purpose, new data-sharing recipient, changed refund terms): re-prompt with C4, and
   email users 🟢 at least 7 days before it takes effect.
@@ -135,6 +135,7 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared 
 | Method & path | Auth | Purpose |
 |---|---|---|
 | `GET /legal/versions` | 🔓 | Current policy versions |
+| `GET /admin/audit` | 🛡 | Search the audit log (§10) |
 | `POST /consent` | 👤 | Record a consent change, `{purpose, granted, source}`. The server stamps the version, hashed IP and user agent |
 | `GET /consent/me` | 👤 | The user's current consent state, `pending` list and history |
 | `DELETE /user/me` | 👤 | Delete my own account (right to erasure). Needs the password; blocked while orders are undelivered |
@@ -166,6 +167,8 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 | Consent records | Account lifetime + 3 years (proof) | Delete |
 | Server and access logs | **At least 1 year** (DPDP Rules), then delete | Loki retention config |
 | `payment_intents`, `password_reset_tokens` | Already TTL'd (24 h / 15 min) | Already handled |
+| Audit log (`audit_log`) | 365 days, then deleted by a TTL index. The period is fixed in `AuditDocument` (`@Indexed(expireAfter = "365d")`); changing it needs a code change plus dropping the existing `at` index (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place. Holds actor ids, record ids, the names of changed fields, non-personal values (prices, statuses, roles), a salted hash of the IP and the browser user-agent; personal values (name, email, phone, address) are never stored. | Deleted automatically |
+| Attempted-login email hash (`subjectHash`) | Same as the audit log. It is a salted hash, so it is pseudonymous. It can't be reversed without the salt, but that holds only when `CONSENT_IP_SALT` is set. The salt defaults to empty, in which case the hash is plain SHA-256 and the backend logs a startup warning; set it in every real environment. | Deleted automatically |
 
 ## 8. Implementation options
 
@@ -198,9 +201,21 @@ I'll go with **Option A** unless you object.
 - [x] 🟡 Fonts self-hosted (`@fontsource-variable/*`). The Google Fonts links are gone and the CSP no longer allows them.
 - [x] 🟢 `cart.shippingInfo` cleared on sign-out.
 - [x] 🟢 `hasConsent(category)` helper (`utils/consent.ts`) as the gate for future third-party scripts.
-- [ ] 🟢 Admin acceptable-use clickwrap (P8 / C12).
+- [x] 🟢 Admin acceptable-use clickwrap (P8 / C12): `admin_aup` purpose, accepted on first login and re-asked when `LEGAL_ADMIN_AUP_VERSION` changes. Admin endpoints return 403 until it is accepted.
 - [ ] 🟢 Set Loki log retention to ≥ 1 year.
 - [x] Tests (`ConsentIntegrationTest`): registration rejected without `acceptTerms` or under 18; consent recorded with a hashed IP; legacy users prompted and blocked from checkout until they accept; marketing withdrawal is append-only; terms can't be withdrawn; deletion needs the password, waits for delivery (admins too) and anonymises orders; admins can't self-delete.
+
+## 10. Audit trail
+
+Every change an admin or customer makes to products, categories, coupons, orders and users, and every sign-in
+attempt, password reset and consent change after registration (the `consents` ledger holds the registration consents), is recorded in the append-only `audit_log` collection (ADR-019).
+Admins read it at **Admin → Audit log**. The log never stores personal values: personal fields (name, phone,
+and so on) are recorded as "changed" only, emails are never stored, and the IP is a salted hash. It does keep
+actor and record ids, changed field names, non-personal values (prices, statuses, roles), the browser user-agent and,
+for failed logins and reset requests, a salted hash of the attempted email. Because it holds no personal values,
+erasing an account needs no change to the log. "Who failed to log in as X" is answerable only for existing accounts
+(through the account's record id): the attempted-email hash is not returned by the API and cannot be searched. Reads of personal data are not logged.
+The Admin Acceptable Use Agreement tells admins that their activity is recorded.
 
 ## Open questions
 - What is the legal entity name, registered address and Grievance Officer? This blocks P5 and Razorpay activation.

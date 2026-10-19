@@ -43,7 +43,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/order")
 class OrderController {
 
-    record CartLineRequest(@NotBlank @Size(max = 64) String productId, @Min(1) @Max(100) int quantity) {
+    record CartLineRequest(@NotBlank @Size(max = 64) String productId, @Size(max = 40) String variantId,
+                           @Min(1) @Max(100) int quantity) {
     }
 
     record CheckoutRequest(@NotEmpty @Size(max = 50) List<@Valid CartLineRequest> items,
@@ -84,7 +85,7 @@ class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, Object> checkout(@Valid @RequestBody CheckoutRequest request, @AuthenticationPrincipal Jwt jwt) {
         List<CartLine> lines = request.items().stream()
-                .map(i -> new CartLine(i.productId(), i.quantity())).toList();
+                .map(i -> new CartLine(i.productId(), i.variantId(), i.quantity())).toList();
         CheckoutResult r = checkout.checkout(AuthUser.from(jwt).id(), lines, request.coupon());
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("provider", r.provider());

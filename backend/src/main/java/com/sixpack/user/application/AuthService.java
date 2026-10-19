@@ -1,5 +1,8 @@
 package com.sixpack.user.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
 import com.sixpack.consent.ConsentEvidence;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.shared.ApiException;
@@ -36,15 +39,17 @@ public class AuthService {
     private final FileStorage storage;
     private final ConsentLedger consents;
     private final MeterRegistry meters;
+    private final AuditTrail audit;
 
     AuthService(UserRepository users, PasswordEncoder encoder, TokenService tokens, FileStorage storage,
-                ConsentLedger consents, MeterRegistry meters) {
+                ConsentLedger consents, MeterRegistry meters, AuditTrail audit) {
         this.users = users;
         this.encoder = encoder;
         this.tokens = tokens;
         this.storage = storage;
         this.consents = consents;
         this.meters = meters;
+        this.audit = audit;
     }
 
     public AuthResult register(RegisterCommand cmd) {
@@ -62,6 +67,8 @@ public class AuthService {
         User saved = users.save(User.newCustomer(cmd.name().trim(), email, encoder.encode(cmd.password()), photo,
                 cmd.gender(), cmd.dob()));
         consents.recordRegistration(saved.id(), cmd.marketingOptIn(), cmd.evidence());
+        audit.record(AuditEvent.of(AuditAction.USER_REGISTERED).on("user", saved.id())
+                .by(saved.id(), saved.role().name()));
         return new AuthResult(issue(saved), saved);
     }
 
@@ -69,15 +76,21 @@ public class AuthService {
         User user = users.findByEmail(normalizeEmail(email)).orElse(null);
         if (user == null || user.passwordHash() == null || !encoder.matches(password, user.passwordHash())) {
             meters.counter("sixpack.auth.login", "result", "failure").increment();
+            AuditEvent failure = AuditEvent.of(AuditAction.LOGIN_FAILED).failed().aboutSubject(email);
+            audit.record(user == null ? failure : failure.on("user", user.id()));
             throw ApiException.unauthorized("Invalid Email or Password");
         }
         if (user.details().status() == UserStatus.SUSPENDED) {
             meters.counter("sixpack.auth.login", "result", "suspended").increment();
+            audit.record(AuditEvent.of(AuditAction.LOGIN_BLOCKED_SUSPENDED).failed().on("user", user.id())
+                    .by(user.id(), user.role().name()));
             throw ApiException.forbidden("Your account is suspended");
         }
         users.touchLastLogin(user.id(), Instant.now());
         User fresh = users.findById(user.id()).orElse(user);
         meters.counter("sixpack.auth.login", "result", "success").increment();
+        audit.record(AuditEvent.of(AuditAction.LOGIN_SUCCEEDED).on("user", fresh.id())
+                .by(fresh.id(), fresh.role().name()));
         return new AuthResult(issue(fresh), fresh);
     }
 

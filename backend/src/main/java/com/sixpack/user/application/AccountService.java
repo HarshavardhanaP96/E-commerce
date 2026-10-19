@@ -1,5 +1,8 @@
 package com.sixpack.user.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
 import com.sixpack.shared.ApiException;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.user.AccountDeletionGuard;
@@ -21,14 +24,16 @@ public class AccountService {
     private final FileStorage storage;
     private final List<AccountDeletionGuard> guards;
     private final ApplicationEventPublisher events;
+    private final AuditTrail audit;
 
     AccountService(UserRepository users, PasswordEncoder encoder, FileStorage storage,
-                   List<AccountDeletionGuard> guards, ApplicationEventPublisher events) {
+                   List<AccountDeletionGuard> guards, ApplicationEventPublisher events, AuditTrail audit) {
         this.users = users;
         this.encoder = encoder;
         this.storage = storage;
         this.guards = guards;
         this.events = events;
+        this.audit = audit;
     }
 
     public void deleteOwnAccount(String userId, String password) {
@@ -40,6 +45,7 @@ public class AccountService {
             throw ApiException.forbidden("Password is incorrect");
         }
         erase(user);
+        audit.record(AuditEvent.of(AuditAction.ACCOUNT_DELETED_SELF).on("user", userId));
     }
 
     void erase(User user) {

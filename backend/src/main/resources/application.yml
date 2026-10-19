@@ -41,11 +41,13 @@ app:
     local-dir: ${UPLOADS_DIR:uploads}
   products:
     page-size: ${PRODUCT_PER_PAGE:10}
+    variants-enabled: ${PRODUCT_VARIANTS_ENABLED:false}
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).
     terms-version: ${LEGAL_TERMS_VERSION:2026-10-16}
     privacy-version: ${LEGAL_PRIVACY_VERSION:2026-10-16}
+    admin-aup-version: ${LEGAL_ADMIN_AUP_VERSION:2026-10-18}
     ip-hash-salt: ${CONSENT_IP_SALT:}
   tenant:
     default-slug: ${TENANT_DEFAULT_SLUG:default}

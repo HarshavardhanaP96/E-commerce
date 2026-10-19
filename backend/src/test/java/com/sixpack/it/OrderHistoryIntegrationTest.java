@@ -1,34 +1,17 @@
 package com.sixpack.it;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
 
 class OrderHistoryIntegrationTest extends IntegrationTest {
-
-    private String placeOrder(String user, String productId) throws Exception {
-        String intent = body(mvc.perform(post("/api/v1/order/checkout").header("Authorization", bearer(user))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("items",
-                                List.of(Map.of("productId", productId, "quantity", 1))))))
-                .andExpect(status().isCreated()).andReturn()).get("checkout").get("providerOrderId").asText();
-        Map<String, Object> req = new HashMap<>(Map.of("providerOrderId", intent, "paymentId", "fake_pay_1",
-                "signature", "fake", "shippingInfo", OrderCheckoutDetailsIntegrationTest.shipping()));
-        return body(mvc.perform(post("/api/v1/order/new").header("Authorization", bearer(user))
-                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(req)))
-                .andExpect(status().isCreated()).andReturn()).get("orderId").asText();
-    }
 
     @Test
     void advancingRecordsWhoAndWhenAndStopsAtDelivered() throws Exception {

@@ -1,5 +1,9 @@
 package com.sixpack.order.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.FieldChange;
 import com.sixpack.order.OrderChangedEvent;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderRepository;
@@ -16,10 +20,12 @@ public class OrderService {
 
     private final OrderRepository orders;
     private final ApplicationEventPublisher events;
+    private final AuditTrail audit;
 
-    OrderService(OrderRepository orders, ApplicationEventPublisher events) {
+    OrderService(OrderRepository orders, ApplicationEventPublisher events, AuditTrail audit) {
         this.orders = orders;
         this.events = events;
+        this.audit = audit;
     }
 
     public List<Order> mine(String userId) {
@@ -47,6 +53,8 @@ public class OrderService {
         }
         Order saved = orders.save(order.withStatus(next, actorId, Instant.now()));
         events.publishEvent(new OrderChangedEvent(id));
+        audit.record(AuditEvent.of(AuditAction.ORDER_STATUS_CHANGED).on("order", id)
+                .changing(List.of(FieldChange.of("status", order.status().name(), next.name()))));
         return saved;
     }
 
@@ -54,5 +62,6 @@ public class OrderService {
         orders.findById(id).orElseThrow(() -> ApiException.notFound("Order not found"));
         orders.deleteById(id);
         events.publishEvent(new OrderChangedEvent(id));
+        audit.record(AuditEvent.of(AuditAction.ORDER_DELETED).on("order", id));
     }
 }

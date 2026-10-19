@@ -61,6 +61,14 @@ class OrderDocument {
         String productId;
         String sku;
         Double taxRate;
+        String variantId;
+        String variantLabel;
+        List<OptionDoc> options;
+    }
+
+    static class OptionDoc {
+        String name;
+        String value;
     }
 
     static class PaymentDoc {

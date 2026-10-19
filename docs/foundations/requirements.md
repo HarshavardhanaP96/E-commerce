@@ -6,6 +6,7 @@
 - [ ] FR3: Product catalogue: latest 5, distinct categories, search (name, max price, category, sort, page), and details.
 - [ ] FR4: Admin product CRUD with an image upload (jpeg, png, webp or gif; max 5 MB).
 - [ ] FR4a: Products carry optional catalogue fields (slug, sku, description, brand, mrp, tax rate, HSN, status, tags, gallery images, category link). Older products without them keep working. Draft and archived products are hidden from the storefront and can't be bought.
+- [ ] FR4c: A product can have variants along up to 3 option axes (size, colour, material, capacity, pack size, any custom axis), up to 100 per product. Each variant has its own SKU, price, optional MRP, stock and status. Product `price` and `stock` are derived from them. Admin edits of the variant structure never overwrite stock that changed in the meantime. Products without variants behave as before. *Phase 1 (admin API) is built behind `app.products.variants-enabled`; checkout, orders, storefront and the admin editor follow in `docs/superpowers/plans/2026-10-18-product-variants.md`.*
 - [ ] FR4b: Admin category CRUD with parent/child nesting. A category with sub-categories or products can't be deleted, and a parent can't create a cycle.
 - [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax at each product's rate (18% by default) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
@@ -17,6 +18,8 @@
 - [ ] FR9: Admin dashboard: stats, pie, bar and line charts, optionally scoped by productId, category or userId.
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
+- [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.
+- [ ] FR13: Data changes (products, categories, coupons, orders, users) and security events (logins, password resets, consent changes) are recorded in an append-only audit log that admins can search, without storing personal values.
 
 ## Non-functional requirements
 - Performance: p95 under 200 ms for catalogue reads at 50 rps on one pod. Catalogue reads and dashboard queries are cached (Caffeine, short TTL).

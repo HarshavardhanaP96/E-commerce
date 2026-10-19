@@ -1,5 +1,9 @@
 package com.sixpack.consent.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.FieldChange;
 import com.sixpack.consent.ConsentEvidence;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
@@ -7,12 +11,9 @@ import com.sixpack.consent.domain.ConsentRecord;
 import com.sixpack.consent.domain.ConsentRecord.Source;
 import com.sixpack.consent.domain.ConsentRepository;
 import com.sixpack.shared.ApiException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import com.sixpack.shared.security.EvidenceHasher;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -33,10 +34,14 @@ public class ConsentService implements ConsentLedger {
 
     private final ConsentRepository records;
     private final LegalProperties legal;
+    private final EvidenceHasher hasher;
+    private final AuditTrail audit;
 
-    ConsentService(ConsentRepository records, LegalProperties legal) {
+    ConsentService(ConsentRepository records, LegalProperties legal, EvidenceHasher hasher, AuditTrail audit) {
         this.records = records;
         this.legal = legal;
+        this.hasher = hasher;
+        this.audit = audit;
     }
 
     @Override
@@ -54,41 +59,56 @@ public class ConsentService implements ConsentLedger {
     @Override
     public String currentVersion(Purpose purpose) {
         // Marketing consent is described in the Privacy Policy, so it follows that version.
-        return purpose == Purpose.TERMS ? legal.termsVersion() : legal.privacyVersion();
+        return switch (purpose) {
+            case TERMS -> legal.termsVersion();
+            case ADMIN_AUP -> legal.adminAupVersion();
+            case PRIVACY, MARKETING_EMAIL -> legal.privacyVersion();
+        };
     }
 
     public Map<Purpose, String> currentVersions() {
-        return Map.of(Purpose.TERMS, legal.termsVersion(), Purpose.PRIVACY, legal.privacyVersion());
+        return Map.of(Purpose.TERMS, legal.termsVersion(), Purpose.PRIVACY, legal.privacyVersion(),
+                Purpose.ADMIN_AUP, legal.adminAupVersion());
     }
 
-    public ConsentState state(String userId) {
+    /** @param admin whether the caller holds the ADMIN role (taken from the JWT; {@code consent} can't call {@code user}) */
+    public ConsentState state(String userId, boolean admin) {
         List<ConsentRecord> history = records.findByUser(userId);
         Map<Purpose, ConsentRecord> latest = latest(history);
         List<Purpose> pending = Arrays.stream(Purpose.values())
-                .filter(Purpose::required)
+                .filter(p -> p.requiredFor(admin))
                 .filter(p -> !isCurrentGrant(latest.get(p)))
                 .toList();
         return new ConsentState(latest, pending, history);
     }
 
-    public ConsentState decide(String userId, Purpose purpose, boolean granted, Source source,
+    public ConsentState decide(String userId, boolean admin, Purpose purpose, boolean granted, Source source,
                                ConsentEvidence evidence) {
         if (source == Source.REGISTER) {
             throw ApiException.badRequest("source: must be reprompt or settings");
         }
+        if (purpose.adminOnly() && !admin) {
+            throw ApiException.badRequest("purpose: only admins can accept this agreement");
+        }
         if (purpose.required() && !granted) {
-            throw ApiException.badRequest("The Terms and Privacy Policy can't be withdrawn while you have an "
-                    + "account. Delete your account instead.");
+            throw ApiException.badRequest(purpose.adminOnly()
+                    ? "The admin agreement can't be withdrawn while you are an admin."
+                    : "The Terms and Privacy Policy can't be withdrawn while you have an account. "
+                            + "Delete your account instead.");
         }
         append(userId, purpose, granted, source, evidence);
-        return state(userId);
+        // The ledger is the legal proof; this entry only puts the decision in the admin audit view.
+        audit.record(AuditEvent.of(AuditAction.CONSENT_CHANGED).on("user", userId).changing(List.of(
+                FieldChange.of("purpose", null, purpose.wireValue()), FieldChange.of("granted", null, granted),
+                FieldChange.of("version", null, currentVersion(purpose)))));
+        return state(userId, admin);
     }
 
     private void append(String userId, Purpose purpose, boolean granted, Source source, ConsentEvidence evidence) {
         String userAgent = evidence.userAgent() == null ? ""
                 : evidence.userAgent().substring(0, Math.min(evidence.userAgent().length(), MAX_USER_AGENT));
         records.append(new ConsentRecord(null, userId, purpose, granted, currentVersion(purpose), source,
-                hashIp(evidence.ip()), userAgent, null));
+                hasher.hash(evidence.ip()), userAgent, null));
     }
 
     private boolean isCurrentGrant(ConsentRecord record) {
@@ -99,18 +119,5 @@ public class ConsentService implements ConsentLedger {
         Map<Purpose, ConsentRecord> latest = new EnumMap<>(Purpose.class);
         newestFirst.forEach(r -> latest.putIfAbsent(r.purpose(), r));
         return latest;
-    }
-
-    private String hashIp(String ip) {
-        if (ip == null || ip.isBlank()) {
-            return "";
-        }
-        try {
-            MessageDigest sha = MessageDigest.getInstance("SHA-256");
-            String salt = legal.ipHashSalt() == null ? "" : legal.ipHashSalt();
-            return HexFormat.of().formatHex(sha.digest((salt + ip).getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }
