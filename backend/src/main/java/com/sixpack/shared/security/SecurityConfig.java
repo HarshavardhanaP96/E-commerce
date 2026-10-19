@@ -28,8 +28,8 @@ class SecurityConfig {
     private static final String ADMIN = "ADMIN";
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props, JsonSecurityHandlers handlers)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props, JsonSecurityHandlers handlers,
+                                           AccountAccess accounts) throws Exception {
         http
                 // Stateless bearer-token API: no cookies, so CSRF protection is not applicable.
                 .csrf(AbstractHttpConfigurer::disable)
@@ -79,7 +79,8 @@ class SecurityConfig {
                         .authenticationEntryPoint(handlers.entryPoint())
                         .accessDeniedHandler(handlers.accessDenied()))
                 .addFilterBefore(new AuthRateLimitFilter(props.authRequestsPerMinute(), handlers),
-                        BearerTokenAuthenticationFilter.class);
+                        BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(new AccountStatusFilter(accounts, handlers), BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 

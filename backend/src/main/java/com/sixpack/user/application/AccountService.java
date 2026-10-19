@@ -25,15 +25,18 @@ public class AccountService {
     private final List<AccountDeletionGuard> guards;
     private final ApplicationEventPublisher events;
     private final AuditTrail audit;
+    private final UserAccountAccess access;
 
     AccountService(UserRepository users, PasswordEncoder encoder, FileStorage storage,
-                   List<AccountDeletionGuard> guards, ApplicationEventPublisher events, AuditTrail audit) {
+                   List<AccountDeletionGuard> guards, ApplicationEventPublisher events, AuditTrail audit,
+                   UserAccountAccess access) {
         this.users = users;
         this.encoder = encoder;
         this.storage = storage;
         this.guards = guards;
         this.events = events;
         this.audit = audit;
+        this.access = access;
     }
 
     public void deleteOwnAccount(String userId, String password) {
@@ -56,6 +59,7 @@ public class AccountService {
         }
         storage.delete(user.photo());
         users.deleteById(user.id());
+        access.evict(user.id());
         events.publishEvent(new UserDeletedEvent(user.id()));
     }
 }
