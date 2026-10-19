@@ -4,7 +4,9 @@ import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.Changes;
+import com.sixpack.coupon.CouponLine;
 import com.sixpack.coupon.CouponLookup;
+import com.sixpack.coupon.CustomerHistory;
 import com.sixpack.coupon.domain.Coupon;
 import com.sixpack.coupon.domain.CouponRepository;
 import com.sixpack.coupon.domain.CouponRules;
@@ -12,7 +14,10 @@ import com.sixpack.coupon.domain.CouponType;
 import com.sixpack.shared.ApiException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,27 +28,45 @@ public class CouponService implements CouponLookup {
     /** Everything an admin can set when creating a coupon. Null means "not set". */
     public record CreateCommand(String code, double amount, String type, Double maxDiscount, Double minOrderValue,
                                 Instant startsAt, Instant expiresAt, Integer usageLimit, Integer perUserLimit,
-                                Boolean active) {
+                                Boolean active, List<String> productIds, List<String> categories,
+                                Boolean firstOrderOnly) {
     }
 
     /** What an admin can change later. Null means "keep the current value". */
     public record UpdateCommand(Double amount, Double maxDiscount, Double minOrderValue, Instant startsAt,
-                                Instant expiresAt, Integer usageLimit, Integer perUserLimit, Boolean active) {
+                                Instant expiresAt, Integer usageLimit, Integer perUserLimit, Boolean active,
+                                List<String> productIds, List<String> categories, Boolean firstOrderOnly) {
     }
 
     private final CouponRepository coupons;
     private final AuditTrail audit;
+    private final CustomerHistory history;
 
-    CouponService(CouponRepository coupons, AuditTrail audit) {
+    CouponService(CouponRepository coupons, AuditTrail audit, CustomerHistory history) {
         this.coupons = coupons;
         this.audit = audit;
+        this.history = history;
     }
 
     @Override
     public double discountFor(String code, double subtotal, String userId) {
         Coupon coupon = find(code).orElseThrow(() -> ApiException.badRequest("Invalid coupon"));
-        int used = userId == null ? 0 : coupons.redemptionsBy(coupon.id(), userId);
-        var evaluation = coupon.evaluate(subtotal, used, Instant.now());
+        return accepted(coupon.evaluate(subtotal, redemptionsBy(coupon, userId), Instant.now()));
+    }
+
+    @Override
+    public double discountFor(String code, List<CouponLine> lines, String userId) {
+        Coupon coupon = find(code).orElseThrow(() -> ApiException.badRequest("Invalid coupon"));
+        // An anonymous preview can't be checked for a previous order; checkout always has a user.
+        boolean returning = coupon.rules().firstOrderOnly() && userId != null && history.hasPlacedOrder(userId);
+        return accepted(coupon.evaluate(lines, redemptionsBy(coupon, userId), returning, Instant.now()));
+    }
+
+    private int redemptionsBy(Coupon coupon, String userId) {
+        return userId == null ? 0 : coupons.redemptionsBy(coupon.id(), userId);
+    }
+
+    private static double accepted(com.sixpack.coupon.domain.Evaluation evaluation) {
         if (!evaluation.accepted()) {
             throw ApiException.badRequest(evaluation.rejection());
         }
@@ -75,7 +98,8 @@ public class CouponService implements CouponLookup {
             throw ApiException.badRequest("expiresAt: must be in the future");
         }
         CouponRules rules = new CouponRules(type, c.maxDiscount(), c.minOrderValue(), c.startsAt(), c.expiresAt(),
-                c.usageLimit(), c.perUserLimit(), c.active() == null || c.active());
+                c.usageLimit(), c.perUserLimit(), c.active() == null || c.active(), ids(c.productIds()),
+                categories(c.categories()), Boolean.TRUE.equals(c.firstOrderOnly()));
         validate(c.amount(), rules);
         Coupon saved = coupons.save(new Coupon(null, code, c.amount(), rules, 0));
         audit.record(AuditEvent.of(AuditAction.COUPON_CREATED).on("coupon", saved.id())
@@ -93,7 +117,10 @@ public class CouponService implements CouponLookup {
                 u.expiresAt() != null ? u.expiresAt() : r.expiresAt(),
                 u.usageLimit() != null ? u.usageLimit() : r.usageLimit(),
                 u.perUserLimit() != null ? u.perUserLimit() : r.perUserLimit(),
-                u.active() != null ? u.active() : r.active());
+                u.active() != null ? u.active() : r.active(),
+                u.productIds() != null ? ids(u.productIds()) : r.productIds(),
+                u.categories() != null ? categories(u.categories()) : r.categories(),
+                u.firstOrderOnly() != null ? u.firstOrderOnly() : r.firstOrderOnly());
         double amount = u.amount() != null ? u.amount() : current.amount();
         validate(amount, merged);
         Coupon saved = coupons.save(current.withRules(amount, merged));
@@ -109,6 +136,17 @@ public class CouponService implements CouponLookup {
         }
         audit.record(AuditEvent.of(AuditAction.COUPON_DELETED).on("coupon", id)
                 .changing(Changes.diff(CouponAudit.view(current), Map.of(), CouponAudit.POLICY)));
+    }
+
+    private static Set<String> ids(List<String> values) {
+        return values == null ? Set.of() : values.stream().filter(v -> v != null && !v.isBlank())
+                .map(String::trim).collect(Collectors.toSet());
+    }
+
+    /** Matches {@code Product.normalizeCategory}: products store their category trimmed and lower-case. */
+    private static Set<String> categories(List<String> values) {
+        return values == null ? Set.of() : values.stream().filter(v -> v != null && !v.isBlank())
+                .map(v -> v.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
     }
 
     private java.util.Optional<Coupon> find(String code) {

@@ -1,5 +1,7 @@
 package com.sixpack.coupon;
 
+import java.util.List;
+
 /** Public API of the coupon module. */
 public interface CouponLookup {
 
@@ -11,6 +13,12 @@ public interface CouponLookup {
      * @throws com.sixpack.shared.ApiException 400 with a readable reason if the code is unknown or not usable
      */
     double discountFor(String code, double subtotal, String userId);
+
+    /**
+     * Like {@link #discountFor(String, double, String)} for a cart whose lines are known, so a coupon limited to
+     * some products or categories discounts only those, and "first order only" can be checked.
+     */
+    double discountFor(String code, List<CouponLine> lines, String userId);
 
     /** Counts one use. A no-op if the code no longer exists. */
     void redeem(String code, String userId);

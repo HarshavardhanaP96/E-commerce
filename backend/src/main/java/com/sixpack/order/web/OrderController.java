@@ -7,6 +7,7 @@ import com.sixpack.order.application.CheckoutService.CheckoutResult;
 import com.sixpack.order.application.OrderService;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderStatus;
+import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.web.ApiResponse;
@@ -51,6 +52,9 @@ class OrderController {
                            @Size(max = 32) String coupon) {
     }
 
+    record QuoteRequest(@NotEmpty @Size(max = 50) List<@Valid CartLineRequest> items, @Size(max = 32) String coupon) {
+    }
+
     record ShippingRequest(
             @NotBlank @Size(max = 200) String address,
             @NotBlank @Size(max = 80) String city,
@@ -79,6 +83,21 @@ class OrderController {
         this.checkout = checkout;
         this.orders = orders;
         this.users = users;
+    }
+
+    /** Prices a cart exactly as checkout would, without opening a payment. Open to anonymous visitors. */
+    @PostMapping("/quote")
+    Map<String, Object> quote(@Valid @RequestBody QuoteRequest request, @AuthenticationPrincipal Jwt jwt) {
+        List<CartLine> lines = request.items().stream()
+                .map(i -> new CartLine(i.productId(), i.variantId(), i.quantity())).toList();
+        Quote q = checkout.price(jwt == null ? null : AuthUser.from(jwt).id(), lines, request.coupon()).quote();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("subtotal", q.subtotal());
+        body.put("tax", q.tax());
+        body.put("shippingCharges", q.shippingCharges());
+        body.put("discount", q.discount());
+        body.put("total", q.total());
+        return ApiResponse.of("quote", body);
     }
 
     @PostMapping("/checkout")

@@ -6,6 +6,7 @@ import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.FieldChange;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
+import com.sixpack.coupon.CouponLine;
 import com.sixpack.coupon.CouponLookup;
 import com.sixpack.order.OrderChangedEvent;
 import com.sixpack.order.domain.Customer;
@@ -31,6 +32,7 @@ import com.sixpack.product.ProductSnapshot;
 import com.sixpack.product.StockLine;
 import com.sixpack.shared.ApiException;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -101,38 +103,53 @@ public class CheckoutService {
         this.audit = audit;
     }
 
-    public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
-        // Checked before money moves, so a paid order is never refused for a missing acceptance.
-        if (!consents.hasAcceptedCurrent(userId, Purpose.TERMS)) {
-            throw ApiException.forbidden("Please accept the updated Terms & Conditions before placing an order");
-        }
+    /** A cart priced from the catalogue. {@code coupon} is the normalised code that was applied, or null. */
+    public record PricedCart(List<OrderItem> items, Quote quote, String coupon) {
+    }
+
+    /**
+     * Prices a cart without touching payment or stock, so the cart page shows what checkout will charge.
+     *
+     * @param userId the customer, or null for an anonymous preview (per-customer coupon rules are then skipped)
+     */
+    public PricedCart price(String userId, List<CartLine> lines, String coupon) {
         Map<LineKey, Integer> quantities = mergeLines(lines);
 
-        List<OrderItem> items = quantities.entrySet().stream().map(line -> {
+        List<OrderItem> items = new ArrayList<>();
+        List<CouponLine> couponLines = new ArrayList<>();
+        for (Map.Entry<LineKey, Integer> line : quantities.entrySet()) {
             ProductSnapshot p = catalog.resolveLine(line.getKey().productId(), line.getKey().variantId());
             String what = p.variantLabel() == null ? p.name() : p.name() + " (" + p.variantLabel() + ")";
             if (p.stock() < line.getValue()) {
                 throw ApiException.conflict("Only " + p.stock() + " left in stock for " + what);
             }
-            return new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue(), p.sku(), p.taxRate(),
+            items.add(new OrderItem(p.id(), p.name(), p.photo(), p.price(), line.getValue(), p.sku(), p.taxRate(),
                     p.variantId(), p.variantLabel(),
-                    p.options().stream().map(o -> new OrderItem.Option(o.name(), o.value())).toList());
-        }).toList();
+                    p.options().stream().map(o -> new OrderItem.Option(o.name(), o.value())).toList()));
+            couponLines.add(new CouponLine(p.id(), p.category(), p.price() * line.getValue()));
+        }
 
         double discount = 0;
         String normalizedCoupon = coupon == null || coupon.isBlank() ? null : coupon.trim();
         if (normalizedCoupon != null) {
-            double subtotal = PriceCalculator.quote(items, 0).subtotal();
-            discount = coupons.discountFor(normalizedCoupon, subtotal, userId);
+            discount = coupons.discountFor(normalizedCoupon, couponLines, userId);
         }
+        return new PricedCart(items, PriceCalculator.quote(items, discount), normalizedCoupon);
+    }
 
-        Quote quote = PriceCalculator.quote(items, discount);
+    public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
+        // Checked before money moves, so a paid order is never refused for a missing acceptance.
+        if (!consents.hasAcceptedCurrent(userId, Purpose.TERMS)) {
+            throw ApiException.forbidden("Please accept the updated Terms & Conditions before placing an order");
+        }
+        PricedCart priced = price(userId, lines, coupon);
+        Quote quote = priced.quote();
         if (quote.totalPaise() < 100) {
             throw ApiException.badRequest("Order total must be at least ₹1");
         }
         ProviderOrder providerOrder = gateway.createOrder(quote.totalPaise(), "rcpt_" + System.currentTimeMillis());
-        intents.save(new PaymentIntent(null, userId, gateway.provider(), providerOrder.id(), items,
-                normalizedCoupon, quote, providerOrder.currency()));
+        intents.save(new PaymentIntent(null, userId, gateway.provider(), providerOrder.id(), priced.items(),
+                priced.coupon(), quote, providerOrder.currency()));
         return new CheckoutResult(gateway.provider(), gateway.publicKey(), providerOrder.id(),
                 providerOrder.amountPaise(), providerOrder.currency(), quote);
     }

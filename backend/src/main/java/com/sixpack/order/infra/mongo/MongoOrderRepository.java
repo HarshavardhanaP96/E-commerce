@@ -99,6 +99,11 @@ class MongoOrderRepository implements OrderRepository {
     }
 
     @Override
+    public boolean hasAnyOrder(String userId) {
+        return mongo.exists(Query.query(Criteria.where("user").is(userId)), OrderDocument.class);
+    }
+
+    @Override
     public void anonymiseShippingForUser(String userId) {
         mongo.updateMulti(Query.query(Criteria.where("user").is(userId)),
                 new Update()

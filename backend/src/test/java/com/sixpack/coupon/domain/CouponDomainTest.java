@@ -3,8 +3,11 @@ package com.sixpack.coupon.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.sixpack.coupon.CouponLine;
 import com.sixpack.shared.ApiException;
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class CouponDomainTest {
@@ -107,5 +110,90 @@ class CouponDomainTest {
         assertThat(CouponType.parse("")).isEqualTo(CouponType.FLAT);
         assertThatThrownBy(() -> CouponType.parse("bogus")).isInstanceOf(ApiException.class);
         assertThat(new CouponRules(null, null, null, null, null, null, null, true).type()).isEqualTo(CouponType.FLAT);
+    }
+
+    private static CouponRules scoped(CouponType type, Set<String> productIds, Set<String> categories,
+                                      boolean firstOrderOnly) {
+        return new CouponRules(type, null, null, null, null, null, null, true, productIds, categories, firstOrderOnly);
+    }
+
+    private static final CouponLine SHIRT = new CouponLine("p-shirt", "clothing", 800);
+    private static final CouponLine MUG = new CouponLine("p-mug", "home", 200);
+
+    @Test
+    void anUnscopedCouponCountsTheWholeCart() {
+        Coupon tenPercent = coupon(10, rules(CouponType.PERCENT, null, null, null, null, null, null, true), 0);
+        assertThat(tenPercent.rules().scoped()).isFalse();
+        assertThat(tenPercent.evaluate(List.of(SHIRT, MUG), 0, false, NOW).discount()).isEqualTo(100.0);
+    }
+
+    @Test
+    void aProductScopedPercentCouponDiscountsOnlyTheMatchingLines() {
+        Coupon c = coupon(10, scoped(CouponType.PERCENT, Set.of("p-mug"), Set.of(), false), 0);
+        Evaluation e = c.evaluate(List.of(SHIRT, MUG), 0, false, NOW);
+        assertThat(e.accepted()).isTrue();
+        assertThat(e.discount()).isEqualTo(20.0);
+    }
+
+    @Test
+    void aCategoryScopedCouponMatchesTheCategory() {
+        Coupon c = coupon(50, scoped(CouponType.PERCENT, Set.of(), Set.of("clothing"), false), 0);
+        assertThat(c.evaluate(List.of(SHIRT, MUG), 0, false, NOW).discount()).isEqualTo(400.0);
+    }
+
+    @Test
+    void productAndCategoryScopesAreAlternatives() {
+        Coupon c = coupon(10, scoped(CouponType.PERCENT, Set.of("p-mug"), Set.of("clothing"), false), 0);
+        assertThat(c.evaluate(List.of(SHIRT, MUG), 0, false, NOW).discount()).isEqualTo(100.0);
+    }
+
+    @Test
+    void aFlatScopedCouponCannotExceedTheMatchingSubtotal() {
+        Coupon c = coupon(500, scoped(CouponType.FLAT, Set.of("p-mug"), Set.of(), false), 0);
+        assertThat(c.evaluate(List.of(SHIRT, MUG), 0, false, NOW).discount()).isEqualTo(200.0);
+    }
+
+    @Test
+    void aScopedCouponIsRefusedWhenNothingInTheCartMatches() {
+        Coupon c = coupon(10, scoped(CouponType.PERCENT, Set.of("p-other"), Set.of("garden"), false), 0);
+        Evaluation e = c.evaluate(List.of(SHIRT, MUG), 0, false, NOW);
+        assertThat(e.accepted()).isFalse();
+        assertThat(e.rejection()).isEqualTo("This coupon doesn't apply to the items in your cart");
+    }
+
+    @Test
+    void minimumOrderValueStillLooksAtTheWholeCart() {
+        CouponRules r = new CouponRules(CouponType.PERCENT, null, 1000.0, null, null, null, null, true,
+                Set.of("p-mug"), Set.of(), false);
+        assertThat(coupon(10, r, 0).evaluate(List.of(SHIRT, MUG), 0, false, NOW).accepted()).isTrue();
+        assertThat(coupon(10, r, 0).evaluate(List.of(MUG), 0, false, NOW).rejection())
+                .isEqualTo("Minimum order value for this coupon is ₹1000");
+    }
+
+    @Test
+    void aFirstOrderOnlyCouponIsRefusedToReturningCustomers() {
+        Coupon c = coupon(100, scoped(CouponType.FLAT, Set.of(), Set.of(), true), 0);
+        assertThat(c.evaluate(List.of(SHIRT), 0, false, NOW).accepted()).isTrue();
+        Evaluation returning = c.evaluate(List.of(SHIRT), 0, true, NOW);
+        assertThat(returning.accepted()).isFalse();
+        assertThat(returning.rejection()).isEqualTo("This coupon is only for your first order");
+    }
+
+    @Test
+    void theSubtotalOnlyOverloadRefusesScopedCouponsButIgnoresFirstOrderOnly() {
+        Coupon productScoped = coupon(10, scoped(CouponType.PERCENT, Set.of("p-mug"), Set.of(), false), 0);
+        assertThat(productScoped.evaluate(1000, 0, NOW).rejection())
+                .isEqualTo("This coupon only applies to selected items");
+        Coupon firstOnly = coupon(100, scoped(CouponType.FLAT, Set.of(), Set.of(), true), 0);
+        assertThat(firstOnly.evaluate(1000, 0, NOW).accepted()).isTrue();
+    }
+
+    @Test
+    void oldDocumentsWithoutScopeFieldsLoadAsUnscoped() {
+        CouponRules r = new CouponRules(CouponType.FLAT, null, null, null, null, null, null, true);
+        assertThat(r.productIds()).isEmpty();
+        assertThat(r.categories()).isEmpty();
+        assertThat(r.firstOrderOnly()).isFalse();
+        assertThat(CouponRules.LEGACY.scoped()).isFalse();
     }
 }

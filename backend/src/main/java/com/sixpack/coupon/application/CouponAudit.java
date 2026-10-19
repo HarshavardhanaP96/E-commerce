@@ -12,7 +12,8 @@ import java.util.Map;
 final class CouponAudit {
 
     static final FieldPolicy POLICY = Changes.policy(List.of("code", "type", "amount", "maxDiscount",
-            "minOrderValue", "startsAt", "expiresAt", "usageLimit", "perUserLimit", "active"), List.of());
+            "minOrderValue", "startsAt", "expiresAt", "usageLimit", "perUserLimit", "active", "productIds", "categories",
+            "firstOrderOnly"), List.of());
 
     private CouponAudit() {
     }
@@ -30,6 +31,9 @@ final class CouponAudit {
         m.put("usageLimit", r.usageLimit());
         m.put("perUserLimit", r.perUserLimit());
         m.put("active", r.active());
+        m.put("productIds", r.productIds().stream().sorted().toList());
+        m.put("categories", r.categories().stream().sorted().toList());
+        m.put("firstOrderOnly", r.firstOrderOnly());
         return m;
     }
 }

@@ -62,6 +62,7 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/payment/discount").permitAll()
                         .requestMatchers("/api/v1/payment/coupon/**").hasRole(ADMIN)
                         // orders
+                        .requestMatchers(POST, "/api/v1/order/quote").permitAll()
                         .requestMatchers(GET, "/api/v1/order/all").hasRole(ADMIN)
                         .requestMatchers(PUT, "/api/v1/order/*").hasRole(ADMIN)
                         .requestMatchers(DELETE, "/api/v1/order/*").hasRole(ADMIN)

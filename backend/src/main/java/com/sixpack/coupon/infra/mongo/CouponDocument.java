@@ -1,6 +1,7 @@
 package com.sixpack.coupon.infra.mongo;
 
 import java.time.Instant;
+import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -22,4 +23,7 @@ class CouponDocument {
     Integer usedCount;
     Integer perUserLimit;
     Boolean active;
+    List<String> productIds;
+    List<String> categories;
+    Boolean firstOrderOnly;
 }

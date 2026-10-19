@@ -17,6 +17,8 @@ public interface OrderRepository {
 
     boolean hasOpenOrders(String userId);
 
+    boolean hasAnyOrder(String userId);
+
     /**
      * Removes everything that identifies the person (street address, PIN code, recipient name and phone, billing
      * address, contact snapshot, notes) from the user's orders; amounts, items, order number, history and payment

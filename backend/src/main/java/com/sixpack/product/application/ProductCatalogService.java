@@ -40,7 +40,7 @@ class ProductCatalogService implements ProductCatalog {
         return products.findAllById(productIds).stream()
                 .filter(p -> p.details().status().isPublic())
                 .map(p -> new ProductSnapshot(p.id(), p.name(), p.photo(), p.price(), p.stock(),
-                        p.details().sku(), p.details().taxRate()))
+                        p.details().sku(), p.details().taxRate(), null, null, null, p.category()))
                 .toList();
     }
 
@@ -54,7 +54,7 @@ class ProductCatalogService implements ProductCatalog {
                 throw ApiException.badRequest(p.name() + " has no options to choose from");
             }
             return new ProductSnapshot(p.id(), p.name(), p.photo(), p.price(), p.stock(), p.details().sku(),
-                    p.details().taxRate());
+                    p.details().taxRate(), null, null, null, p.category());
         }
         if (!wantsVariant) {
             throw ApiException.badRequest("Please choose options for " + p.name());
@@ -64,7 +64,8 @@ class ProductCatalogService implements ProductCatalog {
                         "The selected option of " + p.name() + " is no longer available"));
         return new ProductSnapshot(p.id(), p.name(), variantPhoto(p, v), v.price(), v.stock(), v.sku(),
                 p.details().taxRate(), v.id(), v.label(),
-                v.options().stream().map(o -> new ProductSnapshot.Option(o.name(), o.value())).toList());
+                v.options().stream().map(o -> new ProductSnapshot.Option(o.name(), o.value())).toList(),
+                p.category());
     }
 
     /** The first image attached to any of the variant's option values (e.g. its colour), else the product photo. */
