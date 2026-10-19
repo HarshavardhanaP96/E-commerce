@@ -33,6 +33,21 @@ export type SavedAddress = {
 
 export type SavedAddressInput = Omit<SavedAddress, "id">;
 
+export type OptionValue = { label: string; hex?: string | null; images: string[] };
+export type OptionAxis = { name: string; type: "TEXT" | "COLOUR"; values: OptionValue[] };
+export type OptionChoice = { name: string; value: string };
+export type Variant = {
+  id: string;
+  sku: string;
+  label: string;
+  options: OptionChoice[];
+  price: number;
+  mrp?: number | null;
+  stock: number;
+  status: "ACTIVE" | "DISABLED";
+};
+export type ProductVariants = { axes: OptionAxis[]; items: Variant[] };
+
 export type Product = {
   _id: string;
   name: string;
@@ -51,6 +66,8 @@ export type Product = {
   tags?: string[];
   images?: string[];
   categoryId?: string | null;
+  countryOfOrigin?: string;
+  variants?: ProductVariants;
 };
 
 export type ShippingInfo = {
@@ -65,6 +82,9 @@ export type ShippingInfo = {
 
 export type CartItem = {
   productId: string;
+  /** Set for products with variants; a product and variant together identify a cart line. */
+  variantId?: string;
+  variantLabel?: string;
   photo: string;
   name: string;
   price: number;
@@ -81,6 +101,9 @@ export type OrderItem = {
   quantity: number;
   sku?: string;
   taxRate?: number;
+  variantId?: string;
+  variantLabel?: string;
+  options?: OptionChoice[];
 };
 
 export type OrderStatus = "Processing" | "Shipped" | "Delivered";

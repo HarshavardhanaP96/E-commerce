@@ -9,6 +9,7 @@ import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartRed
 import { RootState } from "../redux/store";
 import { CartItem } from "../types/types";
 import { formatINR } from "../utils/features";
+import { cartKey } from "../utils/variants";
 import { policyPath } from "../legal/policies";
 
 const Cart = () => {
@@ -28,7 +29,8 @@ const Cart = () => {
     if (item.quantity <= 1) return;
     dispatch(addToCart({ ...item, quantity: item.quantity - 1 }));
   };
-  const removeHandler = (productId: string) => dispatch(removeCartItem(productId));
+  const removeHandler = (item: CartItem) =>
+    dispatch(removeCartItem({ productId: item.productId, variantId: item.variantId }));
 
   // Price the cart with the server after the user stops typing, and again when the cart changes: a coupon can be
   // limited to some products, so its discount depends on what is in the cart, not just the subtotal.
@@ -69,7 +71,7 @@ const Cart = () => {
               incrementHandler={incrementHandler}
               decrementHandler={decrementHandler}
               removeHandler={removeHandler}
-              key={i.productId}
+              key={cartKey(i)}
               cartItem={i}
             />
           ))

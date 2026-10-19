@@ -30,7 +30,7 @@ export type QuoteRequest = { items: { productId: string; quantity: number }[]; c
 export type QuoteResponse = { success: boolean; quote: Quote };
 
 export type CheckoutRequest = {
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; variantId?: string; quantity: number }[];
   coupon?: string;
 };
 export type Checkout = {

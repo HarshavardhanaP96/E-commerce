@@ -70,9 +70,13 @@ const TransactionManagement = () => {
           <h4>Items</h4>
           <ul className="order-items">
             {order.orderItems.map((i) => (
-              <li key={i.productId}>
+              <li key={`${i.productId}:${i.variantId ?? ""}`}>
                 <img src={transformImage(i.photo)} alt={i.name} />
-                <Link to={`/admin/product/${i.productId}`}>{i.name}</Link>
+                <span>
+                  <Link to={`/admin/product/${i.productId}`}>{i.name}</Link>
+                  {i.variantLabel && <small> · {i.variantLabel}</small>}
+                  {i.sku && <small> · SKU {i.sku}</small>}
+                </span>
                 <span>
                   {formatINR(i.price)} × {i.quantity} = <strong>{formatINR(i.price * i.quantity)}</strong>
                 </span>

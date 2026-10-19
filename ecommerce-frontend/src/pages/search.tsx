@@ -124,16 +124,7 @@ const Search = () => {
               </div>
             )}
             {searchedData?.products.map((i) => (
-              <ProductCard
-                key={i._id}
-                productId={i._id}
-                name={i.name}
-                price={i.price}
-                stock={i.stock}
-              taxRate={i.taxRate}
-                handler={addToCartHandler}
-                photo={i.photo}
-              />
+              <ProductCard key={i._id} product={i} handler={addToCartHandler} />
             ))}
           </div>
         )}

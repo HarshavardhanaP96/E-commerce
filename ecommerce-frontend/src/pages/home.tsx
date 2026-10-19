@@ -50,16 +50,7 @@ const Home = () => {
           Array.from({ length: 4 }, (_, i) => <div key={i} className="product-card product-card--skeleton" />)
         ) : data?.products.length ? (
           data.products.map((i) => (
-            <ProductCard
-              key={i._id}
-              productId={i._id}
-              name={i.name}
-              price={i.price}
-              stock={i.stock}
-              taxRate={i.taxRate}
-              handler={addToCartHandler}
-              photo={i.photo}
-            />
+            <ProductCard key={i._id} product={i} handler={addToCartHandler} />
           ))
         ) : (
           <div className="empty-state">

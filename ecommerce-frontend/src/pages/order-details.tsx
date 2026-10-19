@@ -32,10 +32,11 @@ const OrderDetails = () => {
           <h4>Items</h4>
           <ul className="order-items">
             {o.orderItems.map((i) => (
-              <li key={i.productId}>
+              <li key={`${i.productId}:${i.variantId ?? ""}`}>
                 <img src={transformImage(i.photo)} alt={i.name} />
                 <span>
                   {i.name}
+                  {i.variantLabel && <small> · {i.variantLabel}</small>}
                   {i.sku && <small> · SKU {i.sku}</small>}
                 </span>
                 <span>

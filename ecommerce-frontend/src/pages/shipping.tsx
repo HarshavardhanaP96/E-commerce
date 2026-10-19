@@ -73,7 +73,7 @@ const Shipping = () => {
     try {
       // 1. Server prices the cart and opens a payment order.
       const quote = await checkout({
-        items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        items: cartItems.map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
         coupon: coupon || undefined,
       }).unwrap();
       const c = quote.checkout;

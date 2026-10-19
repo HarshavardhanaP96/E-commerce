@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { CartItem, ShippingInfo } from "../../types/types";
 import { userNotExist } from "./userReducer";
+import { cartKey } from "../../utils/variants";
 
 const CART_KEY = "cart";
 
@@ -68,13 +69,13 @@ export const cartReducer = createSlice({
   initialState: loadCart,
   reducers: {
     addToCart: (state, action: PayloadAction<CartItem>) => {
-      const index = state.cartItems.findIndex((i) => i.productId === action.payload.productId);
+      const index = state.cartItems.findIndex((i) => cartKey(i) === cartKey(action.payload));
       if (index !== -1) state.cartItems[index] = action.payload;
       else state.cartItems.push(action.payload);
       recalculate(state);
     },
-    removeCartItem: (state, action: PayloadAction<string>) => {
-      state.cartItems = state.cartItems.filter((i) => i.productId !== action.payload);
+    removeCartItem: (state, action: PayloadAction<{ productId: string; variantId?: string }>) => {
+      state.cartItems = state.cartItems.filter((i) => cartKey(i) !== cartKey(action.payload));
       recalculate(state);
     },
     applyCoupon: (state, action: PayloadAction<{ coupon: string; discount: number }>) => {
