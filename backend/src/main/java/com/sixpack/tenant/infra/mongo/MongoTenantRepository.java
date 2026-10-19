@@ -3,6 +3,7 @@ package com.sixpack.tenant.infra.mongo;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
+import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.tenant.domain.Tenant;
 import com.sixpack.tenant.domain.TenantRepository;
 import com.sixpack.tenant.domain.TenantStatus;
@@ -66,6 +67,15 @@ class MongoTenantRepository implements TenantRepository {
         doc.payment.secretRef = t.payment().secretRef();
         doc.mail = new TenantDocument.MailDoc();
         doc.mail.baseUrl = t.mail().baseUrl();
+        StorefrontSettings sf = t.storefront();
+        doc.storefront = new TenantDocument.StorefrontDoc();
+        doc.storefront.logoUrl = sf.logoUrl();
+        doc.storefront.legalName = sf.legalName();
+        doc.storefront.address = sf.address();
+        doc.storefront.email = sf.email();
+        doc.storefront.phone = sf.phone();
+        doc.storefront.grievanceOfficer = sf.grievanceOfficer();
+        doc.storefront.grievanceEmail = sf.grievanceEmail();
         return toDomain(mongo.save(doc));
     }
 
@@ -84,6 +94,9 @@ class MongoTenantRepository implements TenantRepository {
                 d.legal == null ? null : new LegalSettings(d.legal.termsVersion, d.legal.privacyVersion,
                         d.legal.adminAupVersion),
                 d.payment == null ? null : new PaymentSettings(d.payment.provider, d.payment.keyId, d.payment.secretRef),
-                d.mail == null ? null : new MailSettings(d.mail.baseUrl));
+                d.mail == null ? null : new MailSettings(d.mail.baseUrl),
+                d.storefront == null ? null : new StorefrontSettings(d.storefront.logoUrl, d.storefront.legalName,
+                        d.storefront.address, d.storefront.email, d.storefront.phone, d.storefront.grievanceOfficer,
+                        d.storefront.grievanceEmail));
     }
 }

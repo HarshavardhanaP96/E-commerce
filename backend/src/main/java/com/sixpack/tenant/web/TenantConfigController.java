@@ -30,6 +30,7 @@ class TenantConfigController {
         view.put("theme", tenant.theme());
         view.put("locale", tenant.locale());
         view.put("currency", tenant.currency());
+        view.put("storefront", tenant.storefront());
         return ApiResponse.of("tenant", view);
     }
 }

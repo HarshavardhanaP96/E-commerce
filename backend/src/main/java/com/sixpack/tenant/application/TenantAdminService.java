@@ -4,6 +4,7 @@ import com.sixpack.shared.ApiException;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
+import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.shared.tenant.TenantProperties;
 import com.sixpack.shared.tenant.TenantRef;
@@ -34,6 +35,8 @@ public class TenantAdminService {
     private static final Pattern THEME_VALUE = Pattern.compile("^[#a-zA-Z0-9(),.%\\s-]{1,60}$");
     private static final Pattern VERSION = Pattern.compile("^[0-9A-Za-z._-]{1,32}$");
     private static final Pattern SECRET_REF = Pattern.compile("^[A-Za-z0-9_]{1,40}$");
+    private static final Pattern LOGO = Pattern.compile("^(https://[^\\s]{1,190}|uploads/[A-Za-z0-9/_.-]{1,190})$");
+    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]{1,100}@[^@\\s]{1,100}\\.[^@\\s]{1,40}$");
     private static final Pattern BASE_URL = Pattern.compile("^https?://[^\\s/$.?#][^\\s]{0,190}$");
 
     public record AdminCommand(String name, String email, String password) {
@@ -41,12 +44,13 @@ public class TenantAdminService {
 
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
-                                MailSettings mail, AdminCommand admin) {
+                                MailSettings mail, StorefrontSettings storefront, AdminCommand admin) {
     }
 
     /** Null means "keep"; a nested settings object, when given, replaces the previous one. */
     public record UpdateCommand(String name, List<String> domains, Map<String, String> theme, String locale,
-                                String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail) {
+                                String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail,
+                                StorefrontSettings storefront) {
     }
 
     private final TenantRepository tenants;
@@ -84,12 +88,13 @@ public class TenantAdminService {
         LegalSettings legal = validLegal(c.legal());
         PaymentSettings payment = validPayment(c.payment());
         MailSettings mail = validMail(c.mail());
+        StorefrontSettings storefront = validStorefront(c.storefront());
         if (c.admin() != null) {
             requireAdmin(c.admin());
         }
 
         Tenant created = tenants.save(new Tenant(null, slug, name, TenantStatus.ACTIVE, domains, theme,
-                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail));
+                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -116,7 +121,8 @@ public class TenantAdminService {
                 current.createdAt(),
                 u.legal() != null ? validLegal(u.legal()) : current.legal(),
                 u.payment() != null ? validPayment(u.payment()) : current.payment(),
-                u.mail() != null ? validMail(u.mail()) : current.mail()));
+                u.mail() != null ? validMail(u.mail()) : current.mail(),
+                u.storefront() != null ? validStorefront(u.storefront()) : current.storefront()));
         registry.refresh();
         log.info("Tenant '{}' updated", updated.slug());
         return updated;
@@ -136,7 +142,7 @@ public class TenantAdminService {
 
     private Tenant setStatus(Tenant t, TenantStatus status) {
         Tenant saved = tenants.save(new Tenant(t.id(), t.slug(), t.name(), status, t.domains(), t.theme(), t.locale(),
-                t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail()));
+                t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail(), t.storefront()));
         registry.refresh();
         log.info("Tenant '{}' is now {}", saved.slug(), status);
         return saved;
@@ -227,6 +233,26 @@ public class TenantAdminService {
             throw ApiException.badRequest("mail.baseUrl: must be an http(s) URL");
         }
         return mail;
+    }
+
+    private static StorefrontSettings validStorefront(StorefrontSettings sf) {
+        if (sf == null) {
+            return StorefrontSettings.NONE;
+        }
+        if (sf.logoUrl() != null && !LOGO.matcher(sf.logoUrl()).matches()) {
+            throw ApiException.badRequest("storefront.logoUrl: an https URL or an uploads/ path");
+        }
+        for (String email : new String[] {sf.email(), sf.grievanceEmail()}) {
+            if (email != null && !EMAIL.matcher(email).matches()) {
+                throw ApiException.badRequest("storefront: '" + email + "' is not an email address");
+            }
+        }
+        for (String text : new String[] {sf.legalName(), sf.address(), sf.grievanceOfficer(), sf.phone()}) {
+            if (text != null && text.length() > 200) {
+                throw ApiException.badRequest("storefront: text fields are limited to 200 characters");
+            }
+        }
+        return sf;
     }
 
     private static void requireAdmin(AdminCommand admin) {

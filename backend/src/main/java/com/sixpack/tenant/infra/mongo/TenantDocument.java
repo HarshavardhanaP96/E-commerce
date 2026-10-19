@@ -25,6 +25,7 @@ class TenantDocument {
     LegalDoc legal;
     PaymentDoc payment;
     MailDoc mail;
+    StorefrontDoc storefront;
 
     static class LegalDoc {
         String termsVersion;
@@ -36,6 +37,16 @@ class TenantDocument {
         String provider;
         String keyId;
         String secretRef;
+    }
+
+    static class StorefrontDoc {
+        String logoUrl;
+        String legalName;
+        String address;
+        String email;
+        String phone;
+        String grievanceOfficer;
+        String grievanceEmail;
     }
 
     static class MailDoc {

@@ -160,6 +160,38 @@ class PlatformAdminIntegrationTest extends TenantIntegrationTest {
     }
 
     @Test
+    void storefrontDetailsAreValidatedAndServedPublicly() throws Exception {
+        String token = platformToken();
+        String id = body(createTenant(token, newTenant("acme", "shop.acme.test")).andReturn()).get("tenant").get("id").asText();
+
+        mvc.perform(put(API + "/tenants/" + id).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("storefront", Map.of(
+                                "logoUrl", "https://cdn.acme.test/logo.png", "legalName", "Acme Retail Pvt Ltd",
+                                "address", "1 MG Road, Pune", "email", "help@acme.test", "phone", "+91 98765 43210",
+                                "grievanceOfficer", "A. Rao", "grievanceEmail", "grievance@acme.test")))))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/v1/tenant/config").with(host("shop.acme.test")))
+                .andExpect(jsonPath("$.tenant.storefront.legalName").value("Acme Retail Pvt Ltd"))
+                .andExpect(jsonPath("$.tenant.storefront.email").value("help@acme.test"))
+                .andExpect(jsonPath("$.tenant.storefront.logoUrl").value("https://cdn.acme.test/logo.png"))
+                .andExpect(jsonPath("$.tenant.storefront.grievanceOfficer").value("A. Rao"));
+        // The default store has none, so the storefront shows its built-in placeholders.
+        mvc.perform(get("/api/v1/tenant/config")).andExpect(jsonPath("$.tenant.storefront.legalName").doesNotExist());
+
+        for (Map<String, String> bad : List.<Map<String, String>>of(
+                Map.of("logoUrl", "javascript:alert(1)"), Map.of("logoUrl", "http://insecure.example/x.png"),
+                Map.of("email", "not-an-email"), Map.of("grievanceEmail", "a b@c.d"),
+                Map.of("legalName", "x".repeat(201)))) {
+            mvc.perform(put(API + "/tenants/" + id).header("Authorization", bearer(token))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("storefront", bad))))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
     void theDefaultTenantCannotBeSuspendedAndUnknownIdsAre404() throws Exception {
         String token = platformToken();
         String defaultId = tenantRepository.findBySlug("default").orElseThrow().id();
