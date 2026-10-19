@@ -1,5 +1,7 @@
 package com.sixpack.user.application;
 
+import com.sixpack.shared.tenant.DefaultTenant;
+import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.user.domain.Gender;
 import com.sixpack.user.domain.Role;
 import com.sixpack.user.domain.User;
@@ -21,15 +23,21 @@ class AdminBootstrap implements ApplicationRunner {
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final UserProperties props;
+    private final DefaultTenant defaultTenant;
 
-    AdminBootstrap(UserRepository users, PasswordEncoder encoder, UserProperties props) {
+    AdminBootstrap(UserRepository users, PasswordEncoder encoder, UserProperties props, DefaultTenant defaultTenant) {
         this.users = users;
         this.encoder = encoder;
         this.props = props;
+        this.defaultTenant = defaultTenant;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        TenantContext.runAs(defaultTenant.get(), this::createAdmin);
+    }
+
+    private void createAdmin() {
         String email = AuthService.normalizeEmail(props.adminEmail());
         if (email.isEmpty() || props.adminPassword() == null || props.adminPassword().length() < 12) {
             if (!email.isEmpty()) {

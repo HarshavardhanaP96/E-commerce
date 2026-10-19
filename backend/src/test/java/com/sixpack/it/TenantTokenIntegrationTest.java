@@ -36,6 +36,7 @@ class TenantTokenIntegrationTest extends TenantIntegrationTest {
     void aTokenIsRejectedOnAnotherTenantsHost() throws Exception {
         Tenant acme = createTenant("acme", "Acme Shop", "shop.acme.test");
         String token = register("cross@test.dev");
+        registerOn(acme, "cross@test.dev"); // the same person has a separate account on the other store
 
         mvc.perform(get("/api/v1/user/me").header("Authorization", bearer(token))).andExpect(status().isOk());
         mvc.perform(get("/api/v1/user/me").header("Authorization", bearer(token)).with(host("shop.acme.test")))

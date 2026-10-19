@@ -139,7 +139,7 @@ class TenantCommerceIsolationIntegrationTest extends TenantIntegrationTest {
         String buyer = registerOn(acme, "buyer@test.dev");
         String intent = body(checkoutOn(acme, buyer, product, null).andExpect(status().isCreated()).andReturn())
                 .get("checkout").get("providerOrderId").asText();
-        String sameUserOnB = loginOn(globex, "buyer@test.dev", "password123");
+        String sameUserOnB = registerOn(globex, "buyer@test.dev"); // same email, a different account
 
         confirmOn(globex, sameUserOnB, intent).andExpect(status().isNotFound());
         confirmOn(acme, buyer, intent).andExpect(status().isCreated());

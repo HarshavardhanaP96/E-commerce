@@ -1,9 +1,9 @@
 package com.sixpack.user.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.user.domain.PasswordResetToken;
 import com.sixpack.user.domain.PasswordResetTokenRepository;
 import java.util.Optional;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -11,9 +11,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoPasswordResetTokenRepository implements PasswordResetTokenRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoPasswordResetTokenRepository(MongoTemplate mongo) {
+    MongoPasswordResetTokenRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
@@ -28,9 +28,8 @@ class MongoPasswordResetTokenRepository implements PasswordResetTokenRepository 
 
     @Override
     public Optional<PasswordResetToken> consumeByHash(String tokenHash) {
-        PasswordResetTokenDocument doc = mongo.findAndRemove(
-                Query.query(Criteria.where("tokenHash").is(tokenHash)), PasswordResetTokenDocument.class);
-        return Optional.ofNullable(doc)
+        return mongo.findAndRemove(Query.query(Criteria.where("tokenHash").is(tokenHash)),
+                        PasswordResetTokenDocument.class)
                 .map(d -> new PasswordResetToken(d.id, d.userId, d.tokenHash, d.expiresAt));
     }
 

@@ -41,6 +41,7 @@ class UserDetailsPersistenceIntegrationTest extends IntegrationTest {
         mongo.getCollection("users").insertOne(new Document("_id", id).append("name", "Old")
                 .append("email", "old@test.dev").append("password", "hash").append("photo", "")
                 .append("role", "user").append("dob", new java.util.Date(0)));
+        backfillLegacy();
 
         User u = users.findById(id.toHexString()).orElseThrow();
 

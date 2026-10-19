@@ -1,5 +1,6 @@
 package com.sixpack.user.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.user.domain.Address;
 import com.sixpack.user.domain.Gender;
 import com.sixpack.user.domain.Role;
@@ -14,7 +15,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -23,20 +23,20 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoUserRepository implements UserRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoUserRepository(MongoTemplate mongo) {
+    MongoUserRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
     @Override
     public Optional<User> findById(String id) {
-        return Optional.ofNullable(mongo.findById(id, UserDocument.class)).map(MongoUserRepository::toDomain);
+        return mongo.findById(id, UserDocument.class).map(MongoUserRepository::toDomain);
     }
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("email").is(email)), UserDocument.class))
+        return mongo.findOne(Query.query(Criteria.where("email").is(email)), UserDocument.class)
                 .map(MongoUserRepository::toDomain);
     }
 
@@ -65,7 +65,7 @@ class MongoUserRepository implements UserRepository {
 
     @Override
     public User save(User user) {
-        UserDocument doc = user.id() == null ? new UserDocument() : mongo.findById(user.id(), UserDocument.class);
+        UserDocument doc = user.id() == null ? new UserDocument() : mongo.findById(user.id(), UserDocument.class).orElse(null);
         if (doc == null) {
             doc = new UserDocument();
         }

@@ -1,5 +1,7 @@
 package com.sixpack.shared.security;
 
+import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantRef;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,7 +41,8 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         long minute = System.currentTimeMillis() / 60_000;
-        String key = request.getRemoteAddr() + "|" + request.getRequestURI();
+        String tenant = TenantContext.current().map(TenantRef::id).orElse("-");
+        String key = tenant + "|" + request.getRemoteAddr() + "|" + request.getRequestURI();
         Window window = windows.compute(key, (k, w) -> w == null || w.minute != minute ? new Window(minute) : w);
         if (window.count.incrementAndGet() > limitPerMinute) {
             response.setHeader("Retry-After", "60");

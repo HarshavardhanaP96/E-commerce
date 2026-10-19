@@ -2,10 +2,14 @@ package com.sixpack.shared.tenant;
 
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.UpdateDefinition;
@@ -37,6 +41,28 @@ public class TenantMongo {
 
     public <T> List<T> find(Query query, Class<T> type) {
         return mongo.find(scoped(query), type);
+    }
+
+    public <T> Optional<T> findAndRemove(Query query, Class<T> type) {
+        return Optional.ofNullable(mongo.findAndRemove(scoped(query), type));
+    }
+
+    /** For read-side code that works with collection names instead of document classes (the dashboard). */
+    public long count(Query query, String collection) {
+        return mongo.count(scoped(query), collection);
+    }
+
+    public <T> List<T> find(Query query, Class<T> type, String collection) {
+        return mongo.find(scoped(query), type, collection);
+    }
+
+    /** Runs the pipeline over the current tenant's documents only: a tenant {@code $match} is always the first stage. */
+    public <R> AggregationResults<R> aggregate(List<AggregationOperation> operations, String collection,
+                                               Class<R> output) {
+        List<AggregationOperation> pipeline = new ArrayList<>();
+        pipeline.add(Aggregation.match(Criteria.where(FIELD).is(TenantContext.require().id())));
+        pipeline.addAll(operations);
+        return mongo.aggregate(Aggregation.newAggregation(pipeline), collection, output);
     }
 
     public boolean exists(Query query, Class<?> type) {

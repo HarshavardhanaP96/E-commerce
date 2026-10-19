@@ -1,5 +1,6 @@
 package com.sixpack.audit.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent.Outcome;
 import com.sixpack.audit.FieldChange;
@@ -9,7 +10,6 @@ import com.sixpack.audit.domain.AuditRepository;
 import com.sixpack.shared.PageResult;
 import java.util.List;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -20,9 +20,9 @@ class MongoAuditRepository implements AuditRepository {
     // _id breaks ties between entries written in the same millisecond (ObjectIds increase).
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "at", "_id");
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoAuditRepository(MongoTemplate mongo) {
+    MongoAuditRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
@@ -74,7 +74,6 @@ class MongoAuditRepository implements AuditRepository {
     private static AuditDocument toDocument(AuditEntry e) {
         AuditDocument d = new AuditDocument();
         d.at = e.at();
-        d.tenantId = e.tenantId();
         d.actorId = e.actorId();
         d.actorRole = e.actorRole();
         d.action = e.action().name();
@@ -99,7 +98,7 @@ class MongoAuditRepository implements AuditRepository {
     private static AuditEntry toDomain(AuditDocument d) {
         List<FieldChange> changes = d.changes == null ? List.of()
                 : d.changes.stream().map(c -> new FieldChange(c.field, c.before, c.after, c.redacted)).toList();
-        return new AuditEntry(d.id, d.at, d.tenantId, d.actorId, d.actorRole, AuditAction.valueOf(d.action),
+        return new AuditEntry(d.id, d.at, d.getTenantId(), d.actorId, d.actorRole, AuditAction.valueOf(d.action),
                 d.entityType, d.entityId, Outcome.valueOf(d.outcome), changes, d.subjectHash, d.requestId,
                 d.ipHash, d.userAgent);
     }

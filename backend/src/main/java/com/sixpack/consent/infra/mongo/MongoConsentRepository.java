@@ -1,12 +1,12 @@
 package com.sixpack.consent.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.consent.Purpose;
 import com.sixpack.consent.domain.ConsentRecord;
 import com.sixpack.consent.domain.ConsentRecord.Source;
 import com.sixpack.consent.domain.ConsentRepository;
 import java.util.List;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -17,9 +17,9 @@ class MongoConsentRepository implements ConsentRepository {
     // _id breaks ties between records written in the same millisecond (ObjectIds increase).
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt", "_id");
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoConsentRepository(MongoTemplate mongo) {
+    MongoConsentRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 

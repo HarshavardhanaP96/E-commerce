@@ -1,8 +1,8 @@
 package com.sixpack.dashboard.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.group;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
 
 import com.sixpack.dashboard.domain.DashboardReadPort;
@@ -20,8 +20,7 @@ import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.data.mongodb.core.aggregation.DateOperators;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -36,9 +35,9 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
 
     private static final String CREATED_AT = "createdAt";
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoDashboardReadAdapter(MongoTemplate mongo) {
+    MongoDashboardReadAdapter(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
@@ -59,7 +58,7 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
             projection = projection.and(sumField).as("v");
         }
         var grouping = sumField == null ? group("ym").count().as("value") : group("ym").sum("v").as("value");
-        Aggregation agg = newAggregation(match(criteria(dataset, scope, from, null)), projection, grouping);
+        List<AggregationOperation> agg = List.of(match(criteria(dataset, scope, from, null)), projection, grouping);
         Map<YearMonth, Double> out = new LinkedHashMap<>();
         for (Document d : mongo.aggregate(agg, collection(dataset), Document.class)) {
             Object id = d.get("_id");
@@ -98,7 +97,7 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
 
     @Override
     public OrderTotals orderTotals(Scope scope) {
-        Aggregation agg = newAggregation(match(criteria(Dataset.ORDERS, scope, null, null)),
+        List<AggregationOperation> agg = List.of(match(criteria(Dataset.ORDERS, scope, null, null)),
                 group().sum("tax").as("tax").sum("shippingCharges").as("shipping")
                         .sum("discount").as("discount").sum("total").as("total"));
         Document d = mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class).getUniqueMappedResult();
@@ -137,7 +136,7 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
     }
 
     private Map<String, Long> countBy(Dataset dataset, String field, Scope scope) {
-        Aggregation agg = newAggregation(match(criteria(dataset, scope, null, null)),
+        List<AggregationOperation> agg = List.of(match(criteria(dataset, scope, null, null)),
                 group(field).count().as("count"));
         Map<String, Long> out = new LinkedHashMap<>();
         for (Document d : mongo.aggregate(agg, collection(dataset), Document.class)) {
@@ -150,7 +149,7 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
     }
 
     private double sum(Dataset dataset, Criteria criteria, String field) {
-        Aggregation agg = newAggregation(match(criteria), group().sum(field).as("sum"));
+        List<AggregationOperation> agg = List.of(match(criteria), group().sum(field).as("sum"));
         Document d = mongo.aggregate(agg, collection(dataset), Document.class).getUniqueMappedResult();
         return d == null ? 0 : number(d.get("sum"));
     }
