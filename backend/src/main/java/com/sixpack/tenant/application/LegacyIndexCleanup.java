@@ -26,7 +26,11 @@ public class LegacyIndexCleanup implements ApplicationRunner {
     /** Collection to the names of single-tenant unique indexes that must not exist any more. */
     static final Map<String, List<String>> LEGACY = Map.of(
             "products", List.of("slug_1", "sku_1", "variants.items.sku_1"),
-            "categories", List.of("slug_1"));
+            "categories", List.of("slug_1"),
+            "coupons", List.of("coupon_1"),
+            "coupon_redemptions", List.of("coupon_user"),
+            "orders", List.of("orderNumber_1"),
+            "payment_intents", List.of("providerOrderId_1"));
 
     private final MongoTemplate mongo;
 

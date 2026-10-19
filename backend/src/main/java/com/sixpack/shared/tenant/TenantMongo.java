@@ -66,6 +66,20 @@ public class TenantMongo {
         return mongo.save(document);
     }
 
+    /** Inserts a new document owned by the current tenant. */
+    public <T> T insert(T document) {
+        if (!(document instanceof TenantOwned owned)) {
+            throw new IllegalArgumentException(document.getClass().getSimpleName() + " is not TenantOwned");
+        }
+        String tenantId = TenantContext.require().id();
+        if (owned.getTenantId() == null) {
+            owned.setTenantId(tenantId);
+        } else if (!owned.getTenantId().equals(tenantId)) {
+            throw new IllegalStateException("Document belongs to another tenant");
+        }
+        return mongo.insert(document);
+    }
+
     public UpdateResult updateFirst(Query query, UpdateDefinition update, Class<?> type) {
         rejectTenantChange(update);
         return mongo.updateFirst(scoped(query), update, type);

@@ -65,6 +65,16 @@ abstract class TenantIntegrationTest extends IntegrationTest {
         return res.get("token").asText();
     }
 
+    /** Registers a customer on the tenant's host and returns a token valid there. */
+    protected String registerOn(Tenant tenant, String email) throws Exception {
+        var request = MockMvcRequestBuilders.multipart("/api/v1/user/register");
+        request.with(host(hostOf(tenant)));
+        request.param("name", "Test User").param("email", email).param("password", "password123")
+                .param("gender", "female").param("dob", "2000-05-01").param("acceptTerms", "true");
+        return body(mvc.perform(request).andExpect(MockMvcResultMatchers.status().isCreated()).andReturn())
+                .get("token").asText();
+    }
+
     protected static String hostOf(Tenant tenant) {
         return tenant.domains().get(0);
     }

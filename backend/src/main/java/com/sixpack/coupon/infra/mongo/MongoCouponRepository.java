@@ -1,12 +1,12 @@
 package com.sixpack.coupon.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.coupon.domain.Coupon;
 import com.sixpack.coupon.domain.CouponRules;
 import com.sixpack.coupon.domain.CouponType;
 import com.sixpack.coupon.domain.CouponRepository;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -15,20 +15,20 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoCouponRepository implements CouponRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoCouponRepository(MongoTemplate mongo) {
+    MongoCouponRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
     @Override
     public Optional<Coupon> findByCode(String code) {
-        return Optional.ofNullable(mongo.findOne(byCode(code), CouponDocument.class)).map(MongoCouponRepository::toDomain);
+        return mongo.findOne(byCode(code), CouponDocument.class).map(MongoCouponRepository::toDomain);
     }
 
     @Override
     public List<Coupon> findAll() {
-        return mongo.findAll(CouponDocument.class).stream().map(MongoCouponRepository::toDomain).toList();
+        return mongo.find(new Query(), CouponDocument.class).stream().map(MongoCouponRepository::toDomain).toList();
     }
 
     @Override
@@ -38,7 +38,7 @@ class MongoCouponRepository implements CouponRepository {
 
     @Override
     public Coupon save(Coupon coupon) {
-        CouponDocument doc = coupon.id() == null ? null : mongo.findById(coupon.id(), CouponDocument.class);
+        CouponDocument doc = coupon.id() == null ? null : mongo.findById(coupon.id(), CouponDocument.class).orElse(null);
         if (doc == null) {
             doc = new CouponDocument();
             doc.usedCount = 0;
@@ -65,12 +65,13 @@ class MongoCouponRepository implements CouponRepository {
 
     @Override
     public Optional<Coupon> findById(String id) {
-        return Optional.ofNullable(mongo.findById(id, CouponDocument.class)).map(MongoCouponRepository::toDomain);
+        return mongo.findById(id, CouponDocument.class).map(MongoCouponRepository::toDomain);
     }
 
     @Override
     public int redemptionsBy(String couponId, String userId) {
-        CouponRedemptionDocument d = mongo.findOne(redemption(couponId, userId), CouponRedemptionDocument.class);
+        CouponRedemptionDocument d = mongo.findOne(redemption(couponId, userId), CouponRedemptionDocument.class)
+                .orElse(null);
         return d == null || d.count == null ? 0 : d.count;
     }
 

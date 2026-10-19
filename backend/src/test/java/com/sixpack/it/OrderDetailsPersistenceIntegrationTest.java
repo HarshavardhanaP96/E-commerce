@@ -69,6 +69,7 @@ class OrderDetailsPersistenceIntegrationTest extends IntegrationTest {
                         .append("quantity", 2).append("productId", new ObjectId())))
                 .append("payment", new Document("provider", "razorpay").append("orderId", "o").append("paymentId", "p"))
                 .append("createdAt", new Date()));
+        backfillLegacy();
 
         Order o = orders.findById(id.toHexString()).orElseThrow();
 

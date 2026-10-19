@@ -1,10 +1,10 @@
 package com.sixpack.order.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.order.domain.PaymentIntent;
 import com.sixpack.order.domain.PaymentIntentRepository;
 import com.sixpack.order.domain.Quote;
 import java.util.Optional;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -13,9 +13,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoPaymentIntentRepository implements PaymentIntentRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoPaymentIntentRepository(MongoTemplate mongo) {
+    MongoPaymentIntentRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
@@ -39,8 +39,7 @@ class MongoPaymentIntentRepository implements PaymentIntentRepository {
 
     @Override
     public Optional<PaymentIntent> findByProviderOrderId(String providerOrderId) {
-        PaymentIntentDocument d = mongo.findOne(byProviderOrder(providerOrderId), PaymentIntentDocument.class);
-        return Optional.ofNullable(d).map(doc -> new PaymentIntent(doc.id, doc.userId, doc.provider,
+        return mongo.findOne(byProviderOrder(providerOrderId), PaymentIntentDocument.class).map(doc -> new PaymentIntent(doc.id, doc.userId, doc.provider,
                 doc.providerOrderId, doc.items.stream().map(MongoOrderRepository::toDomain).toList(), doc.coupon,
                 new Quote(doc.subtotal, doc.tax, doc.shippingCharges, doc.discount, doc.total), doc.currency));
     }

@@ -35,6 +35,7 @@ class CouponPersistenceIntegrationTest extends IntegrationTest {
     void legacyDocumentLoadsAsAnActiveFlatCoupon() {
         ObjectId id = new ObjectId();
         mongo.getCollection("coupons").insertOne(new Document("_id", id).append("coupon", "OLD").append("amount", 100.0));
+        backfillLegacy();
 
         Coupon c = coupons.findById(id.toHexString()).orElseThrow();
 

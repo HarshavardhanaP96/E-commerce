@@ -1,16 +1,17 @@
 package com.sixpack.coupon.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantDocument;
 import java.time.Instant;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document("coupons")
-class CouponDocument {
+@CompoundIndex(name = "tenant_coupon", def = "{'tenantId': 1, 'coupon': 1}", unique = true)
+class CouponDocument extends TenantDocument {
 
     @Id
     String id;
-    @Indexed(unique = true)
     String coupon;
     Double amount;
     String type;
