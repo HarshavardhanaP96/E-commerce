@@ -155,6 +155,11 @@ class OrderController {
                 caller.admin()));
     }
 
+    @GetMapping("/{id}/invoice")
+    Map<String, Object> invoice(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.of("invoice", orders.invoice(id, AuthUser.from(jwt)));
+    }
+
     @PutMapping("/{id}")
     Map<String, Object> process(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
         Order order = orders.advance(id, AuthUser.from(jwt).id());

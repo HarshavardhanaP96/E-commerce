@@ -5,6 +5,7 @@ import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.FieldChange;
 import com.sixpack.order.OrderChangedEvent;
+import com.sixpack.order.domain.Invoice;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.PaymentInfo;
 import com.sixpack.order.domain.Refund;
@@ -26,9 +27,11 @@ public class OrderService {
     private final ApplicationEventPublisher events;
     private final AuditTrail audit;
     private final PaymentGateway gateway;
+    private final InvoiceProperties invoiceProps;
 
     OrderService(OrderRepository orders, ApplicationEventPublisher events, AuditTrail audit,
-                 PaymentGateway gateway) {
+                 PaymentGateway gateway, InvoiceProperties invoiceProps) {
+        this.invoiceProps = invoiceProps;
         this.orders = orders;
         this.events = events;
         this.audit = audit;
@@ -50,6 +53,10 @@ public class OrderService {
             throw ApiException.notFound("Order not found");
         }
         return order;
+    }
+
+    public Invoice invoice(String id, AuthUser caller) {
+        return Invoice.of(get(id, caller), invoiceProps.seller());
     }
 
     public Order advance(String id, String actorId) {
