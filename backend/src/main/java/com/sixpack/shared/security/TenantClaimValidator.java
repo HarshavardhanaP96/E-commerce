@@ -31,6 +31,9 @@ class TenantClaimValidator implements OAuth2TokenValidator<Jwt> {
         if (tenant == null) {
             return OAuth2TokenValidatorResult.success(); // paths that run without a tenant
         }
+        if ("PLATFORM_ADMIN".equals(jwt.getClaimAsString(AuthUser.ROLE_CLAIM))) {
+            return OAuth2TokenValidatorResult.failure(WRONG_TENANT); // platform tokens never work on a store
+        }
         String tid = jwt.getClaimAsString(CLAIM);
         boolean valid = tid == null ? tenant.slug().equals(defaultSlug) : tid.equals(tenant.id());
         return valid ? OAuth2TokenValidatorResult.success() : OAuth2TokenValidatorResult.failure(WRONG_TENANT);

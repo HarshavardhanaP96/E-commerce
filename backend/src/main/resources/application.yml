@@ -49,6 +49,10 @@ app:
     privacy-version: ${LEGAL_PRIVACY_VERSION:2026-10-16}
     admin-aup-version: ${LEGAL_ADMIN_AUP_VERSION:2026-10-18}
     ip-hash-salt: ${CONSENT_IP_SALT:}
+  platform:
+    # First platform administrator (manages tenants). Created at startup if missing; needs 12+ characters.
+    admin-email: ${PLATFORM_ADMIN_EMAIL:}
+    admin-password: ${PLATFORM_ADMIN_PASSWORD:}
   tenant:
     default-slug: ${TENANT_DEFAULT_SLUG:default}
     default-name: ${TENANT_DEFAULT_NAME:6Pack}

@@ -69,6 +69,11 @@ class MongoTenantRepository implements TenantRepository {
         return toDomain(mongo.save(doc));
     }
 
+    @Override
+    public void deleteById(String id) {
+        mongo.remove(Query.query(Criteria.where("id").is(id)), TenantDocument.class);
+    }
+
     private Optional<Tenant> one(Query query) {
         return Optional.ofNullable(mongo.findOne(query, TenantDocument.class)).map(MongoTenantRepository::toDomain);
     }

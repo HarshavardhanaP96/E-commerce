@@ -24,7 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 class TenantResolutionFilter extends OncePerRequestFilter {
 
     private static final List<String> EXEMPT_PREFIXES =
-            List.of("/actuator", "/api-docs", "/swagger-ui", "/error", "/platform");
+            List.of("/actuator", "/api-docs", "/swagger-ui", "/error", "/api/v1/platform");
 
     private final TenantRegistry registry;
     private final ObjectMapper mapper;
@@ -34,8 +34,7 @@ class TenantResolutionFilter extends OncePerRequestFilter {
         this.mapper = mapper;
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    private static boolean exempt(HttpServletRequest request) {
         String path = request.getRequestURI();
         return "/".equals(path) || EXEMPT_PREFIXES.stream().anyMatch(path::startsWith);
     }
@@ -43,6 +42,13 @@ class TenantResolutionFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        if (exempt(request)) {
+            // Explicitly tenant-less, so nothing bound earlier on this thread can leak into platform or ops paths.
+            try (TenantContext.Scope ignored = TenantContext.open(null)) {
+                chain.doFilter(request, response);
+            }
+            return;
+        }
         Optional<Tenant> tenant = registry.resolve(request.getServerName());
         if (tenant.isEmpty()) {
             reject(response, HttpServletResponse.SC_NOT_FOUND, "Store not found");

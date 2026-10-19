@@ -14,4 +14,6 @@ public interface TenantRepository {
     List<Tenant> findAll();
 
     Tenant save(Tenant tenant);
+
+    void deleteById(String id);
 }

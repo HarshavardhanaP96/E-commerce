@@ -21,7 +21,7 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final Set<String> LIMITED_PATHS = Set.of(
             "/api/v1/user/login", "/api/v1/user/register",
-            "/api/v1/user/forgot-password", "/api/v1/user/reset-password");
+            "/api/v1/user/forgot-password", "/api/v1/user/reset-password", "/api/v1/platform/login");
 
     private final int limitPerMinute;
     private final JsonSecurityHandlers handlers;
