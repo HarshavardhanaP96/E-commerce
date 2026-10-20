@@ -11,6 +11,7 @@ import com.sixpack.dashboard.domain.Kpis;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.dashboard.domain.Scope;
 import com.sixpack.dashboard.domain.Series;
+import com.sixpack.shared.tenant.StoreConfig;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -30,29 +31,35 @@ public class SummaryService {
     }
 
     private final DashboardReadPort read;
-    private final ZoneId zone;
+    private final StoreConfig store;
     private final Clock clock;
 
     @Autowired
-    SummaryService(DashboardReadPort read, AnalyticsProperties properties) {
-        this(read, properties.timezone(), Clock.systemUTC());
+    SummaryService(DashboardReadPort read, StoreConfig store) {
+        this(read, store, Clock.systemUTC());
     }
 
-    SummaryService(DashboardReadPort read, ZoneId zone, Clock clock) {
+    SummaryService(DashboardReadPort read, StoreConfig store, Clock clock) {
         this.read = read;
-        this.zone = zone;
+        this.store = store;
         this.clock = clock;
     }
 
-    /** Today in the shop's time zone. */
+    /** The zone the store's days start and end in: its own setting, else the platform default. */
+    public ZoneId zone() {
+        return ZoneId.of(store.effective().timeZone());
+    }
+
+    /** Today in the store's time zone. */
     public LocalDate today() {
-        return LocalDate.now(clock.withZone(zone));
+        return LocalDate.now(clock.withZone(zone()));
     }
 
     /** @param granularity null picks one from the length of the period */
     @Cacheable(cacheNames = DASHBOARD,
-            key = "'summary:' + #scope + #period + #granularity + #compare + #basis")
+            key = "'summary:' + #root.target.zone() + #scope + #period + #granularity + #compare + #basis")
     public Summary summary(Scope scope, Period period, Granularity granularity, Compare compare, Basis basis) {
+        ZoneId zone = zone();
         Granularity g = granularity == null ? Granularity.auto(period) : granularity;
         boolean itemScoped = scope.productId() != null || scope.category() != null;
         g.buckets(period); // fails fast on too many points, before any query runs

@@ -53,6 +53,7 @@ app:
       minimum-age: ${STORE_MINIMUM_AGE:18}
       page-size: ${PRODUCT_PER_PAGE:10}
       low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
+      # Days start and end in this zone on the store's dashboard, orders and invoices.
       time-zone: ${STORE_TIME_ZONE:Asia/Kolkata}
   features:
     # Platform default for each per-store feature switch (a platform admin can override it per store).
@@ -78,9 +79,6 @@ app:
     # First platform administrator (manages tenants). Created at startup if missing; needs 12+ characters.
     admin-email: ${PLATFORM_ADMIN_EMAIL:}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
-  analytics:
-    # Shop dashboards cut days at midnight in this zone (one platform value until stores set their own).
-    timezone: ${ANALYTICS_TIMEZONE:Asia/Kolkata}
   tenant:
     default-slug: ${TENANT_DEFAULT_SLUG:default}
     default-name: ${TENANT_DEFAULT_NAME:6Pack}

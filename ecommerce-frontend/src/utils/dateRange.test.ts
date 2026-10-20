@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { presetRange } from "./dateRange";
+import { isoDay, presetRange, todayIn } from "./dateRange";
 
 const today = new Date(2026, 9, 20); // 20 Oct 2026, local time
 
@@ -24,4 +24,15 @@ test("financial year starts on 1 April", () => {
   assert.deepEqual(presetRange("fy", today), { from: "2026-04-01", to: "2026-10-20" });
   assert.deepEqual(presetRange("fy", new Date(2027, 1, 10)), { from: "2026-04-01", to: "2027-02-10" });
   assert.deepEqual(presetRange("fy", new Date(2026, 3, 1)), { from: "2026-04-01", to: "2026-04-01" });
+});
+
+test("today is the store's calendar day, not the browser's", () => {
+  const instant = new Date("2026-10-05T20:00:00Z"); // 6 Oct 01:30 in India, still 5 Oct in New York
+  assert.equal(isoDay(todayIn("Asia/Kolkata", instant)), "2026-10-06");
+  assert.equal(isoDay(todayIn("America/New_York", instant)), "2026-10-05");
+});
+
+test("an unknown zone falls back to the browser's day", () => {
+  const instant = new Date(2026, 9, 20, 12);
+  assert.equal(isoDay(todayIn("Mars/Olympus", instant)), "2026-10-20");
 });

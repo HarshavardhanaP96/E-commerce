@@ -195,7 +195,7 @@ gets 503 `Payments are not configured for this store` at checkout. Theme tokens 
 Month arrays run oldest to newest and end with the current month. Buckets account for the year.
 
 - `GET /summary?from=&to=&compare=&granularity=&basis=` (plus the scope filters) → `{success, summary:{from, to, timezone, granularity, basis, compareFrom?, compareTo?, current:{revenue, orders, averageOrderValue, units, refunds?, discount?, tax?}, previous?:{...same}, changePercent?:{revenue, orders, averageOrderValue, units}, series:[{start, revenue, orders}]}}`
-  - `from`/`to`: inclusive `YYYY-MM-DD` days in the shop's time zone (`app.analytics.timezone`, default `Asia/Kolkata`);
+  - `from`/`to`: inclusive `YYYY-MM-DD` days in the store's time zone (its Store settings, else `STORE_TIME_ZONE`, default `Asia/Kolkata`);
     default the last 30 days ending today; at most 731 days. `compare`: `previous` (default; the same number of days
     ending the day before `from`), `year` (the same days a year earlier) or `none`. `granularity`: `day`, `week`
     (Monday start) or `month`; default by length (≤ 31 days daily, ≤ 92 weekly, else monthly); at most 400 points.

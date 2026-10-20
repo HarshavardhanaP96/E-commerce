@@ -1,3 +1,4 @@
+import { regional } from "./money";
 /** Date-range presets for the analytics filters. Dates are local calendar days as YYYY-MM-DD. */
 export type Preset = "7d" | "30d" | "month" | "lastMonth" | "quarter" | "fy" | "custom";
 
@@ -18,8 +19,23 @@ export const isoDay = (d: Date) =>
 
 const day = (y: number, m: number, d: number) => isoDay(new Date(y, m, d));
 
-/** The range a preset stands for on {@code today}; "custom" falls back to the last 30 days. */
-export const presetRange = (preset: Preset, today = new Date()): DateRange => {
+/** The calendar day it is in `zone` at `now`, as a local Date at midnight (the browser's day if the zone is unknown). */
+export const todayIn = (zone: string, now = new Date()): Date => {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(now);
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    return new Date(get("year"), get("month") - 1, get("day"));
+  } catch {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+};
+
+/**
+ * The range a preset stands for on `today`; "custom" falls back to the last 30 days. `today` defaults to the
+ * store's day ({@link regional}), so the presets match the days the dashboard counts in.
+ */
+export const presetRange = (preset: Preset, today = todayIn(regional.timeZone)): DateRange => {
   const y = today.getFullYear();
   const m = today.getMonth();
   const to = isoDay(today);

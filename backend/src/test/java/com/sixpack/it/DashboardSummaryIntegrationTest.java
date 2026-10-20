@@ -1,6 +1,7 @@
 package com.sixpack.it;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,9 +12,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** Headline numbers and trend for a date range, in the shop's time zone (Asia/Kolkata by default). */
+/** Headline numbers and trend for a date range, in the store's own time zone (platform default Asia/Kolkata). */
 class DashboardSummaryIntegrationTest extends IntegrationTest {
 
     private static final String SHOE = new ObjectId().toHexString();
@@ -65,6 +67,34 @@ class DashboardSummaryIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.summary.series[4].start").value("2026-10-05"))
                 .andExpect(jsonPath("$.summary.series[4].revenue").value(500.0))
                 .andExpect(jsonPath("$.summary.series[5].revenue").value(1000.0));
+    }
+
+    private void storeTimeZone(String zone) throws Exception {
+        java.util.Map<String, Object> regional = new java.util.HashMap<>();
+        regional.put("timeZone", zone);
+        mvc.perform(put("/api/v1/store/settings").header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(java.util.Map.of("regional", regional))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void daysAreCutInTheStoresOwnTimeZone() throws Exception {
+        try {
+            storeTimeZone("UTC");
+            // 20:00 UTC on 5 Oct is still 5 Oct for a store on UTC (it is 6 Oct in India)
+            mvc.perform(summary().param("basis", "gross"))
+                    .andExpect(jsonPath("$.summary.timezone").value("UTC"))
+                    .andExpect(jsonPath("$.summary.series[4].revenue").value(1500.0))
+                    .andExpect(jsonPath("$.summary.series[5].revenue").value(0.0));
+
+            storeTimeZone("Asia/Kolkata"); // a changed zone is never answered from the cache
+            mvc.perform(summary().param("basis", "gross"))
+                    .andExpect(jsonPath("$.summary.timezone").value("Asia/Kolkata"))
+                    .andExpect(jsonPath("$.summary.series[5].revenue").value(1000.0));
+        } finally {
+            storeTimeZone(null);
+        }
     }
 
     @Test

@@ -18,8 +18,8 @@
 - [ ] FR8b: Customers keep up to 10 saved addresses with one default. Checkout pre-selects the default and lets them pick another. The data export includes the addresses.
 - [ ] FR9: Admin dashboard: stats, pie, bar and line charts, optionally scoped by productId, category or userId.
   A summary for any date range (net or gross revenue, orders, average order value, units, refunds, discounts, tax)
-  compared with the previous period or the same period last year, with a trend by day, week or month, in the shop's
-  time zone. Filters live in the page URL. *Step 1 of the analytics plan; per-store time zones, more sections, the
+  compared with the previous period or the same period last year, with a trend by day, week or month, in the store's
+  own time zone (Store settings). Filters live in the page URL. *Step 1 of the analytics plan; more sections, the
   daily summary table and the super admin view follow.*
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
