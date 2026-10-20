@@ -1,6 +1,7 @@
 package com.sixpack.tenant.web;
 
 import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantFeatures;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.tenant.application.TenantRegistry;
 import com.sixpack.tenant.domain.Tenant;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 class TenantConfigController {
 
     private final TenantRegistry registry;
+    private final TenantFeatures features;
 
-    TenantConfigController(TenantRegistry registry) {
+    TenantConfigController(TenantRegistry registry, TenantFeatures features) {
         this.registry = registry;
+        this.features = features;
     }
 
     @GetMapping("/config")
@@ -31,6 +34,7 @@ class TenantConfigController {
         view.put("locale", tenant.locale());
         view.put("currency", tenant.currency());
         view.put("storefront", tenant.storefront());
+        view.put("features", features.effective());
         return ApiResponse.of("tenant", view);
     }
 }

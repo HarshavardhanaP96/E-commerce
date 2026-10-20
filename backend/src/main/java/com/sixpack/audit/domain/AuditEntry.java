@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * One immutable audit record.
  *
- * @param tenantId    reserved for multi-tenancy; always null today
+ * @param tenantId    the store the entry belongs to (stamped from the tenant context)
  * @param actorRole   ADMIN, USER, ANONYMOUS (an unauthenticated request) or SYSTEM (no request at all)
  * @param subjectHash salted hash of an attempted login email; never the email itself
  */

@@ -5,13 +5,18 @@ import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
+import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.tenant.application.TenantAdminService;
 import com.sixpack.tenant.application.TenantAdminService.AdminCommand;
 import com.sixpack.tenant.application.TenantAdminService.CreateCommand;
 import com.sixpack.tenant.application.TenantAdminService.UpdateCommand;
 import com.sixpack.tenant.domain.Tenant;
+import com.sixpack.tenant.application.TenantExport;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import org.springframework.http.HttpHeaders;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -40,29 +45,34 @@ class PlatformTenantController {
                          @Size(max = 20) List<String> domains, Map<String, String> theme,
                          @Size(max = 16) String locale, @Size(max = 8) String currency, LegalSettings legal,
                          PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
+                         Map<String, Boolean> features, TenantLimits limits, Boolean trial,
                          @Valid AdminRequest admin) {
     }
 
     record UpdateRequest(@Size(max = 80) String name, @Size(max = 20) List<String> domains,
                          Map<String, String> theme, @Size(max = 16) String locale, @Size(max = 8) String currency,
                          LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                         StorefrontSettings storefront) {
+                         StorefrontSettings storefront, Map<String, Boolean> features, TenantLimits limits) {
     }
 
     record TenantView(@JsonProperty("id") String id, String slug, String name, String status, List<String> domains,
                       Map<String, String> theme, String locale, String currency, LegalSettings legal,
                       PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                      Instant createdAt) {
+                      Map<String, Boolean> features, TenantLimits limits, Instant trialEndsAt,
+                      Instant deletionDueAt, Instant createdAt) {
         static TenantView from(Tenant t) {
             return new TenantView(t.id(), t.slug(), t.name(), t.status().name(), t.domains(), t.theme(), t.locale(),
-                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.createdAt());
+                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.limits(), t.trialEndsAt(), t.deletionDueAt(),
+                    t.createdAt());
         }
     }
 
     private final TenantAdminService service;
+    private final TenantExport export;
 
-    PlatformTenantController(TenantAdminService service) {
+    PlatformTenantController(TenantAdminService service, TenantExport export) {
         this.service = service;
+        this.export = export;
     }
 
     @GetMapping
@@ -81,20 +91,46 @@ class PlatformTenantController {
         AdminCommand admin = r.admin() == null ? null
                 : new AdminCommand(r.admin().name(), r.admin().email(), r.admin().password());
         Tenant created = service.create(new CreateCommand(r.slug(), r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), admin));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits(), Boolean.TRUE.equals(r.trial()), admin));
         return ApiResponse.of("message", "Tenant " + created.slug() + " created", "tenant", TenantView.from(created));
     }
 
     @PutMapping("/{id}")
     Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateRequest r) {
         Tenant updated = service.update(id, new UpdateCommand(r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront()));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits()));
         return ApiResponse.of("message", "Tenant updated", "tenant", TenantView.from(updated));
     }
 
     @PostMapping("/{id}/suspend")
     Map<String, Object> suspend(@PathVariable String id) {
         return ApiResponse.of("message", "Tenant suspended", "tenant", TenantView.from(service.suspend(id)));
+    }
+
+    /** Downloads the store's data and photos as a ZIP. */
+    @GetMapping("/{id}/export")
+    void export(@PathVariable String id, HttpServletResponse response) throws IOException {
+        String slug = service.get(id).slug();
+        response.setContentType("application/zip");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + slug + "-export.zip\"");
+        export.exportTo(id, response.getOutputStream());
+    }
+
+    @PostMapping("/{id}/offboard")
+    Map<String, Object> offboard(@PathVariable String id) {
+        return ApiResponse.of("message", "Store closed and scheduled for deletion", "tenant",
+                TenantView.from(service.offboard(id)));
+    }
+
+    @PostMapping("/{id}/cancel")
+    Map<String, Object> cancel(@PathVariable String id) {
+        return ApiResponse.of("message", "Store cancelled", "tenant", TenantView.from(service.cancel(id)));
+    }
+
+    @PostMapping("/{id}/restore")
+    Map<String, Object> restore(@PathVariable String id) {
+        return ApiResponse.of("message", "Deletion cancelled; the store is active", "tenant",
+                TenantView.from(service.restore(id)));
     }
 
     @PostMapping("/{id}/activate")

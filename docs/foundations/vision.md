@@ -18,7 +18,7 @@ the mock data in the UI with real API calls.
   email provider (a mail port exists, and dev logs the reset link), or object storage for images (a storage
   port exists, and the local disk adapter ships).
 - Multi-tenancy was a non-goal in the first phase and has since been built (ADR-020, ADR-021): one deployment
-  serves several isolated stores. Self-serve signup, tenant offboarding and cross-tenant reporting are not part of it.
+  serves several isolated stores. Self-serve signup and cross-tenant reporting are not part of it.
 
 ## Status and what is next
 Built since the migration: richer catalogue, user, order and coupon models (ADR-015 to ADR-018), product variants
@@ -31,7 +31,7 @@ administrator. The backlog below is what is still open, in the order it is best 
 | 1 | Ship what exists: click through the new screens in a browser, push and let CI run for the first time, merge the audit and variants branches once, split the unreviewed `wip` consent commit | Nothing built since the migration has been seen in a browser or run in CI; each day apart adds merge conflicts |
 | 2 | Answer the open tenancy decisions in `requirements.md` (shared customers, per-tenant legal text, own payment accounts, scale, existing data) | Defaults were applied; changing them later is cheaper before a second real tenant exists |
 | 3 | Product variants: storefront product page and cart identity, admin variant editor, then turn the flag on | Backend is done and tested with the flag off |
-| 4 | Tenant offboarding (export then delete), a cross-tenant audit view and audit of platform actions | Needed before the first outside tenant |
+| 4 | ~~Tenant offboarding (export then delete), a cross-tenant audit view and audit of platform actions~~ Done on `feat/tenancy-hardening` (2026-10-20) | Needed before the first outside tenant |
 | 5 | Real email provider (per-tenant sender) and object storage for uploads | Reset links only log today; local disk limits the backend to one replica (ADR-008) |
 | 6 | Payment depth: payment method and failure reason, refunds and returns, shipments, invoices | Needs a gateway fetch-payment call or webhooks, so after per-tenant payment accounts are live |
 | 7 | Smaller gaps: category and gallery admin screens, a suspend toggle for users, email verification flow, enforcing suspension on already-issued tokens, coupon scoping and first-order-only coupons, per-tenant policy text, custom-domain verification, end-to-end browser tests | Each is independent and small |

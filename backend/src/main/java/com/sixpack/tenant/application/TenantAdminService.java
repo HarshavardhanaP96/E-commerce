@@ -1,17 +1,25 @@
 package com.sixpack.tenant.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.shared.tenant.TenantProperties;
 import com.sixpack.shared.tenant.TenantRef;
 import com.sixpack.tenant.domain.Tenant;
 import com.sixpack.tenant.domain.TenantRepository;
 import com.sixpack.tenant.domain.TenantStatus;
 import com.sixpack.user.AdminProvisioning;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,26 +52,54 @@ public class TenantAdminService {
 
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
-                                MailSettings mail, StorefrontSettings storefront, AdminCommand admin) {
+                                MailSettings mail, StorefrontSettings storefront, Map<String, Boolean> features,
+                                TenantLimits limits, boolean trial, AdminCommand admin) {
     }
 
-    /** Null means "keep"; a nested settings object, when given, replaces the previous one. */
+    /**
+     * Null means "keep"; a nested settings object, when given, replaces the previous one. {@code features}
+     * replaces the store's feature switches; an empty map returns every feature to the platform default.
+     */
     public record UpdateCommand(String name, List<String> domains, Map<String, String> theme, String locale,
                                 String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                                StorefrontSettings storefront) {
+                                StorefrontSettings storefront, Map<String, Boolean> features,
+                                TenantLimits limits) {
     }
 
     private final TenantRepository tenants;
     private final TenantRegistry registry;
     private final TenantProperties props;
     private final AdminProvisioning provisioning;
+    private final AuditTrail audit;
+    private final TenantLifecycleProperties lifecycle;
 
     TenantAdminService(TenantRepository tenants, TenantRegistry registry, TenantProperties props,
-                       AdminProvisioning provisioning) {
+                       AdminProvisioning provisioning, AuditTrail audit, TenantLifecycleProperties lifecycle) {
+        this.lifecycle = lifecycle;
         this.tenants = tenants;
         this.registry = registry;
         this.props = props;
         this.provisioning = provisioning;
+        this.audit = audit;
+    }
+
+    /** Platform actions go into the affected store's own log, so the store's admins can see them too. */
+    /** An action on the store that changes none of its settings (an export). */
+    void record(AuditAction action, Tenant tenant) {
+        TenantContext.runAs(new TenantRef(tenant.id(), tenant.slug()),
+                () -> audit.record(AuditEvent.of(action).on("tenant", tenant.id())));
+    }
+
+    void record(AuditAction action, Tenant before, Tenant after) {
+        record(action, before, after, false);
+    }
+
+    void record(AuditAction action, Tenant before, Tenant after, boolean bySystem) {
+        Map<String, Object> was = before == null ? Map.of() : TenantAudit.view(before);
+        AuditEvent event = AuditEvent.of(action).on("tenant", after.id())
+                .changing(Changes.diff(was, TenantAudit.view(after), TenantAudit.POLICY));
+        TenantContext.runAs(new TenantRef(after.id(), after.slug()),
+                () -> audit.record(bySystem ? event.bySystem() : event));
     }
 
     public List<Tenant> list() {
@@ -89,12 +125,18 @@ public class TenantAdminService {
         PaymentSettings payment = validPayment(c.payment());
         MailSettings mail = validMail(c.mail());
         StorefrontSettings storefront = validStorefront(c.storefront());
+        Map<String, Boolean> features = validFeatures(c.features());
+        TenantLimits limits = validLimits(c.limits());
         if (c.admin() != null) {
             requireAdmin(c.admin());
         }
 
-        Tenant created = tenants.save(new Tenant(null, slug, name, TenantStatus.ACTIVE, domains, theme,
-                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront));
+        Instant trialEndsAt = c.trial()
+                ? Instant.now().plus(lifecycle.trialLength()).truncatedTo(ChronoUnit.MILLIS) : null;
+        Tenant created = tenants.save(new Tenant(null, slug, name,
+                c.trial() ? TenantStatus.TRIAL : TenantStatus.ACTIVE, domains, theme,
+                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront,
+                features, null, limits, trialEndsAt));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -106,12 +148,16 @@ public class TenantAdminService {
             }
         }
         registry.refresh();
+        record(AuditAction.TENANT_CREATED, null, created);
         log.info("Tenant '{}' created with domains {}", created.slug(), created.domains());
         return created;
     }
 
     public Tenant update(String id, UpdateCommand u) {
         Tenant current = get(id);
+        if (current.status() == TenantStatus.DELETED) {
+            throw ApiException.conflict("This store has been deleted");
+        }
         Tenant updated = tenants.save(new Tenant(current.id(), current.slug(),
                 u.name() != null ? requireName(u.name()) : current.name(), current.status(),
                 u.domains() != null ? validDomains(u.domains(), current.id()) : current.domains(),
@@ -122,10 +168,45 @@ public class TenantAdminService {
                 u.legal() != null ? validLegal(u.legal()) : current.legal(),
                 u.payment() != null ? validPayment(u.payment()) : current.payment(),
                 u.mail() != null ? validMail(u.mail()) : current.mail(),
-                u.storefront() != null ? validStorefront(u.storefront()) : current.storefront()));
+                u.storefront() != null ? validStorefront(u.storefront()) : current.storefront(),
+                u.features() != null ? validFeatures(u.features()) : current.features(),
+                current.deletionDueAt(),
+                u.limits() != null ? validLimits(u.limits()) : current.limits(),
+                current.trialEndsAt()));
         registry.refresh();
+        record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());
         return updated;
+    }
+
+    /** Null fields fall back to the platform default; set ones must be positive. */
+    private static TenantLimits validLimits(TenantLimits limits) {
+        if (limits == null) {
+            return TenantLimits.NONE;
+        }
+        if ((limits.products() != null && limits.products() <= 0)
+                || (limits.uploadBytes() != null && limits.uploadBytes() <= 0)
+                || (limits.requestsPerMinute() != null && limits.requestsPerMinute() <= 0)) {
+            throw ApiException.badRequest("limits: values must be positive");
+        }
+        return limits;
+    }
+
+    /** Known feature keys only, so a typo is an error instead of a switch that silently does nothing. */
+    private static Map<String, Boolean> validFeatures(Map<String, Boolean> features) {
+        if (features == null) {
+            return Map.of();
+        }
+        Map<String, Boolean> valid = new java.util.TreeMap<>();
+        features.forEach((key, on) -> {
+            if (Feature.fromKey(key).isEmpty()) {
+                throw ApiException.badRequest("features: unknown feature '" + key + "'");
+            }
+            if (on != null) {
+                valid.put(key, on);
+            }
+        });
+        return valid;
     }
 
     public Tenant suspend(String id) {
@@ -133,17 +214,73 @@ public class TenantAdminService {
         if (current.slug().equals(props.defaultSlug())) {
             throw ApiException.badRequest("The default tenant cannot be suspended");
         }
-        return setStatus(current, TenantStatus.SUSPENDED);
+        requireNotOffboarded(current);
+        return setStatus(current, TenantStatus.SUSPENDED, null);
     }
 
     public Tenant activate(String id) {
-        return setStatus(get(id), TenantStatus.ACTIVE);
+        Tenant current = get(id);
+        requireNotOffboarded(current);
+        return setStatus(current, TenantStatus.ACTIVE, null);
     }
 
-    private Tenant setStatus(Tenant t, TenantStatus status) {
-        Tenant saved = tenants.save(new Tenant(t.id(), t.slug(), t.name(), status, t.domains(), t.theme(), t.locale(),
-                t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail(), t.storefront()));
+    /**
+     * Closes the store and schedules its data for deletion after the grace period. Export it first: after the
+     * purge only the tenant record and its audit log remain.
+     */
+    public Tenant offboard(String id) {
+        Tenant current = get(id);
+        if (current.slug().equals(props.defaultSlug())) {
+            throw ApiException.badRequest("The default tenant cannot be offboarded");
+        }
+        requireNotOffboarded(current);
+        return setStatus(current, TenantStatus.SCHEDULED_FOR_DELETION, Instant.now().plus(lifecycle.deletionGrace()).truncatedTo(ChronoUnit.MILLIS));
+    }
+
+    /** The store owner is leaving: the storefront closes. It can be activated again, or offboarded. */
+    public Tenant cancel(String id) {
+        Tenant current = get(id);
+        if (current.slug().equals(props.defaultSlug())) {
+            throw ApiException.badRequest("The default tenant cannot be cancelled");
+        }
+        requireNotOffboarded(current);
+        return setStatus(current, TenantStatus.CANCELLED, null);
+    }
+
+    /** Suspends every trial that ended on or before {@code now}; recorded with actor SYSTEM. */
+    void expireTrials(Instant now) {
+        for (Tenant t : tenants.findAll()) {
+            if (t.status() == TenantStatus.TRIAL && t.trialEndsAt() != null && !t.trialEndsAt().isAfter(now)) {
+                Tenant saved = tenants.save(t.withStatus(TenantStatus.SUSPENDED, null));
+                registry.refresh();
+                record(AuditAction.TENANT_STATUS_CHANGED, t, saved, true);
+                log.info("Trial of tenant '{}' ended; suspended", t.slug());
+            }
+        }
+    }
+
+    /** Cancels a scheduled deletion; the store is active again. */
+    public Tenant restore(String id) {
+        Tenant current = get(id);
+        if (current.status() != TenantStatus.SCHEDULED_FOR_DELETION) {
+            throw ApiException.conflict("Only a store scheduled for deletion can be restored");
+        }
+        return setStatus(current, TenantStatus.ACTIVE, null);
+    }
+
+    private static void requireNotOffboarded(Tenant t) {
+        if (t.status() == TenantStatus.SCHEDULED_FOR_DELETION) {
+            throw ApiException.conflict("This store is scheduled for deletion; restore it first");
+        }
+        if (t.status() == TenantStatus.DELETED) {
+            throw ApiException.conflict("This store has been deleted");
+        }
+    }
+
+    private Tenant setStatus(Tenant t, TenantStatus status, Instant deletionDueAt) {
+        Tenant saved = tenants.save(t.withStatus(status, deletionDueAt));
         registry.refresh();
+        record(AuditAction.TENANT_STATUS_CHANGED, t, saved);
         log.info("Tenant '{}' is now {}", saved.slug(), status);
         return saved;
     }

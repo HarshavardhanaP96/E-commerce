@@ -24,6 +24,8 @@
 - [ ] FR15: Customers and admins can open a printable invoice for an order, with the seller's details, the tax split by rate (CGST+SGST in the seller's state, IGST elsewhere), and any refunds.
 - [ ] FR16: Registration emails a single-use verification link (valid 24 h); following it marks the email verified. Customers can ask for a new link from a banner. Nothing is blocked while an email is unverified.
 - [ ] FR13: Data changes (products, categories, coupons, orders, users) and security events (logins, password resets, consent changes) are recorded in an append-only audit log that admins can search, without storing personal values.
+- [x] FR13b: A platform administrator can export a store's data and photos, close it with a grace period during which it can be restored, after which its data and photos are deleted and only its audit log (365 days) and a `DELETED` tenant record remain (answers Q13; procedure in `compliance-consent.md` §7).
+- [x] FR13a: Platform administrator actions on a store (create, settings and payment-account edits, feature switches, suspend, activate) are recorded in that store's audit log with actor role `PLATFORM_ADMIN`, visible to the store's admins. Platform administrators can read every store's log, read-only (`GET /platform/audit`), answering Q17.
 
 ## Non-functional requirements
 - Performance: p95 under 200 ms for catalogue reads at 50 rps on one pod. Catalogue reads and dashboard queries are cached (Caffeine, short TTL).
@@ -53,8 +55,8 @@ default. Each is cheaper to change before a second real tenant exists.
 - **Existing data (Q14):** today's data becomes the `default` tenant. Confirm there is no data that should be split
   or archived instead.
 - **Still open:** cross-tenant platform reporting (Q8); dedicated databases for regulated tenants (Q9); a procedure for
-  tenant offboarding, i.e. export then delete (Q13); whether the platform administrator must accept the admin agreement
-  (Q16); whether the platform may see every tenant's audit log (Q17); sender address per tenant when a mail provider
+  whether the platform administrator must accept the admin agreement
+  (Q16); sender address per tenant when a mail provider
   arrives (Q11); wildcard or custom-domain support (Q12).
 
 ## Known limits (accepted for now)
@@ -64,7 +66,8 @@ default. Each is cheaper to change before a second real tenant exists.
   return a use (ADR-018).
 - **Product variants are off** (`app.products.variants-enabled=false`) until the storefront and admin editor exist.
 - **`emailVerified` is stored but nothing sets it**; there is no verification flow.
-- **Platform administrator actions** are logged but not written to the tenant-scoped audit log.
+- **Platform logins are not audited.** Platform actions on a store (create, edit, suspend, activate) are, in that
+  store's own log; a platform login belongs to no store, so it is only a log line.
 - **The tenant is chosen from the request host**, so the ingress must overwrite any client-supplied
   `X-Forwarded-Host`, and a second tenant needs `TENANT_DEFAULT_DOMAINS` set first.
 - **Payment method and failure reason** are not recorded; a captured payment whose order failed is still refunded by hand.

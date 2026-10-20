@@ -23,7 +23,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\", namespace=~\"$namespace\"}[1m]))",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri!~\"/actuator.*\", namespace=~\"$namespace\", tenant=~\"$tenant\"}[1m]))",
           "legendFormat": "{{status}}"
         }
       ]
@@ -43,7 +43,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\", namespace=~\"$namespace\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\", namespace=~\"$namespace\", tenant=~\"$tenant\"}[5m])))",
           "legendFormat": "{{uri}}"
         }
       ]
@@ -63,7 +63,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(sixpack_orders_placed_total{namespace=~\"$namespace\"}[1h]))"
+          "expr": "sum(increase(sixpack_orders_placed_total{namespace=~\"$namespace\", tenant=~\"$tenant\"}[1h]))"
         }
       ]
     },
@@ -82,7 +82,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (reason) (increase(sixpack_checkout_failed_total{namespace=~\"$namespace\"}[1h]))",
+          "expr": "sum by (reason) (increase(sixpack_checkout_failed_total{namespace=~\"$namespace\", tenant=~\"$tenant\"}[1h]))",
           "legendFormat": "{{reason}}"
         }
       ]
@@ -102,7 +102,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (result) (rate(sixpack_auth_login_total{namespace=~\"$namespace\"}[5m]))",
+          "expr": "sum by (result) (rate(sixpack_auth_login_total{namespace=~\"$namespace\", tenant=~\"$tenant\"}[5m]))",
           "legendFormat": "{{result}}"
         }
       ]
@@ -160,6 +160,27 @@
         "query": {
           "query": "label_values(http_server_requests_seconds_count, namespace)",
           "refId": "ns"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "tenant",
+        "label": "Store",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count{namespace=~\"$namespace\"}, tenant)",
+          "refId": "tenant"
         },
         "refresh": 2,
         "includeAll": true,

@@ -179,7 +179,7 @@ All of §5 steps 1 to 8 are built except the items below. The `default` tenant k
 | Q8 platform reporting | Not built (per-tenant dashboards only). |
 | Q11 mail | Link base per tenant; there is still no real mail provider. |
 | Q12 domains | Several exact domains per tenant; no wildcard or custom-domain verification. |
-| Q17 audit | Each tenant admin sees only their tenant's log; a cross-tenant view and audit of platform actions are not built. |
+| Q17 audit | Each tenant admin sees only their tenant's log, including what platform administrators did to their store. Platform administrators get a read-only view of every store's log (`TenantMongo.findAcrossTenants`, the only cross-tenant read). Decided 2026-10-20. |
 
-Not built: self-serve signup, tenant offboarding (export then delete), per-tenant policy **text**, object storage for uploads,
+Not built: self-serve signup, per-tenant policy **text**, object storage for uploads,
 dedicated databases, platform-level reporting.

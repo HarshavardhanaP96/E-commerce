@@ -42,4 +42,9 @@ public record AuditEvent(AuditAction action, String entityType, String entityId,
     public AuditEvent by(String newActorId, String newActorRole) {
         return new AuditEvent(action, entityType, entityId, outcome, changes, subject, newActorId, newActorRole);
     }
+
+    /** Done by a background job, not by whoever's request happens to be on the thread. */
+    public AuditEvent bySystem() {
+        return by(null, "SYSTEM");
+    }
 }

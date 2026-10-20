@@ -9,6 +9,7 @@ import com.sixpack.audit.domain.AuditRepository;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.security.EvidenceHasher;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Locale;
@@ -28,6 +29,7 @@ class AuditService implements AuditTrail {
 
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
     private static final int MAX_USER_AGENT = 256;
+    private static final String PLATFORM_ADMIN = "PLATFORM_ADMIN";
 
     private record Actor(String id, String role) {
     }
@@ -46,12 +48,14 @@ class AuditService implements AuditTrail {
     public void record(AuditEvent event) {
         try {
             entries.append(toEntry(event));
-            meters.counter("sixpack.audit.write", "result", "success").increment();
+            meters.counter("sixpack.audit.write", Tags.of("result", "success").and(TenantContext.metricTag()))
+                    .increment();
         } catch (RuntimeException e) {
             // Auditing must never fail the action it describes. The metric (and its alert) is what makes a gap visible.
             log.error("Audit write failed for action={} entity={}/{}", event.action(), event.entityType(),
                     event.entityId(), e);
-            meters.counter("sixpack.audit.write", "result", "failure").increment();
+            meters.counter("sixpack.audit.write", Tags.of("result", "failure").and(TenantContext.metricTag()))
+                    .increment();
         }
     }
 
@@ -68,13 +72,15 @@ class AuditService implements AuditTrail {
     }
 
     private static Actor actor(AuditEvent e, boolean inRequest) {
-        if (e.actorId() != null) {
+        if (e.actorId() != null || e.actorRole() != null) {
             return new Actor(e.actorId(), e.actorRole());
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             AuthUser user = AuthUser.from(jwt);
-            return new Actor(user.id(), user.admin() ? "ADMIN" : "USER");
+            String role = PLATFORM_ADMIN.equals(jwt.getClaimAsString("role")) ? PLATFORM_ADMIN
+                    : user.admin() ? "ADMIN" : "USER";
+            return new Actor(user.id(), role);
         }
         return new Actor(null, inRequest ? "ANONYMOUS" : "SYSTEM");
     }

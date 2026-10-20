@@ -18,15 +18,23 @@ export type TenantConfig = {
   locale?: string;
   currency?: string;
   storefront?: StorefrontConfig;
+  /** Effective feature switches for this store (its own setting, else the platform default). */
+  features?: Record<string, boolean>;
 };
 
 /** The store this browser tab is showing. Set once, before the app renders. */
 export const brand = { name: "6Pack", logoUrl: "" };
 
+/** The store's feature switches (its own setting, else the platform default). Unknown until the config loads: on. */
+export const features: Record<string, boolean> = {};
+
+export const featureOn = (key: string) => features[key] ?? true;
+
 /** Applies the store's name, logo, design tokens and business details to the page. */
 export const applyTenantConfig = (config: TenantConfig) => {
   brand.name = config.name || brand.name;
   brand.logoUrl = config.storefront?.logoUrl ?? "";
+  Object.assign(features, config.features ?? {});
   document.title = brand.name;
   for (const [token, value] of Object.entries(config.theme ?? {})) {
     document.documentElement.style.setProperty(token, value);

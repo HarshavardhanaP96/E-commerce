@@ -47,6 +47,11 @@ class MongoProductRepository implements ProductRepository {
     }
 
     @Override
+    public long count() {
+        return mongo.count(new Query(), ProductDocument.class);
+    }
+
+    @Override
     public Optional<Product> findById(String id) {
         return mongo.findById(id, ProductDocument.class).map(MongoProductRepository::toDomain);
     }

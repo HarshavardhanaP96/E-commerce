@@ -9,6 +9,7 @@ import SizeChartEditor from "../../../components/admin/SizeChartEditor";
 import { ProductFormValues, emptyProductForm, toFormData } from "../../../components/admin/productFormData";
 import Loader from "../../../components/admin/Loader";
 import { errorMessage } from "../../../redux/api/baseQuery";
+import { featureOn } from "../../../tenant/tenant";
 import {
   useDeleteProductMutation,
   useProductDetailsQuery,
@@ -89,7 +90,11 @@ const ProductManagement = () => {
       }
     >
       <div className="tabs" role="tablist">
-        {(["details", "variants", "size"] as const).map((t) => (
+        {(["details", "variants", "size"] as const)
+          // With variants switched off for this store the editor would only fail to save; keep it for products that
+          // already have variants so they stay visible.
+          .filter((t) => t !== "variants" || featureOn("variants") || (product.variants?.items.length ?? 0) > 0)
+          .map((t) => (
           <button
             key={t}
             role="tab"

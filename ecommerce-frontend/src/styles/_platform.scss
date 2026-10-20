@@ -17,11 +17,42 @@
     }
   }
 
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__due {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+  }
+
   &__json {
     width: 100%;
     font-family: ui-monospace, monospace;
     font-size: 0.85rem;
     margin-bottom: 1rem;
+  }
+}
+
+// A checkbox row inside the shared .form-grid, whose labels stack and stretch their inputs.
+.form-grid label.platform__check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    width: auto !important;
   }
 }
 

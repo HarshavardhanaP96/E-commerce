@@ -43,6 +43,10 @@ app:
     page-size: ${PRODUCT_PER_PAGE:10}
     variants-enabled: ${PRODUCT_VARIANTS_ENABLED:true}
     low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
+  features:
+    # Platform default for each per-store feature switch (a platform admin can override it per store).
+    defaults:
+      variants: ${app.products.variants-enabled}
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).
@@ -68,6 +72,16 @@ app:
     # Hosts that belong to the default tenant when it is first created. Not needed for a single-store setup
     # (with one tenant every host resolves to it).
     default-domains: ${TENANT_DEFAULT_DOMAINS:localhost,127.0.0.1}
+    # Offboarding: how long a closed store can be restored before its data is purged, and how often to check.
+    deletion-grace: ${TENANT_DELETION_GRACE:30d}
+    purge-interval: ${TENANT_PURGE_INTERVAL:1h}
+    # A store created as a trial is suspended when this has passed (the platform admin activates it to keep it).
+    trial-length: ${TENANT_TRIAL_LENGTH:14d}
+    # Platform default limits per store; a platform admin can set a store's own (PUT /platform/tenants/{id}).
+    limits:
+      products: ${TENANT_MAX_PRODUCTS:5000}
+      uploads: ${TENANT_MAX_UPLOADS:2GB}
+      requests-per-minute: ${TENANT_REQUESTS_PER_MINUTE:600}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
     razorpay:
@@ -113,6 +127,9 @@ springdoc:
     enabled: ${SPRINGDOC_ENABLED:true}
 
 logging:
+  pattern:
+    # Plain-text console only (prod uses ECS JSON, which includes every MDC key).
+    correlation: "[%X{traceId:-},%X{spanId:-},%X{tenant:-}] "
   level:
     root: INFO
     com.sixpack: INFO

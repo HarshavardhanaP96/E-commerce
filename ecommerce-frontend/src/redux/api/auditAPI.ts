@@ -11,6 +11,7 @@ export const AUDIT_ACTIONS = [
   "LOGIN_SUCCEEDED", "LOGIN_FAILED", "LOGIN_BLOCKED_SUSPENDED",
   "PASSWORD_RESET_REQUESTED", "PASSWORD_RESET_COMPLETED",
   "CONSENT_CHANGED",
+  "TENANT_CREATED", "TENANT_UPDATED", "TENANT_STATUS_CHANGED",
 ] as const;
 
 export type AuditChange = { field: string; before?: unknown; after?: unknown; redacted: boolean };
@@ -19,7 +20,7 @@ export type AuditEntry = {
   _id: string;
   at: string;
   actorId: string | null;
-  actorRole: "ADMIN" | "USER" | "ANONYMOUS" | "SYSTEM";
+  actorRole: "ADMIN" | "USER" | "ANONYMOUS" | "SYSTEM" | "PLATFORM_ADMIN";
   action: (typeof AUDIT_ACTIONS)[number];
   entityType: string | null;
   entityId: string | null;
@@ -27,6 +28,15 @@ export type AuditEntry = {
   changes: AuditChange[];
   requestId: string | null;
 };
+
+const show = (value: unknown) =>
+  value === null || value === undefined ? "—" : Array.isArray(value) ? value.join(", ") : String(value);
+
+/** One line per change: "price: 10 → 12", or "email changed" for personal fields logged without values. */
+export const summariseChanges = (changes: AuditChange[]) =>
+  changes
+    .map((c) => (c.redacted ? `${c.field} changed` : `${c.field}: ${show(c.before)} → ${show(c.after)}`))
+    .join("; ");
 
 export type AuditFilters = {
   entityType?: string;

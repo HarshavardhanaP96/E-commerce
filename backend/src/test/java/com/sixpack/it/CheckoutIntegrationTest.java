@@ -15,6 +15,9 @@ import org.springframework.http.MediaType;
 
 class CheckoutIntegrationTest extends IntegrationTest {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    io.micrometer.core.instrument.MeterRegistry meters;
+
     private static final Map<String, String> SHIPPING = Map.of("address", "1 MG Road", "city", "Bengaluru",
             "state", "KA", "country", "India", "pinCode", "560001");
 
@@ -62,7 +65,9 @@ class CheckoutIntegrationTest extends IntegrationTest {
         String product = createProduct(adminToken(), "Mug", 300, 5, "home");
         String user = register("sig@test.dev");
         String providerOrderId = checkout(user, product, 1, null).get("providerOrderId").asText();
+        double before = badSignatures();
         confirm(user, providerOrderId, "forged").andExpect(status().isBadRequest());
+        assertThat(badSignatures()).isEqualTo(before + 1);
         confirm(register("thief@test.dev"), providerOrderId, "fake").andExpect(status().isNotFound());
     }
 
@@ -97,6 +102,10 @@ class CheckoutIntegrationTest extends IntegrationTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/payment/discount").param("coupon", "NOPE")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/payment/discount").param("coupon[$ne]", "x")).andExpect(status().isBadRequest());
+    }
+
+    private double badSignatures() {
+        return meters.counter("sixpack.checkout.failed", "reason", "bad_signature", "tenant", "default").count();
     }
 
     private JsonNode checkout(String token, String productId, int qty, String coupon) throws Exception {

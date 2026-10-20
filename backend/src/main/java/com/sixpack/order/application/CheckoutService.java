@@ -13,6 +13,7 @@ import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.OrderDetails;
 import com.sixpack.order.domain.OrderNumbers;
 import com.sixpack.order.domain.StatusEntry;
+import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.user.UserContact;
 import com.sixpack.user.UserDirectory;
 import com.sixpack.order.domain.Order;
@@ -33,6 +34,7 @@ import com.sixpack.product.ProductSnapshot;
 import com.sixpack.product.StockLine;
 import com.sixpack.shared.ApiException;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -162,7 +164,8 @@ public class CheckoutService {
                 .filter(i -> i.userId().equals(userId))
                 .orElseThrow(() -> ApiException.notFound("Checkout session not found"));
         if (!gateways.current().verifySignature(providerOrderId, paymentId, signature)) {
-            meters.counter("sixpack.checkout.failed", "reason", "bad_signature").increment();
+            meters.counter("sixpack.checkout.failed", Tags.of("reason", "bad_signature").and(TenantContext.metricTag()))
+                    .increment();
             throw ApiException.badRequest("Payment verification failed");
         }
         UserContact contact = users.contactById(userId)
@@ -179,7 +182,8 @@ public class CheckoutService {
             catalog.reserveStock(quantities);
         } catch (ApiException e) {
             intents.markCreated(providerOrderId);
-            meters.counter("sixpack.checkout.failed", "reason", "paid_but_unfulfilled").increment();
+            meters.counter("sixpack.checkout.failed",
+                    Tags.of("reason", "paid_but_unfulfilled").and(TenantContext.metricTag())).increment();
             log.error("paid_but_unfulfilled providerOrderId={} paymentId={} userId={}: {}",
                     providerOrderId, paymentId, userId, e.getMessage());
             throw e;
@@ -211,7 +215,7 @@ public class CheckoutService {
             intents.markCreated(providerOrderId);
             throw e;
         }
-        meters.counter("sixpack.orders.placed").increment();
+        meters.counter("sixpack.orders.placed", Tags.of(TenantContext.metricTag())).increment();
         events.publishEvent(new OrderChangedEvent(order.id()));
         audit.record(AuditEvent.of(AuditAction.ORDER_PLACED).on("order", order.id())
                 .changing(List.of(FieldChange.of("status", null, OrderStatus.PROCESSING.name()),

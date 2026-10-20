@@ -1,5 +1,8 @@
 package com.sixpack.storage;
 
+import java.io.InputStream;
+import java.util.List;
+
 /**
  * Public API of the storage module. Implementations: local disk (default). An S3-compatible adapter can
  * be added without touching callers (ADR-008).
@@ -18,4 +21,13 @@ public interface FileStorage {
 
     /** Deletes a previously stored file. Absolute URLs and paths outside the storage root are ignored. */
     void delete(String path);
+
+    /** Public paths of every file stored for the tenant in context (for a store export). */
+    List<String> tenantFiles();
+
+    /** Opens a file of the tenant in context by its public path. */
+    InputStream open(String path);
+
+    /** Deletes every file stored for the tenant in context (purging an offboarded store). */
+    void deleteTenantFiles();
 }

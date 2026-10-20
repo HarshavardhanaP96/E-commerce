@@ -117,12 +117,12 @@ class AuditTrailIntegrationTest extends IntegrationTest {
 
     @Test
     void aFailingWriteNeverReachesTheCallerAndIsCounted() {
-        double before = meters.counter("sixpack.audit.write", "result", "failure").count();
+        double before = meters.counter("sixpack.audit.write", "result", "failure", "tenant", "default").count();
         doThrow(new RuntimeException("db down")).when(repository).append(any());
 
         assertThatCode(() -> audit.record(sample())).doesNotThrowAnyException();
 
-        assertThat(meters.counter("sixpack.audit.write", "result", "failure").count()).isEqualTo(before + 1);
+        assertThat(meters.counter("sixpack.audit.write", "result", "failure", "tenant", "default").count()).isEqualTo(before + 1);
     }
 
     @Test
@@ -138,6 +138,6 @@ class AuditTrailIntegrationTest extends IntegrationTest {
     @Test
     void theRepositoryCanOnlyAppendAndSearch() {
         assertThat(Arrays.stream(AuditRepository.class.getDeclaredMethods()).map(Method::getName))
-                .containsExactlyInAnyOrder("append", "search");
+                .containsExactlyInAnyOrder("append", "search", "searchAllTenants");
     }
 }

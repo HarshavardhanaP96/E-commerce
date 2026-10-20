@@ -13,7 +13,10 @@ public enum AuditAction {
     PROFILE_UPDATED, ADDRESS_ADDED, ADDRESS_UPDATED, ADDRESS_DELETED,
     LOGIN_SUCCEEDED, LOGIN_FAILED, LOGIN_BLOCKED_SUSPENDED,
     PASSWORD_RESET_REQUESTED, PASSWORD_RESET_COMPLETED, EMAIL_VERIFIED,
-    CONSENT_CHANGED;
+    CONSENT_CHANGED,
+    /** Platform administrator actions, recorded in the affected store's own log. */
+    TENANT_CREATED, TENANT_UPDATED, TENANT_STATUS_CHANGED,
+    TENANT_EXPORTED, TENANT_PURGED;
 
     public static AuditAction parse(String value) {
         try {

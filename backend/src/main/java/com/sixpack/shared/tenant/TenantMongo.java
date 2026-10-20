@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TenantMongo {
 
-    static final String FIELD = "tenantId";
+    public static final String FIELD = "tenantId";
 
     private final MongoTemplate mongo;
 
@@ -128,6 +128,24 @@ public class TenantMongo {
 
     public <R> List<R> findDistinct(Query query, String field, Class<?> entity, Class<R> result) {
         return mongo.findDistinct(scoped(query), field, entity, result);
+    }
+
+    /** Deletes every document of the current tenant in {@code collection}; for purging an offboarded store. */
+    public long removeAll(String collection) {
+        return mongo.remove(scoped(new Query()), collection).getDeletedCount();
+    }
+
+    /**
+     * Reads across every tenant. Only for read-only platform views (the platform audit log): the caller must be
+     * behind the platform administrator role. There is deliberately no cross-tenant write.
+     */
+    public <T> List<T> findAcrossTenants(Query query, Class<T> type) {
+        return mongo.find(query, type);
+    }
+
+    /** The count for {@link #findAcrossTenants}. */
+    public long countAcrossTenants(Query query, Class<?> type) {
+        return mongo.count(query, type);
     }
 
     /** A copy of the query limited to the current tenant, so callers may reuse their own query object. */

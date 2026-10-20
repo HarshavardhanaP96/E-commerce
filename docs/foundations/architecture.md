@@ -51,10 +51,15 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
 ### Observability plan
 - **Metrics:** Micrometer → `/actuator/prometheus`. HTTP server metrics, JVM, Mongo driver pool, Caffeine
   cache, and business counters (`sixpack.orders.placed`, `sixpack.checkout.failed{reason}`,
-  `sixpack.auth.login{result}`).
+  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`, `sixpack.ratelimit.rejected`). Every one of these, and
+  `http.server.requests`, carries a `tenant` tag: the store's slug, `unknown` for a host that matched no store,
+  or `none` on platform and operational paths. The Grafana dashboard has a store picker and the payment and
+  audit alerts name the store.
 - **Traces:** Micrometer Tracing + OpenTelemetry bridge, OTLP HTTP export to `OTEL_EXPORTER_OTLP_ENDPOINT`.
   Sampling is 100% in local and test and 10% in prod (`MANAGEMENT_TRACING_SAMPLING_PROBABILITY`).
-- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` in MDC. In k8s an
+- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` and `tenant` in MDC
+  (`TenantContext` sets `tenant` whenever a store is bound, so background work run with `runAs` is labelled
+  too). The request span gets the same `tenant` attribute from the HTTP observation. In k8s an
   OTel collector DaemonSet (`otel-logs`) ships them to Loki. Grafana links trace ids in logs to Tempo.
 - **Health:** liveness and readiness groups (readiness includes Mongo), used by k8s probes.
 - **Local stack:** `docker compose --profile observability up` adds Prometheus, Grafana (Prometheus
@@ -142,8 +147,15 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   indexes, and `TenantBackfill` gives existing documents to the default tenant. Users are per tenant (the same email is a
   separate account in each store), so reset tokens, consents, the audit log and the dashboard follow. Caches are keyed by
   tenant in one `CacheManager` decorator that fails closed; uploads go to `uploads/<tenantId>/`; rate limits include the
-  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details) sit on the `Tenant`
-  and fall back to `app.*` properties, so the default tenant keeps running on today's environment; payment secrets are
+  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details, feature switches) sit on
+  the `Tenant` and fall back to `app.*` properties (feature switches to `app.features.defaults`, read through
+  `TenantFeatures`; `variants` is the first). Per-store limits (`TenantQuotas`, defaults `app.tenant.limits.*`):
+  product count (checked on create), upload bytes (`LocalFileStorage` measures a store's folder once, then
+  counts writes and deletes), and requests per minute (`TenantRateLimitFilter`, a fixed window right after tenant
+  resolution, 429 with `Retry-After`). All three are per backend instance, like the login limiter. Store
+  statuses: `TRIAL` (until `trialEndsAt`, then suspended by `TenantTrials`), `ACTIVE`, `SUSPENDED` (closed by the
+  platform), `CANCELLED` (closed because the owner left), `SCHEDULED_FOR_DELETION` and `DELETED` (offboarding,
+  `TenantPurge`). Both jobs run on `app.tenant.purge-interval` and record their changes with actor `SYSTEM`, so the default tenant keeps running on today's environment; payment secrets are
   never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
   gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
   and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an

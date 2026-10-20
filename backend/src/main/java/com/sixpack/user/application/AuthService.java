@@ -6,6 +6,7 @@ import com.sixpack.audit.AuditTrail;
 import com.sixpack.consent.ConsentEvidence;
 import com.sixpack.consent.ConsentLedger;
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.user.domain.UserStatus;
 import java.time.Instant;
 import com.sixpack.shared.security.TokenService;
@@ -14,6 +15,7 @@ import com.sixpack.user.domain.Gender;
 import com.sixpack.user.domain.User;
 import com.sixpack.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Locale;
@@ -79,20 +81,22 @@ public class AuthService {
     public AuthResult login(String email, String password) {
         User user = users.findByEmail(normalizeEmail(email)).orElse(null);
         if (user == null || user.passwordHash() == null || !encoder.matches(password, user.passwordHash())) {
-            meters.counter("sixpack.auth.login", "result", "failure").increment();
+            meters.counter("sixpack.auth.login", Tags.of("result", "failure").and(TenantContext.metricTag()))
+                    .increment();
             AuditEvent failure = AuditEvent.of(AuditAction.LOGIN_FAILED).failed().aboutSubject(email);
             audit.record(user == null ? failure : failure.on("user", user.id()));
             throw ApiException.unauthorized("Invalid Email or Password");
         }
         if (user.details().status() == UserStatus.SUSPENDED) {
-            meters.counter("sixpack.auth.login", "result", "suspended").increment();
+            meters.counter("sixpack.auth.login", Tags.of("result", "suspended").and(TenantContext.metricTag()))
+                    .increment();
             audit.record(AuditEvent.of(AuditAction.LOGIN_BLOCKED_SUSPENDED).failed().on("user", user.id())
                     .by(user.id(), user.role().name()));
             throw ApiException.forbidden("Your account is suspended");
         }
         users.touchLastLogin(user.id(), Instant.now());
         User fresh = users.findById(user.id()).orElse(user);
-        meters.counter("sixpack.auth.login", "result", "success").increment();
+        meters.counter("sixpack.auth.login", Tags.of("result", "success").and(TenantContext.metricTag())).increment();
         audit.record(AuditEvent.of(AuditAction.LOGIN_SUCCEEDED).on("user", fresh.id())
                 .by(fresh.id(), fresh.role().name()));
         return new AuthResult(issue(fresh), fresh);

@@ -34,6 +34,7 @@ import org.testcontainers.containers.MongoDBContainer;
 @SpringBootTest(properties = {
         "app.security.jwt-secret=test-secret-test-secret-test-secret-0123456789",
         "app.security.auth-requests-per-minute=10000",
+        "app.tenant.limits.requests-per-minute=1000000",
         "app.storage.local-dir=target/test-uploads",
         "app.payment.provider=fake",
         "app.user.admin-email=",

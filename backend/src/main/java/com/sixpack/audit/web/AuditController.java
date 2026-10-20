@@ -53,13 +53,21 @@ class AuditController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(defaultValue = "1") int page) {
-        PageResult<AuditEntry> result = entries.search(new AuditQuery(blankToNull(entityType),
-                blankToNull(entityId), blankToNull(actorId),
-                blankToNull(action) == null ? null : AuditAction.parse(action),
-                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), PAGE_SIZE));
-        long totalPage = (result.total() + PAGE_SIZE - 1) / PAGE_SIZE;
+        PageResult<AuditEntry> result = entries.search(
+                query(entityType, entityId, actorId, action, outcome, from, to, page));
         return ApiResponse.of("entries", result.items().stream().map(EntryView::from).toList(),
-                "totalPage", totalPage);
+                "totalPage", totalPages(result));
+    }
+
+    static AuditQuery query(String entityType, String entityId, String actorId, String action, String outcome,
+                            Instant from, Instant to, int page) {
+        return new AuditQuery(blankToNull(entityType), blankToNull(entityId), blankToNull(actorId),
+                blankToNull(action) == null ? null : AuditAction.parse(action),
+                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), PAGE_SIZE);
+    }
+
+    static long totalPages(PageResult<?> result) {
+        return (result.total() + PAGE_SIZE - 1) / PAGE_SIZE;
     }
 
     private static Outcome parseOutcome(String value) {
@@ -70,7 +78,7 @@ class AuditController {
         }
     }
 
-    private static String blankToNull(String value) {
+    static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 }
