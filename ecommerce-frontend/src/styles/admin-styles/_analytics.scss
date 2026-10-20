@@ -1,0 +1,41 @@
+.analytics__body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.analytics__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}
+
+.heatmap {
+  display: grid;
+  gap: 2px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+
+  &__row {
+    display: grid;
+    grid-template-columns: 2.5rem repeat(24, minmax(0.875rem, 1fr));
+    gap: 2px;
+    align-items: center;
+  }
+
+  &__head span {
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__cell {
+    height: 1.125rem;
+    border-radius: 2px;
+    background: var(--border);
+
+    &.l1 { background: color-mix(in srgb, var(--accent) 25%, var(--border)); }
+    &.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+    &.l3 { background: color-mix(in srgb, var(--accent) 75%, var(--border)); }
+    &.l4 { background: var(--accent); }
+  }
+}

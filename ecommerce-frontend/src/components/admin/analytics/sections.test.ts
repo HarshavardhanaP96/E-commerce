@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { bucketLabel, csvPath, fileNameFrom, heatLevel, tabFrom } from "./sections";
+
+describe("analytics sections", () => {
+  it("reads the tab from the URL and falls back to overview", () => {
+    expect(tabFrom("sales")).toBe("sales");
+    expect(tabFrom(null)).toBe("overview");
+    expect(tabFrom("nope")).toBe("overview");
+  });
+
+  it("builds a CSV path without empty parameters", () => {
+    expect(csvPath("sales", { from: "2026-10-01", to: "2026-10-31", compare: "previous", category: "", limit: undefined }))
+      .toBe("/api/v1/dashboard/sales?from=2026-10-01&to=2026-10-31&compare=previous&format=csv");
+  });
+
+  it("takes the file name from Content-Disposition", () => {
+    expect(fileNameFrom('attachment; filename="overview-2026-10-01_2026-10-31.csv"', "x.csv"))
+      .toBe("overview-2026-10-01_2026-10-31.csv");
+    expect(fileNameFrom(null, "x.csv")).toBe("x.csv");
+  });
+
+  it("scales heat into five levels and never divides by zero", () => {
+    expect(heatLevel(0, 10)).toBe(0);
+    expect(heatLevel(1, 10)).toBe(1);
+    expect(heatLevel(10, 10)).toBe(4);
+    expect(heatLevel(5, 0)).toBe(0);
+  });
+
+  it("labels buckets without shifting the date", () => {
+    expect(bucketLabel("2026-10-05", "day")).toBe("5 Oct");
+    expect(bucketLabel("2026-10-01", "month")).toBe("Oct 2026");
+  });
+});
