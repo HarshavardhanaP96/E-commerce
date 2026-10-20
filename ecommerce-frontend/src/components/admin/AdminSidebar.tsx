@@ -8,6 +8,7 @@ import {
   LuMenu,
   LuPackage,
   LuReceipt,
+  LuSettings,
   LuTicket,
   LuUsers,
   LuX,
@@ -22,6 +23,7 @@ const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
   { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },
   { url: "/admin/audit", text: "Audit log", Icon: LuHistory },
+  { url: "/admin/settings", text: "Store settings", Icon: LuSettings },
 ];
 
 const SUPPORT: typeof NAV = [{ url: "/admin/help", text: "Help & guides", Icon: LuBookOpen }];

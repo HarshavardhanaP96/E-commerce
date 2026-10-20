@@ -10,7 +10,7 @@ import { useGetMyAddressesQuery } from "../redux/api/userAPI";
 import { resetCart, saveShippingInfo } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { SavedAddress, ShippingInfo } from "../types/types";
-import { formatINR } from "../utils/features";
+import { formatMoney } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
@@ -92,7 +92,7 @@ const Shipping = () => {
         });
         paymentId = paid.razorpay_payment_id;
         signature = paid.razorpay_signature;
-      } else if (!confirm(`Test mode: pay ${formatINR(c.total)} with the fake gateway?`)) {
+      } else if (!confirm(`Test mode: pay ${formatMoney(c.total)} with the fake gateway?`)) {
         return;
       }
 

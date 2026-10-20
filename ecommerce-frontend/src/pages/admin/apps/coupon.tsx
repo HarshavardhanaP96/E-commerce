@@ -14,7 +14,8 @@ import {
   useUpdateCouponMutation,
 } from "../../../redux/api/couponAPI";
 import { Coupon as CouponType, NewCouponInput } from "../../../types/types";
-import { formatDate, formatINR } from "../../../utils/features";
+import { formatDate, formatMoney } from "../../../utils/features";
+import { currencySymbol } from "../../../utils/money";
 
 const randomCode = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(8)))
@@ -56,8 +57,8 @@ const iso = (local: string) => (local ? new Date(local).toISOString() : undefine
 
 const describe = (c: CouponType) =>
   c.type === "PERCENT"
-    ? `${c.amount}% off${c.maxDiscount ? ` (max ${formatINR(c.maxDiscount)})` : ""}`
-    : `${formatINR(c.amount)} off`;
+    ? `${c.amount}% off${c.maxDiscount ? ` (max ${formatMoney(c.maxDiscount)})` : ""}`
+    : `${formatMoney(c.amount)} off`;
 
 /** Who and what a coupon applies to, in a few words for the table. */
 const scopeText = (c: CouponType) => {
@@ -87,7 +88,7 @@ const Coupon = () => {
     { Header: "Code", accessor: "coupon" },
     { Header: "Discount", accessor: "amount", width: 190, Cell: ({ row }: CellProps<CouponType>) => describe(row.original) } as Column<CouponType>,
     { Header: "Applies to", id: "scope", width: 210, disableSortBy: true, Cell: ({ row }: CellProps<CouponType>) => scopeText(row.original) } as Column<CouponType>,
-    { Header: "Min order", accessor: "minOrderValue", width: 110, Cell: ({ value }: CellProps<CouponType>) => (value ? formatINR(value) : "—") } as Column<CouponType>,
+    { Header: "Min order", accessor: "minOrderValue", width: 110, Cell: ({ value }: CellProps<CouponType>) => (value ? formatMoney(value) : "—") } as Column<CouponType>,
     {
       Header: "Valid",
       id: "valid",
@@ -189,23 +190,23 @@ const Coupon = () => {
               <label>
                 Type
                 <select value={form.type} onChange={set("type")}>
-                  <option value="FLAT">Flat (₹ off)</option>
+                  <option value="FLAT">Flat ({currencySymbol()} off)</option>
                   <option value="PERCENT">Percent (% off)</option>
                 </select>
               </label>
               <label>
-                {form.type === "PERCENT" ? "Percent off (1–100)" : "Amount off (₹)"}
+                {form.type === "PERCENT" ? "Percent off (1–100)" : "Amount off ({currencySymbol()})"}
                 <input type="number" min={1} max={form.type === "PERCENT" ? 100 : 100000} step="0.01"
                        value={form.amount} onChange={set("amount")} required />
               </label>
               {form.type === "PERCENT" && (
                 <label>
-                  Max discount (₹, optional)
+                  Max discount ({currencySymbol()}, optional)
                   <input type="number" min={1} value={form.maxDiscount} onChange={set("maxDiscount")} />
                 </label>
               )}
               <label>
-                Minimum order (₹, optional)
+                Minimum order ({currencySymbol()}, optional)
                 <input type="number" min={0} value={form.minOrderValue} onChange={set("minOrderValue")} />
               </label>
               <label>

@@ -8,7 +8,7 @@ import PaymentPanel from "../../../components/admin/PaymentPanel";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import { useDeleteOrderMutation, useOrderDetailsQuery, useProcessOrderMutation } from "../../../redux/api/orderAPI";
-import { formatDate, formatDateTime, formatINR, orderLabel, transformImage } from "../../../utils/features";
+import { formatDate, formatDateTime, formatMoney, orderLabel, transformImage } from "../../../utils/features";
 
 const NEXT_ACTION: Record<string, string> = { Processing: "Mark shipped", Shipped: "Mark delivered" };
 
@@ -78,7 +78,7 @@ const TransactionManagement = () => {
                   {i.sku && <small> · SKU {i.sku}</small>}
                 </span>
                 <span>
-                  {formatINR(i.price)} × {i.quantity} = <strong>{formatINR(i.price * i.quantity)}</strong>
+                  {formatMoney(i.price)} × {i.quantity} = <strong>{formatMoney(i.price * i.quantity)}</strong>
                 </span>
               </li>
             ))}
@@ -132,11 +132,11 @@ const TransactionManagement = () => {
           {order.payment && <PaymentPanel orderId={id} payment={order.payment} />}
           <h4>Amount</h4>
           <dl className="facts">
-            <dt>Subtotal</dt><dd>{formatINR(order.subtotal)}</dd>
-            <dt>Shipping</dt><dd>{formatINR(order.shippingCharges)}</dd>
-            <dt>Tax</dt><dd>{formatINR(order.tax)}</dd>
-            <dt>Discount</dt><dd className="red">−{formatINR(order.discount)}</dd>
-            <dt><strong>Total</strong></dt><dd><strong>{formatINR(order.total)}</strong></dd>
+            <dt>Subtotal</dt><dd>{formatMoney(order.subtotal)}</dd>
+            <dt>Shipping</dt><dd>{formatMoney(order.shippingCharges)}</dd>
+            <dt>Tax</dt><dd>{formatMoney(order.tax)}</dd>
+            <dt>Discount</dt><dd className="red">−{formatMoney(order.discount)}</dd>
+            <dt><strong>Total</strong></dt><dd><strong>{formatMoney(order.total)}</strong></dd>
           </dl>
         </section>
       </div>

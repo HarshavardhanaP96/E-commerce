@@ -76,6 +76,8 @@ class SecurityConfig {
                         .requestMatchers("/api/v1/order/**").authenticated()
                         // audit log
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN)
+                        // the store's own shop rules
+                        .requestMatchers("/api/v1/store/settings").hasRole(ADMIN)
                         // dashboard
                         .requestMatchers("/api/v1/dashboard/**").hasRole(ADMIN)
                         .anyRequest().authenticated())

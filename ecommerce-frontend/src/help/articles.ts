@@ -1,3 +1,6 @@
+import { formatMoney } from "../utils/money";
+import { commerce, shippingNote } from "../utils/pricing";
+
 /**
  * Help centre content. Answers restate the store policies in plain language (see legal/policies.ts), so when a
  * policy changes — shipping charge, return window, refund time — update the matching answer here too.
@@ -94,9 +97,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
     id: "shipping-cost",
     category: "shipping",
     question: "How much does shipping cost?",
-    answer: [
-      "Shipping is free on orders over ₹1,000. Otherwise there is a flat ₹200 charge, shown before you pay. We deliver within India.",
-    ],
+    // A getter: the store's own shipping rule is only known once its config has loaded.
+    get answer() {
+      return [`${shippingNote(commerce, formatMoney)} We deliver within India.`];
+    },
     link: { to: "/legal/shipping", label: "Shipping & Delivery Policy" },
   },
   {

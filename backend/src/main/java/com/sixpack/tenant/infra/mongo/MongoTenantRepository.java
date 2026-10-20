@@ -84,6 +84,7 @@ class MongoTenantRepository implements TenantRepository {
         doc.limits.products = t.limits().products();
         doc.limits.uploadBytes = t.limits().uploadBytes();
         doc.limits.requestsPerMinute = t.limits().requestsPerMinute();
+        doc.settings = t.settings();
         return toDomain(mongo.save(doc));
     }
 
@@ -109,6 +110,6 @@ class MongoTenantRepository implements TenantRepository {
                 d.features, d.deletionDueAt,
                 d.limits == null ? null : new TenantLimits(d.limits.products, d.limits.uploadBytes,
                         d.limits.requestsPerMinute),
-                d.trialEndsAt);
+                d.trialEndsAt, d.settings);
     }
 }

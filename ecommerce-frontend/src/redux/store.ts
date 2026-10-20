@@ -7,6 +7,7 @@ import { categoryAPI } from "./api/categoryAPI";
 import { dashboardAPI } from "./api/dashboardAPI";
 import { consentAPI } from "./api/consentAPI";
 import { auditAPI } from "./api/auditAPI";
+import { storeAPI } from "./api/storeAPI";
 import { platformAPI } from "./api/platformAPI";
 import { userReducer } from "./reducer/userReducer";
 import { cartReducer, persistCart } from "./reducer/cartReducer";
@@ -22,6 +23,7 @@ export const store = configureStore({
     [consentAPI.reducerPath]: consentAPI.reducer,
     [auditAPI.reducerPath]: auditAPI.reducer,
     [platformAPI.reducerPath]: platformAPI.reducer,
+    [storeAPI.reducerPath]: storeAPI.reducer,
     [userReducer.name]: userReducer.reducer,
     [cartReducer.name]: cartReducer.reducer,
   },
@@ -35,7 +37,8 @@ export const store = configureStore({
       dashboardAPI.middleware,
       consentAPI.middleware,
       auditAPI.middleware,
-      platformAPI.middleware
+      platformAPI.middleware,
+      storeAPI.middleware
     ),
 });
 

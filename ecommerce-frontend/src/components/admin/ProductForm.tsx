@@ -3,6 +3,7 @@ import { transformImage } from "../../utils/features";
 import { useCategoryTreeQuery } from "../../redux/api/categoryAPI";
 import { LuImagePlus } from "react-icons/lu";
 import { MAX_GALLERY, ProductFormValues, splitPictures } from "./productFormData";
+import { currencySymbol, formatMoney } from "../../utils/money";
 
 type Props = {
   values: ProductFormValues;
@@ -70,7 +71,7 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
       <section className="card card--center">
         {image ? <img className="detail-photo" src={image} alt="Product" /> : <div className="detail-photo placeholder">No photo</div>}
         <h3>{values.name || "Product name"}</h3>
-        <strong className="detail-price">{values.price ? `₹${Number(values.price).toLocaleString("en-IN")}` : "₹—"}</strong>
+        <strong className="detail-price">{values.price ? formatMoney(Number(values.price)) : `${currencySymbol()}—`}</strong>
         {values.stock !== "" && (
           <span className={`badge ${Number(values.stock) > 0 ? "badge--delivered" : "badge--processing"}`}>
             {Number(values.stock) > 0 ? `${values.stock} in stock` : "Out of stock"}
@@ -114,7 +115,7 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
           <input value={values.category} onChange={set("category")} placeholder="e.g. laptop, camera" maxLength={50} required={!currentPhoto} />
         </label>
         <label>
-          Price (₹)
+          Price ({currencySymbol()})
           <input
             type="number"
             min={1}
@@ -160,7 +161,7 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
           <input value={values.brand} onChange={set("brand")} maxLength={60} />
         </label>
         <label>
-          MRP (₹)
+          MRP ({currencySymbol()})
           <input type="number" min={0} step="0.01" value={values.mrp} onChange={set("mrp")} />
         </label>
         <label>

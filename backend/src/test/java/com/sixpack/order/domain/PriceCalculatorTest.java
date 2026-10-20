@@ -83,4 +83,32 @@ class PriceCalculatorTest {
         assertThat(q.tax()).isZero();
         assertThat(q.total()).isEqualTo(1200.0);
     }
+
+    @Test
+    void aStoresOwnShippingFeeAndThresholdAreUsed() {
+        PricingRules rules = new PricingRules(49.0, 499.0, 18.0);
+        assertThat(PriceCalculator.quote(List.of(item(400, 1, 0.0)), 0, rules).shippingCharges()).isEqualTo(49.0);
+        assertThat(PriceCalculator.quote(List.of(item(499, 1, 0.0)), 0, rules).shippingCharges()).isEqualTo(49.0);
+        assertThat(PriceCalculator.quote(List.of(item(500, 1, 0.0)), 0, rules).shippingCharges()).isZero();
+    }
+
+    @Test
+    void aStoresDefaultRateAppliesOnlyToItemsWithoutTheirOwn() {
+        PricingRules rules = new PricingRules(0.0, 0.0, 5.0);
+        Quote q = PriceCalculator.quote(List.of(item(100, 1, null), item(100, 1, 12.0)), 0, rules);
+        assertThat(q.tax()).isEqualTo(17.0);
+    }
+
+    @Test
+    void theStandardRulesPriceExactlyAsBefore() {
+        List<OrderItem> cart = List.of(new OrderItem("p1", "Tee", "", 250.0, 2));
+        assertThat(PriceCalculator.quote(cart, 0, PricingRules.STANDARD)).isEqualTo(PriceCalculator.quote(cart, 0));
+        assertThat(PricingRules.STANDARD).isEqualTo(new PricingRules(200.0, 1000.0, 18.0));
+    }
+
+    @Test
+    void stampingGivesEveryItemTheRateItIsChargedAt() {
+        List<OrderItem> stamped = new PricingRules(0.0, 0.0, 5.0).stamp(List.of(item(100, 1, null), item(100, 1, 12.0)));
+        assertThat(stamped).extracting(OrderItem::taxRate).containsExactly(5.0, 12.0);
+    }
 }

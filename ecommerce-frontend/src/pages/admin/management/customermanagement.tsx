@@ -16,7 +16,7 @@ import {
 } from "../../../redux/api/userAPI";
 import { RootState } from "../../../redux/store";
 import { Role } from "../../../types/types";
-import { formatDate, formatINR, transformImage } from "../../../utils/features";
+import { formatDate, formatMoney, transformImage } from "../../../utils/features";
 
 const CustomerManagement = () => {
   const { id = "" } = useParams();
@@ -114,7 +114,7 @@ const CustomerManagement = () => {
             <dt>Last sign-in</dt><dd>{user.lastLoginAt ? formatDate(user.lastLoginAt) : "Never"}</dd>
             <dt>Email</dt><dd>{user.emailVerified ? "Verified" : "Not verified"}</dd>
             <dt>Account</dt><dd>{suspended ? "Suspended" : "Active"}</dd>
-            <dt>Orders</dt><dd>{userOrders.length} · {formatINR(spent)} spent</dd>
+            <dt>Orders</dt><dd>{userOrders.length} · {formatMoney(spent)} spent</dd>
             <dt>Role</dt>
             <dd>
               <select value={role} onChange={(e) => setRole(e.target.value as Role)} disabled={isSelf}>
@@ -128,7 +128,7 @@ const CustomerManagement = () => {
               {userOrders.slice(0, 5).map((o) => (
                 <li key={o._id} onClick={() => navigate(`/admin/transaction/${o._id}`)}>
                   <span>{formatDate(o.createdAt)}</span>
-                  <span>{formatINR(o.total)}</span>
+                  <span>{formatMoney(o.total)}</span>
                   <StatusBadge status={o.status} />
                 </li>
               ))}

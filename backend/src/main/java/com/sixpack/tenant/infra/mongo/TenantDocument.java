@@ -1,5 +1,6 @@
 package com.sixpack.tenant.infra.mongo;
 
+import com.sixpack.shared.tenant.StoreSettings;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,8 @@ class TenantDocument {
     Instant deletionDueAt;
     Instant trialEndsAt;
     LimitsDoc limits;
+    /** Mapped as-is: plain records of numbers and strings. */
+    StoreSettings settings;
 
     static class LimitsDoc {
         Integer products;

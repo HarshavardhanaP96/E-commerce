@@ -40,9 +40,20 @@ app:
   storage:
     local-dir: ${UPLOADS_DIR:uploads}
   products:
-    page-size: ${PRODUCT_PER_PAGE:10}
     variants-enabled: ${PRODUCT_VARIANTS_ENABLED:true}
-    low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
+  store:
+    # Platform default for each shop rule. A store owner sets their own on the admin Store settings page
+    # (PUT /api/v1/store/settings); these apply only where a store has not. Money is in the store's currency.
+    defaults:
+      shipping-fee: ${STORE_SHIPPING_FEE:200}
+      free-shipping-above: ${STORE_FREE_SHIPPING_ABOVE:1000}
+      default-tax-rate: ${STORE_DEFAULT_TAX_RATE:18}
+      max-coupon-amount: ${STORE_MAX_COUPON_AMOUNT:100000}
+      # Never below 18: a store can ask for older shoppers, not younger.
+      minimum-age: ${STORE_MINIMUM_AGE:18}
+      page-size: ${PRODUCT_PER_PAGE:10}
+      low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
+      time-zone: ${STORE_TIME_ZONE:Asia/Kolkata}
   features:
     # Platform default for each per-store feature switch (a platform admin can override it per store).
     defaults:
@@ -55,7 +66,8 @@ app:
     admin-aup-version: ${LEGAL_ADMIN_AUP_VERSION:2026-10-18}
     ip-hash-salt: ${CONSENT_IP_SALT:}
   invoice:
-    # Printed on every invoice. seller-state decides CGST+SGST (same state as the buyer) versus IGST.
+    # The default store's seller details, for whatever it has not set on its Store settings page. Other stores never
+    # use these: their invoices name the store itself. seller-state decides CGST+SGST (same state as the buyer) or IGST.
     seller-name: ${INVOICE_SELLER_NAME:6Pack}
     seller-address: ${INVOICE_SELLER_ADDRESS:}
     seller-gstin: ${INVOICE_SELLER_GSTIN:}

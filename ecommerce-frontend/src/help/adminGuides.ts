@@ -308,6 +308,24 @@ export const GUIDES: Guide[] = [
     related: ["fulfil-order", "orders"],
   },
   {
+    slug: "store-settings",
+    group: "Start here",
+    title: "Setting your shop's rules",
+    summary: "Shipping, default GST, coupon cap, minimum age, catalogue paging, invoice details and time zone.",
+    openLabel: { to: "/admin/settings", label: "Open Store settings" },
+    body: [
+      { type: "steps", items: [
+        "Go to Store settings.",
+        "Every field shows the platform default in grey. Type a value to use your own, or leave it empty to keep the default.",
+        "Under Invoices and contact details, enter your legal name, registered address, GSTIN and state. Your invoices print these.",
+        "Click Save settings. The cart, checkout and invoices use the new values straight away.",
+      ] },
+      { type: "p", text: "The default GST rate applies only to products without their own rate. An order keeps the rate it was charged at, so changing the default never changes past invoices." },
+      { type: "tip", text: "Set a shipping fee of 0 to make shipping free on every order. The minimum age can be raised, but never set below 18." },
+    ],
+    related: ["coupons"],
+  },
+  {
     slug: "coupons",
     group: "Sales",
     title: "Creating and deleting coupons",

@@ -1,7 +1,7 @@
 import { LuMinus, LuPlus, LuTrash2 } from "react-icons/lu";
 import { Link } from "react-router-dom";
 import { CartItem } from "../types/types";
-import { formatINR, transformImage } from "../utils/features";
+import { formatMoney, transformImage } from "../utils/features";
 
 type CartItemsProps = {
   cartItem: CartItem;
@@ -26,7 +26,7 @@ const CartItems = ({
           <Link to={`/product/${productId}`}>{name}</Link>
         </p>
         {variantLabel && <small className="CartItem__variant">{variantLabel}</small>}
-        <span>{formatINR(price)} each</span>
+        <span>{formatMoney(price)} each</span>
       </article>
 
       <div>

@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import Loader from "../components/loader";
 import StatusBadge from "../components/admin/StatusBadge";
 import { useOrderDetailsQuery } from "../redux/api/orderAPI";
-import { formatDate, formatDateTime, formatINR, orderLabel, transformImage } from "../utils/features";
+import { formatDate, formatDateTime, formatMoney, orderLabel, transformImage } from "../utils/features";
 
 const OrderDetails = () => {
   const { id = "" } = useParams();
@@ -40,7 +40,7 @@ const OrderDetails = () => {
                   {i.sku && <small> · SKU {i.sku}</small>}
                 </span>
                 <span>
-                  {formatINR(i.price)} × {i.quantity} = <strong>{formatINR(i.price * i.quantity)}</strong>
+                  {formatMoney(i.price)} × {i.quantity} = <strong>{formatMoney(i.price * i.quantity)}</strong>
                 </span>
               </li>
             ))}
@@ -68,11 +68,11 @@ const OrderDetails = () => {
           )}
           <h4>Payment</h4>
           <dl className="facts">
-            <dt>Subtotal</dt><dd>{formatINR(o.subtotal)}</dd>
-            <dt>Shipping</dt><dd>{formatINR(o.shippingCharges)}</dd>
-            <dt>Tax</dt><dd>{formatINR(o.tax)}</dd>
-            <dt>Discount</dt><dd className="red">−{formatINR(o.discount)}</dd>
-            <dt><strong>Total</strong></dt><dd><strong>{formatINR(o.total)}</strong></dd>
+            <dt>Subtotal</dt><dd>{formatMoney(o.subtotal)}</dd>
+            <dt>Shipping</dt><dd>{formatMoney(o.shippingCharges)}</dd>
+            <dt>Tax</dt><dd>{formatMoney(o.tax)}</dd>
+            <dt>Discount</dt><dd className="red">−{formatMoney(o.discount)}</dd>
+            <dt><strong>Total</strong></dt><dd><strong>{formatMoney(o.total)}</strong></dd>
           </dl>
           {o.payment?.status && (
             <p>
@@ -86,7 +86,7 @@ const OrderDetails = () => {
             <ul className="refund-list">
               {o.payment!.refunds!.map((r) => (
                 <li key={`${r.at}-${r.amount}`}>
-                  <strong>Refunded {formatINR(r.amount)}</strong> <small>{formatDateTime(r.at)}</small>
+                  <strong>Refunded {formatMoney(r.amount)}</strong> <small>{formatDateTime(r.at)}</small>
                   <span>{r.reason}</span>
                 </li>
               ))}

@@ -9,7 +9,7 @@ import { useProductDetailsQuery } from "../redux/api/productAPI";
 import { addToCart } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { OptionAxis, Product as ProductType } from "../types/types";
-import { formatINR, transformImage } from "../utils/features";
+import { formatMoney, transformImage } from "../utils/features";
 import {
   Selection,
   cartKey,
@@ -133,10 +133,10 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
 
           <p className="product-info__price">
             {showFrom && <small>From </small>}
-            {formatINR(price)}
+            {formatMoney(price)}
             {discount > 0 && (
               <>
-                <s>{formatINR((line?.mrp ?? product.mrp) as number)}</s>
+                <s>{formatMoney((line?.mrp ?? product.mrp) as number)}</s>
                 <span className="product-info__off">{discount}% off</span>
               </>
             )}

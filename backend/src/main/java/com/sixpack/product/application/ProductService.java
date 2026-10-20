@@ -41,6 +41,7 @@ import com.sixpack.shared.PageResult;
 import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.TenantFeatures;
 import com.sixpack.shared.tenant.TenantQuotas;
+import com.sixpack.shared.tenant.StoreConfig;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
 import java.util.Map;
@@ -87,20 +88,20 @@ public class ProductService {
     private final ProductRepository products;
     private final FileStorage storage;
     private final ApplicationEventPublisher events;
-    private final ProductProperties props;
+    private final StoreConfig store;
     private final CategoryRepository categories;
     private final AuditTrail audit;
     private final TenantFeatures features;
     private final TenantQuotas quotas;
 
     ProductService(ProductRepository products, FileStorage storage, ApplicationEventPublisher events,
-                   ProductProperties props, CategoryRepository categories, AuditTrail audit,
+                   StoreConfig store, CategoryRepository categories, AuditTrail audit,
                    TenantFeatures features, TenantQuotas quotas) {
         this.quotas = quotas;
         this.products = products;
         this.storage = storage;
         this.events = events;
-        this.props = props;
+        this.store = store;
         this.categories = categories;
         this.audit = audit;
         this.features = features;
@@ -136,7 +137,7 @@ public class ProductService {
                                       List<String> options) {
         Boolean sortAsc = sort == null || sort.isBlank() ? null : "asc".equalsIgnoreCase(sort);
         return products.search(new ProductSearch(blankToNull(search), maxPrice,
-                Product.normalizeCategory(blankToNull(category)), sortAsc, Math.max(page, 1), props.pageSize(),
+                Product.normalizeCategory(blankToNull(category)), sortAsc, Math.max(page, 1), store.effective().pageSize(),
                 optionFilters(options)));
     }
 
@@ -284,14 +285,15 @@ public class ProductService {
 
     /** Public lines at or below their low-stock threshold, emptiest first. */
     public List<StockAlert> lowStock() {
-        return products.findAll().stream().flatMap(p -> p.stockAlerts(props.lowStockThreshold()).stream())
+        int threshold = store.effective().lowStockThreshold();
+        return products.findAll().stream().flatMap(p -> p.stockAlerts(threshold).stream())
                 .sorted(Comparator.comparingInt(StockAlert::stock).thenComparing(StockAlert::name)
                         .thenComparing(a -> Objects.toString(a.label(), "")))
                 .toList();
     }
 
     public int lowStockDefault() {
-        return props.lowStockThreshold();
+        return store.effective().lowStockThreshold();
     }
 
     /** Changes one variant's stock atomically, without touching the rest of the product. */
@@ -349,7 +351,7 @@ public class ProductService {
     }
 
     public int pageSize() {
-        return props.pageSize();
+        return store.effective().pageSize();
     }
 
     private List<String> storeAll(List<byte[]> files) {

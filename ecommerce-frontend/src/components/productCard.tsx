@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { LuArrowRight, LuPlus } from "react-icons/lu";
 import { CartItem, Product } from "../types/types";
-import { formatINR, transformImage } from "../utils/features";
+import { formatMoney, transformImage } from "../utils/features";
 import { hasVariants, priceRange, swatches } from "../utils/variants";
 
 type ProductsProps = {
@@ -37,7 +37,7 @@ const ProductCard = ({ product, handler }: ProductsProps) => {
           </h3>
           <p className="product-card__price">
             {withVariants && range.min !== range.max && <small>From </small>}
-            {formatINR(withVariants ? range.min : price)}
+            {formatMoney(withVariants ? range.min : price)}
           </p>
           {colours.length > 0 && (
             <ul className="swatches swatches--small" aria-label="Available colours">

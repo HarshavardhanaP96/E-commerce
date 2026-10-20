@@ -13,7 +13,7 @@ import {
   useGetPieChartQuery,
 } from "../../redux/api/dashboardAPI";
 import { useCategoriesQuery, useLowStockQuery } from "../../redux/api/productAPI";
-import { formatINR, lastMonths, transformImage } from "../../utils/features";
+import { formatMoney, lastMonths, transformImage } from "../../utils/features";
 
 const Widget = ({ label, value, change }: { label: string; value: string; change: number }) => (
   <article className="kpi">
@@ -69,7 +69,7 @@ const Analytics = () => {
         </header>
 
         <section className="kpi-row">
-          <Widget label="Revenue" value={formatINR(s.count.revenue)} change={s.changePercent.revenue} />
+          <Widget label="Revenue" value={formatMoney(s.count.revenue)} change={s.changePercent.revenue} />
           <Widget label="Customers" value={String(s.count.user)} change={s.changePercent.user} />
           <Widget label="Products" value={String(s.count.product)} change={s.changePercent.product} />
           <Widget label="Orders" value={String(s.count.order)} change={s.changePercent.order} />
@@ -175,8 +175,8 @@ const Analytics = () => {
                   <tr key={t.id} className="clickable" onClick={() => navigate(`/admin/transaction/${t.id}`)}>
                     <td>{t.id.slice(-8).toUpperCase()}</td>
                     <td>{t.quantity}</td>
-                    <td>{formatINR(t.discount)}</td>
-                    <td>{formatINR(t.amount)}</td>
+                    <td>{formatMoney(t.discount)}</td>
+                    <td>{formatMoney(t.amount)}</td>
                     <td><StatusBadge status={t.status} /></td>
                   </tr>
                 ))}

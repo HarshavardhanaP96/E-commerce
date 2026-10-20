@@ -14,6 +14,7 @@ import com.sixpack.storage.FileStorage;
 import com.sixpack.user.domain.Gender;
 import com.sixpack.user.domain.User;
 import com.sixpack.user.domain.UserRepository;
+import com.sixpack.shared.tenant.StoreConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.time.LocalDate;
@@ -43,10 +44,12 @@ public class AuthService {
     private final MeterRegistry meters;
     private final AuditTrail audit;
     private final EmailVerificationService verification;
+    private final StoreConfig store;
 
     AuthService(UserRepository users, PasswordEncoder encoder, TokenService tokens, FileStorage storage,
                 ConsentLedger consents, MeterRegistry meters, AuditTrail audit,
-                EmailVerificationService verification) {
+                EmailVerificationService verification, StoreConfig store) {
+        this.store = store;
         this.users = users;
         this.encoder = encoder;
         this.tokens = tokens;
@@ -62,8 +65,10 @@ public class AuthService {
         if (cmd.dob().isAfter(LocalDate.now())) {
             throw ApiException.badRequest("dob: must be in the past");
         }
-        if (Period.between(cmd.dob(), LocalDate.now()).getYears() < MINIMUM_AGE) {
-            throw ApiException.badRequest("You must be " + MINIMUM_AGE + " or older to create an account");
+        // A store may ask for an older age than the legal floor, never a younger one.
+        int minimumAge = Math.max(MINIMUM_AGE, store.effective().minimumAge());
+        if (Period.between(cmd.dob(), LocalDate.now()).getYears() < minimumAge) {
+            throw ApiException.badRequest("You must be " + minimumAge + " or older to create an account");
         }
         if (users.existsByEmail(email)) {
             throw ApiException.conflict("User already exists");

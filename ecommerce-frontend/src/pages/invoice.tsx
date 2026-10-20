@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import Loader from "../components/loader";
 import { useOrderInvoiceQuery } from "../redux/api/orderAPI";
 import { ShippingInfo } from "../types/types";
-import { formatDate, formatINR } from "../utils/features";
+import { formatDate, formatMoney } from "../utils/features";
 
 const address = (a?: ShippingInfo | null) =>
   a ? [a.address, a.city, a.state, a.country].filter(Boolean).join(", ") + (a.pinCode ? ` – ${a.pinCode}` : "") : "—";
@@ -77,9 +77,9 @@ const InvoicePage = () => {
               <tr key={`${l.description}-${i}`}>
                 <td>{l.description}{l.sku && <small> · SKU {l.sku}</small>}</td>
                 <td>{l.quantity}</td>
-                <td>{formatINR(l.unitPrice)}</td>
+                <td>{formatMoney(l.unitPrice)}</td>
                 <td>{pct(l.taxRate)}</td>
-                <td>{formatINR(l.amount)}</td>
+                <td>{formatMoney(l.amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -98,20 +98,20 @@ const InvoicePage = () => {
               {inv.taxSummary.map((t) => (
                 <tr key={t.rate}>
                   <td>{pct(t.rate)}</td>
-                  <td>{formatINR(t.taxableValue)}</td>
-                  {intraState ? <><td>{formatINR(t.cgst)}</td><td>{formatINR(t.sgst)}</td></> : <td>{formatINR(t.igst)}</td>}
+                  <td>{formatMoney(t.taxableValue)}</td>
+                  {intraState ? <><td>{formatMoney(t.cgst)}</td><td>{formatMoney(t.sgst)}</td></> : <td>{formatMoney(t.igst)}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
 
           <dl className="facts invoice__totals">
-            <dt>Subtotal</dt><dd>{formatINR(inv.subtotal)}</dd>
-            {inv.discount > 0 && <><dt>Discount</dt><dd>−{formatINR(inv.discount)}</dd></>}
-            <dt>Shipping</dt><dd>{formatINR(inv.shippingCharges)}</dd>
-            <dt>Tax</dt><dd>{formatINR(inv.tax)}</dd>
-            <dt><strong>Total</strong></dt><dd><strong>{formatINR(inv.total)}</strong></dd>
-            {inv.refunded > 0 && <><dt>Refunded</dt><dd>−{formatINR(inv.refunded)}</dd></>}
+            <dt>Subtotal</dt><dd>{formatMoney(inv.subtotal)}</dd>
+            {inv.discount > 0 && <><dt>Discount</dt><dd>−{formatMoney(inv.discount)}</dd></>}
+            <dt>Shipping</dt><dd>{formatMoney(inv.shippingCharges)}</dd>
+            <dt>Tax</dt><dd>{formatMoney(inv.tax)}</dd>
+            <dt><strong>Total</strong></dt><dd><strong>{formatMoney(inv.total)}</strong></dd>
+            {inv.refunded > 0 && <><dt>Refunded</dt><dd>−{formatMoney(inv.refunded)}</dd></>}
           </dl>
         </div>
 

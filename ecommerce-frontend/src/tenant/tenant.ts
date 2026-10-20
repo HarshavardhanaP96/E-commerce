@@ -1,5 +1,7 @@
 import { server } from "../redux/config";
 import { BUSINESS, refreshPolicies } from "../legal/policies";
+import { regional } from "../utils/money";
+import { commerce } from "../utils/pricing";
 
 export type StorefrontConfig = {
   logoUrl?: string | null;
@@ -20,6 +22,9 @@ export type TenantConfig = {
   storefront?: StorefrontConfig;
   /** Effective feature switches for this store (its own setting, else the platform default). */
   features?: Record<string, boolean>;
+  /** The store's shop rules in force (its own setting, else the platform default). */
+  commerce?: Partial<typeof commerce>;
+  timeZone?: string;
 };
 
 /** The store this browser tab is showing. Set once, before the app renders. */
@@ -35,6 +40,10 @@ export const applyTenantConfig = (config: TenantConfig) => {
   brand.name = config.name || brand.name;
   brand.logoUrl = config.storefront?.logoUrl ?? "";
   Object.assign(features, config.features ?? {});
+  Object.assign(commerce, config.commerce ?? {});
+  if (config.currency) regional.currency = config.currency;
+  if (config.locale) regional.locale = config.locale;
+  if (config.timeZone) regional.timeZone = config.timeZone;
   document.title = brand.name;
   for (const [token, value] of Object.entries(config.theme ?? {})) {
     document.documentElement.style.setProperty(token, value);

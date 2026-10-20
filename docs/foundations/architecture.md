@@ -93,6 +93,17 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-20: ADR-023 **Shop rules are store settings; platform values are only the fallback.** A store owner sets
+  `Tenant.settings` (`StoreSettings`: `commerce`, `catalog`, `invoice`, `regional`; every field nullable) and the
+  storefront details through `GET/PUT /store/settings` (role ADMIN, audited `STORE_SETTINGS_UPDATED`). Modules read
+  the value in force through `shared.tenant.StoreConfig` (store value, else `app.store.defaults.*`), never through
+  their own properties: checkout pricing (`PricingRules`), coupon cap, minimum age, page size, low-stock level.
+  Checkout stamps the effective tax rate on each order line, so a later change of the default never alters an
+  old order or its invoice. Invoice seller: storefront `legalName`/address/contact + `invoice.gstin`/`state`; only
+  the default store may fall back to `INVOICE_SELLER_*` (the same rule as platform payment keys), so a second
+  store's invoices can never carry the platform's GSTIN. Platform safety limits (variant/CSV/size-chart caps, JWT,
+  rate limits, retention) stay platform-owned; currency and locale stay with the platform admin.
+  Rule for new work: any default a shop owner could reasonably want differently is added here, not as a constant.
 - 2026-10-20: ADR-022 **Coupon scope lives on the coupon; "has this customer ordered?" comes in through a port.**
   `CouponRules` gains `productIds`, `categories` and `firstOrderOnly` (absent in old documents, meaning "all items,
   any customer"). `Coupon.evaluate(lines, redemptions, hasPreviousOrder, now)` stays one pure method; the

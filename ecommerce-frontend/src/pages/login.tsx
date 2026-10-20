@@ -7,13 +7,15 @@ import { useDispatch } from "react-redux";
 import { userLoggedIn } from "../redux/reducer/userReducer";
 import { Link, useNavigate } from "react-router-dom";
 import { policyPath } from "../legal/policies";
+import { commerce } from "../utils/pricing";
 
-/** DPDP treats under-18s as children needing parental consent; the server enforces the same limit. */
-const MINIMUM_AGE = 18;
-
+/**
+ * The store's minimum age (never below 18: DPDP treats under-18s as children needing parental consent). The server
+ * enforces the same limit.
+ */
 const isAdult = (dob: string) => {
   const birth = new Date(`${dob}T00:00:00`);
-  const adultOn = new Date(birth.getFullYear() + MINIMUM_AGE, birth.getMonth(), birth.getDate());
+  const adultOn = new Date(birth.getFullYear() + commerce.minimumAge, birth.getMonth(), birth.getDate());
   return adultOn <= new Date();
 };
 
@@ -70,7 +72,7 @@ const Login = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdult(date)) {
-      toast.error(`You must be ${MINIMUM_AGE} or older to create an account`);
+      toast.error(`You must be ${commerce.minimumAge} or older to create an account`);
       return;
     }
     try {

@@ -16,6 +16,7 @@ import com.sixpack.payment.PaymentGateways;
 import com.sixpack.payment.RefundResult;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.security.AuthUser;
+import com.sixpack.shared.tenant.StoreConfig;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,11 +29,11 @@ public class OrderService {
     private final ApplicationEventPublisher events;
     private final AuditTrail audit;
     private final PaymentGateways gateways;
-    private final InvoiceProperties invoiceProps;
+    private final StoreConfig store;
 
     OrderService(OrderRepository orders, ApplicationEventPublisher events, AuditTrail audit,
-                 PaymentGateways gateways, InvoiceProperties invoiceProps) {
-        this.invoiceProps = invoiceProps;
+                 PaymentGateways gateways, StoreConfig store) {
+        this.store = store;
         this.orders = orders;
         this.events = events;
         this.audit = audit;
@@ -57,7 +58,9 @@ public class OrderService {
     }
 
     public Invoice invoice(String id, AuthUser caller) {
-        return Invoice.of(get(id, caller), invoiceProps.seller());
+        StoreConfig.Seller s = store.seller();
+        return Invoice.of(get(id, caller),
+                new Invoice.Seller(s.name(), s.address(), s.gstin(), s.state(), s.email(), s.phone()));
     }
 
     public Order advance(String id, String actorId) {

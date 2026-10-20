@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { errorMessage } from "../redux/api/baseQuery";
 import { CartItem } from "../types/types";
 import { addToCart } from "../redux/reducer/cartReducer";
-import { formatINR } from "../utils/features";
+import { formatMoney } from "../utils/features";
 import { useDispatch } from "react-redux";
 
 const Search = () => {
@@ -84,7 +84,7 @@ const Search = () => {
         </div>
 
         <div>
-          <h4>Max price <b>{formatINR(maxPrice)}</b></h4>
+          <h4>Max price <b>{formatMoney(maxPrice)}</b></h4>
           <input
             type="range"
             min={100}

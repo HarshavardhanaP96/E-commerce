@@ -3,6 +3,7 @@ package com.sixpack.tenant.domain;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
+import com.sixpack.shared.tenant.StoreSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantLimits;
 import java.time.Instant;
@@ -18,7 +19,7 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
                      Map<String, String> theme, String locale, String currency, Instant createdAt,
                      LegalSettings legal, PaymentSettings payment, MailSettings mail,
                      StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt,
-                     TenantLimits limits, Instant trialEndsAt) {
+                     TenantLimits limits, Instant trialEndsAt, StoreSettings settings) {
 
     public Tenant {
         status = status == null ? TenantStatus.ACTIVE : status;
@@ -31,6 +32,23 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
         features = features == null ? Map.of() : Map.copyOf(features);
         limits = limits == null ? TenantLimits.NONE : limits;
         trialEndsAt = status == TenantStatus.TRIAL ? trialEndsAt : null;
+        settings = settings == null ? StoreSettings.NONE : settings;
+    }
+
+    /** Without the owner's shop rules. */
+    public Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
+                  Map<String, String> theme, String locale, String currency, Instant createdAt,
+                  LegalSettings legal, PaymentSettings payment, MailSettings mail,
+                  StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt,
+                  TenantLimits limits, Instant trialEndsAt) {
+        this(id, slug, name, status, domains, theme, locale, currency, createdAt, legal, payment, mail, storefront,
+                features, deletionDueAt, limits, trialEndsAt, null);
+    }
+
+    /** The same store with the owner's shop rules and storefront details. */
+    public Tenant withOwnerSettings(StoreSettings newSettings, StorefrontSettings newStorefront) {
+        return new Tenant(id, slug, name, status, domains, theme, locale, currency, createdAt, legal, payment, mail,
+                newStorefront, features, deletionDueAt, limits, trialEndsAt, newSettings);
     }
 
     /** Not on trial. */
@@ -68,7 +86,7 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
     public Tenant withStatus(TenantStatus newStatus, Instant newDeletionDueAt) {
         return new Tenant(id, slug, name, newStatus, newStatus == TenantStatus.DELETED ? List.of() : domains, theme,
                 locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt, limits,
-                trialEndsAt);
+                trialEndsAt, settings);
     }
 
     /** Without feature switches. */

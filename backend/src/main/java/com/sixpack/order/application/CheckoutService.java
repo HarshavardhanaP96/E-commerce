@@ -24,6 +24,7 @@ import com.sixpack.order.domain.PaymentInfo;
 import com.sixpack.order.domain.PaymentIntent;
 import com.sixpack.order.domain.PaymentIntentRepository;
 import com.sixpack.order.domain.PriceCalculator;
+import com.sixpack.order.domain.PricingRules;
 import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.payment.PaymentGateway;
@@ -33,6 +34,7 @@ import com.sixpack.product.ProductCatalog;
 import com.sixpack.product.ProductSnapshot;
 import com.sixpack.product.StockLine;
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.StoreConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import java.util.ArrayList;
@@ -89,11 +91,12 @@ public class CheckoutService {
     private final MeterRegistry meters;
     private final UserDirectory users;
     private final AuditTrail audit;
+    private final StoreConfig store;
 
     CheckoutService(ProductCatalog catalog, CouponLookup coupons, PaymentGateways gateways,
                     PaymentIntentRepository intents, OrderRepository orders, ConsentLedger consents,
                     ApplicationEventPublisher events, MeterRegistry meters, UserDirectory users,
-                    AuditTrail audit) {
+                    AuditTrail audit, StoreConfig store) {
         this.catalog = catalog;
         this.coupons = coupons;
         this.gateways = gateways;
@@ -104,6 +107,7 @@ public class CheckoutService {
         this.meters = meters;
         this.users = users;
         this.audit = audit;
+        this.store = store;
     }
 
     /** A cart priced from the catalogue. {@code coupon} is the normalised code that was applied, or null. */
@@ -137,7 +141,10 @@ public class CheckoutService {
         if (normalizedCoupon != null) {
             discount = coupons.discountFor(normalizedCoupon, couponLines, userId);
         }
-        return new PricedCart(items, PriceCalculator.quote(items, discount), normalizedCoupon);
+        StoreConfig.Effective rules = store.effective();
+        PricingRules pricing = new PricingRules(rules.shippingFee(), rules.freeShippingAbove(), rules.defaultTaxRate());
+        List<OrderItem> charged = pricing.stamp(items);
+        return new PricedCart(charged, PriceCalculator.quote(charged, discount, pricing), normalizedCoupon);
     }
 
     public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {

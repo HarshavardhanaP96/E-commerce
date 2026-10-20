@@ -16,7 +16,9 @@ public enum AuditAction {
     CONSENT_CHANGED,
     /** Platform administrator actions, recorded in the affected store's own log. */
     TENANT_CREATED, TENANT_UPDATED, TENANT_STATUS_CHANGED,
-    TENANT_EXPORTED, TENANT_PURGED;
+    TENANT_EXPORTED, TENANT_PURGED,
+    /** The store admin's own shop rules and storefront details. */
+    STORE_SETTINGS_UPDATED;
 
     public static AuditAction parse(String value) {
         try {

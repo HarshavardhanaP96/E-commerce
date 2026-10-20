@@ -6,7 +6,8 @@ import { useAdjustVariantStockMutation, useReplaceVariantsMutation } from "../..
 import { useGetVariantSalesQuery } from "../../redux/api/dashboardAPI";
 import { Product } from "../../types/types";
 import { VariantsRequest } from "../../types/api-types";
-import { formatINR, transformImage } from "../../utils/features";
+import { formatMoney, transformImage } from "../../utils/features";
+import { currencySymbol } from "../../utils/money";
 
 type ValueDraft = { label: string; hex: string; images: string[] };
 type AxisDraft = { name: string; type: "TEXT" | "COLOUR"; values: ValueDraft[] };
@@ -362,8 +363,8 @@ const VariantEditor = ({ product }: { product: Product }) => {
               <tr>
                 <th>Variant</th>
                 <th>SKU</th>
-                <th>Price (₹)</th>
-                <th>MRP (₹)</th>
+                <th>Price ({currencySymbol()})</th>
+                <th>MRP ({currencySymbol()})</th>
                 <th>Stock</th>
                 <th>Status</th>
                 <th title="Units sold across all orders">Sold</th>
@@ -408,7 +409,7 @@ const VariantEditor = ({ product }: { product: Product }) => {
                   </td>
                   <td
                     className="variant-table__sold"
-                    title={r.id && sales.get(r.id) ? `${formatINR(sales.get(r.id)!.revenue)} from ${sales.get(r.id)!.orders} order(s)` : undefined}
+                    title={r.id && sales.get(r.id) ? `${formatMoney(sales.get(r.id)!.revenue)} from ${sales.get(r.id)!.orders} order(s)` : undefined}
                   >
                     {r.id ? sales.get(r.id)?.units ?? 0 : "—"}
                   </td>
@@ -426,7 +427,7 @@ const VariantEditor = ({ product }: { product: Product }) => {
         <span>
           {rows.length > 0
             ? `${rows.length} variant${rows.length === 1 ? "" : "s"} · ${totalStock} in stock${
-                activePrices.length ? ` · from ${formatINR(Math.min(...activePrices))}` : ""
+                activePrices.length ? ` · from ${formatMoney(Math.min(...activePrices))}` : ""
               }`
             : "No variants yet"}
         </span>

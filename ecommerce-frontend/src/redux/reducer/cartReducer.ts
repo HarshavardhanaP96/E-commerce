@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { CartItem, ShippingInfo } from "../../types/types";
 import { userNotExist } from "./userReducer";
 import { cartKey } from "../../utils/variants";
+import { cartTotals, commerce } from "../../utils/pricing";
 
 const CART_KEY = "cart";
 
@@ -27,20 +28,8 @@ const emptyCart: CartState = {
   shippingInfo: { address: "", city: "", state: "", country: "India", pinCode: "" },
 };
 
-/** Mirrors the server's PriceCalculator for display only; the server recomputes at checkout. */
 const recalculate = (state: CartState) => {
-  const subtotal = state.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  state.subtotal = subtotal;
-  state.shippingCharges = subtotal === 0 || subtotal > 1000 ? 0 : 200;
-  const DEFAULT_TAX_RATE = 18;
-  const taxableByRate = new Map<number, number>();
-  for (const item of state.cartItems) {
-    const rate = item.taxRate ?? DEFAULT_TAX_RATE;
-    taxableByRate.set(rate, (taxableByRate.get(rate) ?? 0) + item.price * item.quantity);
-  }
-  state.tax = [...taxableByRate].reduce((sum, [rate, amount]) => sum + Math.round((amount * rate) / 100), 0);
-  const discount = Math.min(state.discount, subtotal);
-  state.total = subtotal + state.tax + state.shippingCharges - discount;
+  Object.assign(state, cartTotals(state.cartItems, state.discount, commerce));
 };
 
 const loadCart = (): CartState => {

@@ -8,7 +8,7 @@ import { useQuoteMutation } from "../redux/api/orderAPI";
 import { addToCart, applyCoupon, removeCartItem } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { CartItem } from "../types/types";
-import { formatINR } from "../utils/features";
+import { formatMoney } from "../utils/features";
 import { cartKey } from "../utils/variants";
 import { policyPath } from "../legal/policies";
 
@@ -85,14 +85,14 @@ const Cart = () => {
       </main>
       <aside>
         <h2>Order summary</h2>
-        <p><span>Subtotal</span> <span>{formatINR(subtotal)}</span></p>
-        <p><span>Shipping</span> <span>{formatINR(shippingCharges)}</span></p>
-        <p><span>Tax (18%)</span> <span>{formatINR(tax)}</span></p>
+        <p><span>Subtotal</span> <span>{formatMoney(subtotal)}</span></p>
+        <p><span>Shipping</span> <span>{formatMoney(shippingCharges)}</span></p>
+        <p><span>Tax (18%)</span> <span>{formatMoney(tax)}</span></p>
         <p>
-          <span>Discount</span> <em className="green">−{formatINR(Math.min(discount, subtotal))}</em>
+          <span>Discount</span> <em className="green">−{formatMoney(Math.min(discount, subtotal))}</em>
         </p>
         <p className="cart__total">
-          <span>Total</span> <span>{formatINR(total)}</span>
+          <span>Total</span> <span>{formatMoney(total)}</span>
         </p>
         <input
           type="text"
@@ -104,7 +104,7 @@ const Cart = () => {
         {couponCode.trim() && !isFetching &&
           (valid ? (
             <span className="green">
-              <LuCheck /> {formatINR(discount)} off with <code>{coupon}</code>
+              <LuCheck /> {formatMoney(discount)} off with <code>{coupon}</code>
             </span>
           ) : (
             couponMessage && (

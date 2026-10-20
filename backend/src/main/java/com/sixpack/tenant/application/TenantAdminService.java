@@ -172,7 +172,7 @@ public class TenantAdminService {
                 u.features() != null ? validFeatures(u.features()) : current.features(),
                 current.deletionDueAt(),
                 u.limits() != null ? validLimits(u.limits()) : current.limits(),
-                current.trialEndsAt()));
+                current.trialEndsAt(), current.settings()));
         registry.refresh();
         record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());
@@ -372,7 +372,7 @@ public class TenantAdminService {
         return mail;
     }
 
-    private static StorefrontSettings validStorefront(StorefrontSettings sf) {
+    static StorefrontSettings validStorefront(StorefrontSettings sf) {
         if (sf == null) {
             return StorefrontSettings.NONE;
         }

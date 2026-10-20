@@ -1535,3 +1535,38 @@
   &:nth-child(6) { width: 15%; }
   &:nth-child(7) { width: 10%; }
 }
+
+// ---------- store settings ----------
+.store-settings {
+  max-width: 52rem;
+  display: grid;
+  gap: $spacing-lg;
+
+  &__head {
+    h2 {
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      color: $color-text-secondary;
+    }
+  }
+
+  &__form {
+    display: grid;
+    gap: $spacing-lg;
+  }
+
+  &__hint,
+  &__note {
+    @include text(label);
+    font-weight: 400;
+    color: $color-text-muted;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+}

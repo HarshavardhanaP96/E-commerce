@@ -6,7 +6,7 @@ import DataTable from "../../components/admin/DataTable";
 import StatusBadge from "../../components/admin/StatusBadge";
 import { useAllOrdersQuery } from "../../redux/api/orderAPI";
 import { Order } from "../../types/types";
-import { formatDate, formatINR } from "../../utils/features";
+import { formatDate, formatMoney } from "../../utils/features";
 
 type Row = Order & { customer: string; items: number };
 
@@ -14,8 +14,8 @@ const columns: Column<Row>[] = [
   { Header: "Order", accessor: "_id", width: 220 },
   { Header: "Customer", accessor: "customer" },
   { Header: "Items", accessor: "items", width: 80 },
-  { Header: "Discount", accessor: "discount", width: 110, Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
-  { Header: "Amount", accessor: "total", width: 120, Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
+  { Header: "Discount", accessor: "discount", width: 110, Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
+  { Header: "Amount", accessor: "total", width: 120, Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
   { Header: "Date", accessor: "createdAt", width: 130, Cell: ({ value }: CellProps<Row>) => formatDate(value) } as Column<Row>,
   { Header: "Status", accessor: "status", width: 120, Cell: ({ value }: CellProps<Row>) => <StatusBadge status={value} /> } as Column<Row>,
 ];

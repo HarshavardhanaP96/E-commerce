@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import { errorMessage } from "../../redux/api/baseQuery";
 import { useRefundOrderMutation } from "../../redux/api/orderAPI";
 import { OrderPayment } from "../../types/types";
-import { formatDateTime, formatINR } from "../../utils/features";
+import { formatDateTime, formatMoney } from "../../utils/features";
 import StatusBadge from "./StatusBadge";
 
 /** How the order was paid, what has been returned, and a form to return more. Admin only. */
@@ -20,7 +20,7 @@ const PaymentPanel = ({ orderId, payment }: { orderId: string; payment: OrderPay
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const wanted = amount === "" ? left : Number(amount);
-    if (!confirm(`Refund ${formatINR(wanted)} to the customer's original payment method? This cannot be undone.`)) return;
+    if (!confirm(`Refund ${formatMoney(wanted)} to the customer's original payment method? This cannot be undone.`)) return;
     const res = await refundOrder({ id: orderId, amount: amount === "" ? undefined : Number(amount), reason: reason.trim() });
     if ("error" in res) return toast.error(errorMessage(res.error));
     toast.success(res.data.message);
@@ -35,8 +35,8 @@ const PaymentPanel = ({ orderId, payment }: { orderId: string; payment: OrderPay
         <dt>Status</dt><dd>{payment.status ? <StatusBadge status={payment.status} /> : "—"}</dd>
         <dt>Method</dt><dd>{payment.method ?? "Unknown"}</dd>
         <dt>Provider</dt><dd>{payment.provider}</dd>
-        <dt>Paid</dt><dd>{formatINR(total)}{payment.paidAt ? ` on ${formatDateTime(payment.paidAt)}` : ""}</dd>
-        <dt>Refunded</dt><dd>{formatINR(refunded)}</dd>
+        <dt>Paid</dt><dd>{formatMoney(total)}{payment.paidAt ? ` on ${formatDateTime(payment.paidAt)}` : ""}</dd>
+        <dt>Refunded</dt><dd>{formatMoney(refunded)}</dd>
       </dl>
 
       {payment.failureReason && <p className="red" role="alert">{payment.failureReason}</p>}
@@ -45,7 +45,7 @@ const PaymentPanel = ({ orderId, payment }: { orderId: string; payment: OrderPay
         <ul className="refund-list">
           {payment.refunds!.map((r) => (
             <li key={`${r.at}-${r.amount}`}>
-              <strong>{formatINR(r.amount)}</strong> <small>{formatDateTime(r.at)} · {r.status}</small>
+              <strong>{formatMoney(r.amount)}</strong> <small>{formatDateTime(r.at)} · {r.status}</small>
               <span>{r.reason}</span>
             </li>
           ))}
@@ -55,9 +55,9 @@ const PaymentPanel = ({ orderId, payment }: { orderId: string; payment: OrderPay
       {canRefund && (
         <form className="refund-form" onSubmit={submit}>
           <label>
-            Amount (₹), up to {formatINR(left)}
+            Amount (₹), up to {formatMoney(left)}
             <input type="number" min={0.01} max={left} step="0.01" value={amount}
-                   placeholder={`Leave empty to refund ${formatINR(left)}`} onChange={(e) => setAmount(e.target.value)} />
+                   placeholder={`Leave empty to refund ${formatMoney(left)}`} onChange={(e) => setAmount(e.target.value)} />
           </label>
           <label>
             Reason (the customer can see this)

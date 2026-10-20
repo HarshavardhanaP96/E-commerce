@@ -7,7 +7,7 @@ import DataTable from "../../components/admin/DataTable";
 import ProductCsvTools from "../../components/admin/ProductCsvTools";
 import { useAdminProductsQuery, useCategoriesQuery } from "../../redux/api/productAPI";
 import { Product } from "../../types/types";
-import { formatINR, transformImage } from "../../utils/features";
+import { formatMoney, transformImage } from "../../utils/features";
 
 const columns: Column<Product>[] = [
   {
@@ -19,7 +19,7 @@ const columns: Column<Product>[] = [
   } as Column<Product>,
   { Header: "Name", accessor: "name" },
   { Header: "Category", accessor: "category", width: 160 },
-  { Header: "Price", accessor: "price", width: 130, Cell: ({ value }: CellProps<Product>) => formatINR(value) } as Column<Product>,
+  { Header: "Price", accessor: "price", width: 130, Cell: ({ value }: CellProps<Product>) => formatMoney(value) } as Column<Product>,
   {
     Header: "Stock",
     accessor: "stock",

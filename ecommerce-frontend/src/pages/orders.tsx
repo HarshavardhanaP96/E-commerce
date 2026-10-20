@@ -4,7 +4,7 @@ import DataTable from "../components/admin/DataTable";
 import StatusBadge from "../components/admin/StatusBadge";
 import { useMyOrdersQuery } from "../redux/api/orderAPI";
 import { Order } from "../types/types";
-import { formatDate, formatINR, orderLabel } from "../utils/features";
+import { formatDate, formatMoney, orderLabel } from "../utils/features";
 
 type Row = Order & { items: number };
 
@@ -13,8 +13,8 @@ const columns: Column<Row>[] = [
     Cell: ({ row }: CellProps<Row>) => orderLabel(row.original) } as Column<Row>,
   { Header: "Date", accessor: "createdAt", Cell: ({ value }: CellProps<Row>) => formatDate(value) } as Column<Row>,
   { Header: "Items", accessor: "items", width: 80 },
-  { Header: "Discount", accessor: "discount", Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
-  { Header: "Amount", accessor: "total", Cell: ({ value }: CellProps<Row>) => formatINR(value) } as Column<Row>,
+  { Header: "Discount", accessor: "discount", Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
+  { Header: "Amount", accessor: "total", Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
   { Header: "Status", accessor: "status", width: 120, Cell: ({ value }: CellProps<Row>) => <StatusBadge status={value} /> } as Column<Row>,
 ];
 

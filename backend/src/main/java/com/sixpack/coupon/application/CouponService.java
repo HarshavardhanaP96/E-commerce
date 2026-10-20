@@ -12,6 +12,7 @@ import com.sixpack.coupon.domain.CouponRepository;
 import com.sixpack.coupon.domain.CouponRules;
 import com.sixpack.coupon.domain.CouponType;
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.StoreConfig;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CouponService implements CouponLookup {
 
-    private static final double MAX_FLAT = 100_000;
 
     /** Everything an admin can set when creating a coupon. Null means "not set". */
     public record CreateCommand(String code, double amount, String type, Double maxDiscount, Double minOrderValue,
@@ -42,7 +42,10 @@ public class CouponService implements CouponLookup {
     private final AuditTrail audit;
     private final CustomerHistory history;
 
-    CouponService(CouponRepository coupons, AuditTrail audit, CustomerHistory history) {
+    private final StoreConfig store;
+
+    CouponService(CouponRepository coupons, AuditTrail audit, CustomerHistory history, StoreConfig store) {
+        this.store = store;
         this.coupons = coupons;
         this.audit = audit;
         this.history = history;
@@ -156,15 +159,16 @@ public class CouponService implements CouponLookup {
         return coupons.findByCode(code.trim());
     }
 
-    private static void validate(double amount, CouponRules rules) {
+    private void validate(double amount, CouponRules rules) {
         if (amount <= 0) {
             throw ApiException.badRequest("amount: must be positive");
         }
         if (rules.type() == CouponType.PERCENT && amount > 100) {
             throw ApiException.badRequest("amount: a percent coupon cannot exceed 100");
         }
-        if (rules.type() == CouponType.FLAT && amount > MAX_FLAT) {
-            throw ApiException.badRequest("amount: must be at most " + (long) MAX_FLAT);
+        double maxFlat = store.effective().maxCouponAmount();
+        if (rules.type() == CouponType.FLAT && amount > maxFlat) {
+            throw ApiException.badRequest("amount: must be at most " + (long) maxFlat);
         }
         if (rules.maxDiscount() != null && rules.type() != CouponType.PERCENT) {
             throw ApiException.badRequest("maxDiscount: only applies to percent coupons");

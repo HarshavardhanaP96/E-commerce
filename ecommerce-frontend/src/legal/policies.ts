@@ -1,3 +1,6 @@
+import { formatMoney } from "../utils/money";
+import { commerce, shippingNote } from "../utils/pricing";
+
 /**
  * Store policies (docs/foundations/compliance-consent.md §2). Draft text: have it reviewed by a lawyer before
  * launch, and fill in BUSINESS below — Razorpay won't activate the account without these details.
@@ -187,7 +190,7 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
         heading: "Where and how much",
         body: [
           "We deliver within India.",
-          "Shipping is free on orders over ₹1,000. Otherwise there is a flat ₹200 charge, which is shown before you pay.",
+          shippingNote(commerce, formatMoney),
         ],
       },
       {
