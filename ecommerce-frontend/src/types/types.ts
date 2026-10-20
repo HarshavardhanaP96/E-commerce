@@ -74,6 +74,34 @@ export type Product = {
   categoryId?: string | null;
   countryOfOrigin?: string;
   variants?: ProductVariants;
+  /** The product's own threshold; null means the store default applies. */
+  lowStockThreshold?: number | null;
+  /** Effective "running low" level (own threshold or the store default). */
+  lowStockAt?: number;
+  sizeChart?: SizeChart | null;
+};
+
+export type SizeChart = { columns: string[]; rows: string[][]; note?: string | null };
+
+export type StockAlert = {
+  productId: string;
+  name: string;
+  photo: string;
+  variantId: string | null;
+  label: string | null;
+  sku: string | null;
+  stock: number;
+  threshold: number;
+  out: boolean;
+};
+
+export type VariantSales = {
+  variantId: string | null;
+  label: string | null;
+  sku: string | null;
+  units: number;
+  revenue: number;
+  orders: number;
 };
 
 export type ShippingInfo = {

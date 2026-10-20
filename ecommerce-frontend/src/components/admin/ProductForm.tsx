@@ -114,6 +114,18 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
           />
         </label>
         <label>
+          Low-stock alert at
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={values.lowStockThreshold}
+            onChange={set("lowStockThreshold")}
+            placeholder="Store default"
+            title="Warn when stock (of the product or any variant) is at or below this number"
+          />
+        </label>
+        <label>
           SKU
           <input value={values.sku} onChange={set("sku")} maxLength={60} />
         </label>

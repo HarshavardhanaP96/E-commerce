@@ -20,7 +20,9 @@ import com.sixpack.product.domain.CategoryRepository;
 import com.sixpack.product.domain.ProductDetails;
 import com.sixpack.product.domain.ProductStatus;
 import com.sixpack.product.domain.ProductVariants;
+import com.sixpack.product.domain.SizeChart;
 import com.sixpack.product.domain.Slugs;
+import com.sixpack.product.domain.StockAlert;
 import com.sixpack.product.domain.Variant;
 import com.sixpack.product.domain.VariantRules;
 import com.sixpack.product.domain.VariantRules.AxisInput;
@@ -29,6 +31,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
@@ -49,12 +52,15 @@ public class ProductService {
 
     public record DetailsCommand(String slug, String sku, String description, String brand, Double mrp,
                                  Double taxRate, String hsn, String status, List<String> tags, String categoryId,
-                                 String countryOfOrigin, List<byte[]> images) {
+                                 String countryOfOrigin, Integer lowStockThreshold, List<byte[]> images) {
         public static final DetailsCommand NONE =
-                new DetailsCommand(null, null, null, null, null, null, null, null, null, null, null, null);
+                new DetailsCommand(null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public record VariantsCommand(List<AxisInput> axes, List<VariantInput> variants) {
+    }
+
+    public record SizeChartCommand(List<String> columns, List<List<String>> rows, String note) {
     }
 
     /** Exactly one of {@code delta} (relative change) and {@code set} (absolute value). */
@@ -253,6 +259,29 @@ public class ProductService {
         return saved;
     }
 
+    /** Replaces the product's size guide; an empty chart removes it. */
+    @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
+            PRODUCTS_BY_ID}, allEntries = true)
+    public Product replaceSizeChart(String id, SizeChartCommand cmd) {
+        Product current = products.findById(id).orElseThrow(() -> ApiException.notFound("Product not found"));
+        SizeChart chart = SizeChart.of(cmd.columns(), cmd.rows(), cmd.note());
+        Product saved = products.save(current.withDetails(current.details().withSizeChart(chart)));
+        events.publishEvent(new ProductChangedEvent());
+        return saved;
+    }
+
+    /** Public lines at or below their low-stock threshold, emptiest first. */
+    public List<StockAlert> lowStock() {
+        return products.findAll().stream().flatMap(p -> p.stockAlerts(props.lowStockThreshold()).stream())
+                .sorted(Comparator.comparingInt(StockAlert::stock).thenComparing(StockAlert::name)
+                        .thenComparing(a -> Objects.toString(a.label(), "")))
+                .toList();
+    }
+
+    public int lowStockDefault() {
+        return props.lowStockThreshold();
+    }
+
     /** Changes one variant's stock atomically, without touching the rest of the product. */
     @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_OPTIONS, PRODUCTS_ADMIN,
             PRODUCTS_BY_ID}, allEntries = true)
@@ -359,7 +388,18 @@ public class ProductService {
                 mrp, c.taxRate() != null ? c.taxRate() : cur.taxRate(), pick(c.hsn(), cur.hsn()),
                 hasText(c.status()) ? ProductStatus.parse(c.status()) : cur.status(),
                 c.tags() != null && !c.tags().isEmpty() ? normalizeTags(c.tags()) : cur.tags(),
-                cur.images(), categoryId, pick(c.countryOfOrigin(), cur.countryOfOrigin()), cur.variants());
+                cur.images(), categoryId, pick(c.countryOfOrigin(), cur.countryOfOrigin()), cur.variants(),
+                lowStockThreshold(c.lowStockThreshold(), cur.lowStockThreshold()), cur.sizeChart());
+    }
+
+    private static Integer lowStockThreshold(Integer proposed, Integer current) {
+        if (proposed == null) {
+            return current;
+        }
+        if (proposed < 0 || proposed > VariantRules.MAX_STOCK) {
+            throw ApiException.badRequest("lowStockThreshold: must be between 0 and " + VariantRules.MAX_STOCK);
+        }
+        return proposed;
     }
 
     private String freeSlug(String base, String selfId) {

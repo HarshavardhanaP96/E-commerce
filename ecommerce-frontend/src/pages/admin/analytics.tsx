@@ -12,8 +12,8 @@ import {
   useGetLineChartQuery,
   useGetPieChartQuery,
 } from "../../redux/api/dashboardAPI";
-import { useCategoriesQuery } from "../../redux/api/productAPI";
-import { formatINR, lastMonths } from "../../utils/features";
+import { useCategoriesQuery, useLowStockQuery } from "../../redux/api/productAPI";
+import { formatINR, lastMonths, transformImage } from "../../utils/features";
 
 const Widget = ({ label, value, change }: { label: string; value: string; change: number }) => (
   <article className="kpi">
@@ -35,6 +35,9 @@ const Analytics = () => {
   const pie = useGetPieChartQuery(scope);
   const bar = useGetBarChartQuery(scope);
   const line = useGetLineChartQuery(scope);
+  const { data: lowStock } = useLowStockQuery();
+  // Not narrowed by the category filter: alerts are store-wide.
+  const alerts = lowStock?.alerts ?? [];
 
   if (stats.isLoading || pie.isLoading || bar.isLoading || line.isLoading) return <Loader />;
   if (stats.isError || !stats.data || !pie.data || !bar.data || !line.data) {
@@ -73,6 +76,31 @@ const Analytics = () => {
         </section>
 
         <section className="analytics__grid">
+          <div className="card chart-card chart-card--wide low-stock">
+            <h4>
+              Low stock {alerts.length > 0 && <span className="badge badge--processing">{alerts.length}</span>}
+            </h4>
+            {alerts.length === 0 ? (
+              <p className="low-stock__empty">Everything is above its low-stock level.</p>
+            ) : (
+              <ul>
+                {alerts.slice(0, 20).map((a) => (
+                  <li key={`${a.productId}:${a.variantId ?? ""}`}>
+                    <button type="button" onClick={() => navigate(`/admin/product/${a.productId}`)}>
+                      <img src={transformImage(a.photo)} alt="" />
+                      <span>
+                        {a.name}
+                        {a.label && <small> · {a.label}</small>}
+                        {a.sku && <small className="low-stock__sku">{a.sku}</small>}
+                      </span>
+                      <b className={a.out ? "red" : ""}>{a.out ? "Out" : `${a.stock} left`}</b>
+                    </button>
+                  </li>
+                ))}
+                {alerts.length > 20 && <li className="low-stock__more">…and {alerts.length - 20} more</li>}
+              </ul>
+            )}
+          </div>
           <div className="card chart-card chart-card--wide">
             <h4>Revenue & orders (6 months)</h4>
             <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders" dualAxis

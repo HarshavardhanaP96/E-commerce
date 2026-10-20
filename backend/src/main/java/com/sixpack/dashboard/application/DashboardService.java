@@ -54,6 +54,11 @@ public class DashboardService {
         this.clock = clock;
     }
 
+    @Cacheable(cacheNames = DASHBOARD, key = "'variants:' + #productId")
+    public List<DashboardReadPort.VariantSales> variantSales(String productId) {
+        return read.variantSales(productId);
+    }
+
     @Cacheable(cacheNames = DASHBOARD, key = "'stats:' + #scope")
     public Stats stats(Scope scope) {
         YearMonth now = YearMonth.now(clock);

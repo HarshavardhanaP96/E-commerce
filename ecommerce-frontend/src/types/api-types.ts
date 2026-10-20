@@ -1,4 +1,4 @@
-import { Bar, Category, Coupon, Invoice, Line, OptionFacet, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
+import { Bar, Category, Coupon, Invoice, Line, OptionFacet, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, SizeChart, StockAlert, Stats, User, VariantSales } from "./types";
 
 export type MessageResponse = { success: boolean; message: string };
 
@@ -21,6 +21,12 @@ export type VariantsRequest = {
     status: "ACTIVE" | "DISABLED";
   }[];
 };
+export type StockAlertsResponse = { success: boolean; alerts: StockAlert[] };
+export type VariantSalesResponse = { success: boolean; sales: VariantSales[] };
+export type CsvChange = { line: number; productId: string; product: string; variant: string | null; changes: string[] };
+export type CsvImportResponse = { success: boolean; applied: boolean; changes: CsvChange[]; unchanged: number };
+export type CsvImportError = { success: false; message: string; errors?: { line: number; message: string }[] };
+export type SizeChartRequest = SizeChart;
 export type OptionFacetsResponse = { success: boolean; options: OptionFacet[] };
 export type CategoriesResponse = { success: boolean; categories: string[] };
 export type SearchProductsResponse = ProductsResponse & { totalPage: number; total: number };

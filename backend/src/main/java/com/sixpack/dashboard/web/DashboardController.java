@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +49,12 @@ class DashboardController {
                              @RequestParam(required = false) @Size(max = 50) String category,
                              @RequestParam(required = false) @Size(max = 64) String userId) {
         return ApiResponse.of("charts", service.line(scope(productId, category, userId)));
+    }
+
+    /** Units and revenue of one product per variant, best sellers first. */
+    @GetMapping("/products/{productId}/variants")
+    Map<String, Object> variantSales(@PathVariable @Size(max = 64) String productId) {
+        return ApiResponse.of("sales", service.variantSales(productId));
     }
 
     private static Scope scope(String productId, String category, String userId) {

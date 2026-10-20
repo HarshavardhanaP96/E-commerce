@@ -147,7 +147,55 @@ export const GUIDES: Guide[] = [
       { type: "tip", text: "Set a variant to Disabled to stop selling it without losing its history. Disabled variants show as sold out." },
       { type: "warn", text: "With variants, the product's own price and stock are worked out for you: the store shows the lowest variant price and the total stock. Removing an option merges or drops existing variants, and uploading a new gallery removes the images you set on colours." },
     ],
-    related: ["edit-product", "add-product", "products"],
+    related: ["edit-product", "size-guide", "low-stock", "products-csv"],
+  },
+  {
+    slug: "size-guide",
+    group: "Catalogue",
+    title: "Adding a size guide",
+    summary: "Show shoppers a measurement table on the product page.",
+    body: [
+      { type: "steps", items: [
+        "Open the product and choose the Size guide tab.",
+        "Start from the clothing or footwear template, or a blank table. If the product has a Size option, its sizes fill the first column for you.",
+        "Type the measurements. Add or remove rows and columns as needed, and add an optional note such as how to measure.",
+        "Click Save size guide. Shoppers now see a Size guide link next to the size buttons.",
+      ] },
+      { type: "tip", text: "Keep the size in the first column and use the same size names as the product's Size option, so shoppers can match them up." },
+    ],
+    related: ["product-variants", "edit-product"],
+  },
+  {
+    slug: "low-stock",
+    group: "Catalogue",
+    title: "Low-stock alerts",
+    summary: "See what is running out before it sells out.",
+    body: [
+      { type: "p", text: "Every product has a low-stock level. When the product's stock, or the stock of any active variant, is at or below that level, it shows up in the Low stock card on Analytics and gets a Low badge in the Products list." },
+      { type: "steps", title: "Change the level for one product", items: [
+        "Open the product. On the Details tab, set Low-stock alert at.",
+        "Click Save. Leave it empty to use the store default (5).",
+      ] },
+      { type: "tip", text: "Set it to 0 to be told only when something has sold out. Disabled variants and draft or archived products never raise alerts." },
+    ],
+    related: ["products-csv", "product-variants"],
+  },
+  {
+    slug: "products-csv",
+    group: "Catalogue",
+    title: "Bulk-editing prices and stock with a spreadsheet",
+    summary: "Export products to CSV, edit them in Excel or Google Sheets, and import the file back.",
+    body: [
+      { type: "steps", items: [
+        "On the Products page, click Export CSV. Every product without variants and every variant gets its own row.",
+        "Edit price, mrp, stock, status or low_stock_threshold. Leave a cell empty to keep the current value. Other columns are for reference and are ignored.",
+        "Save as CSV and click Import CSV. You see a list of what will change; nothing is saved yet.",
+        "Click Apply to save the changes.",
+      ] },
+      { type: "tip", text: "You can also import a short file with just two columns, such as sku and stock." },
+      { type: "warn", text: "If any row has a problem, the whole file is refused and you get the line numbers to fix. Import changes existing products and variants only; it never creates or deletes them." },
+    ],
+    related: ["low-stock", "products"],
   },
   {
     slug: "categories",

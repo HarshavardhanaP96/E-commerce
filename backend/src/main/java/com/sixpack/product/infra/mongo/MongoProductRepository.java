@@ -12,6 +12,7 @@ import com.sixpack.product.domain.ProductRepository;
 import com.sixpack.product.domain.ProductSearch;
 import com.sixpack.product.domain.ProductStatus;
 import com.sixpack.product.domain.ProductVariants;
+import com.sixpack.product.domain.SizeChart;
 import com.sixpack.product.domain.Variant;
 import com.sixpack.product.domain.VariantStatus;
 import com.sixpack.shared.ApiException;
@@ -171,6 +172,8 @@ class MongoProductRepository implements ProductRepository {
         doc.images = d.images();
         doc.categoryId = d.categoryId();
         doc.countryOfOrigin = d.countryOfOrigin();
+        doc.lowStockThreshold = d.lowStockThreshold();
+        doc.sizeChart = toDoc(d.sizeChart());
         return toDomain(mongo.save(doc));
     }
 
@@ -273,7 +276,7 @@ class MongoProductRepository implements ProductRepository {
     private static Product toDomain(ProductDocument d) {
         ProductDetails details = new ProductDetails(d.slug, d.sku, d.description, d.brand, d.mrp, d.taxRate, d.hsn,
                 ProductStatus.fromStored(d.status), d.tags, d.images, d.categoryId, d.countryOfOrigin,
-                toDomain(d.variants));
+                toDomain(d.variants), d.lowStockThreshold, toDomain(d.sizeChart));
         return new Product(d.id, d.name, d.photo, d.price == null ? 0 : d.price, d.stock == null ? 0 : d.stock,
                 d.category, d.createdAt, details);
     }
@@ -322,6 +325,21 @@ class MongoProductRepository implements ProductRepository {
             item.status = i.status().name();
             return item;
         }).toList();
+        return doc;
+    }
+
+    private static SizeChart toDomain(ProductDocument.SizeChartDoc c) {
+        return c == null ? SizeChart.EMPTY : new SizeChart(c.columns, orEmpty(c.rows), c.note);
+    }
+
+    private static ProductDocument.SizeChartDoc toDoc(SizeChart c) {
+        if (c.isEmpty()) {
+            return null;
+        }
+        var doc = new ProductDocument.SizeChartDoc();
+        doc.columns = c.columns();
+        doc.rows = c.rows();
+        doc.note = c.note();
         return doc;
     }
 

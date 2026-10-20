@@ -6,7 +6,7 @@ The collection names and field names match the old Mongoose models, so existing 
 | Collection | Shape |
 |---|---|
 | `users` | `_id: string` (legacy: string ids like Firebase uids or ObjectId hex), `name`, `email` (unique), `password` (bcrypt, never serialised), `photo`, `role: "admin"\|"user"`, `gender: "male"\|"female"`, `dob: Date`, `createdAt`, `updatedAt` |
-| `products` | `_id: ObjectId`, `name`, `photo` (relative path `uploads/yyyy/mm/dd/<uuid>.<ext>` or absolute URL), `price: number`, `stock: int ≥ 0`, `category` (lower-case, trimmed), `createdAt`, `updatedAt`, `countryOfOrigin?`, `variants?{axes[], items[{variantId, sku, options[{name,value}], price, mrp, stock, status}]}` (absent unless the product has variants; sparse unique index on `variants.items.sku`), `rev?` (bumped by every stock change) |
+| `products` | `_id: ObjectId`, `name`, `photo` (relative path `uploads/yyyy/mm/dd/<uuid>.<ext>` or absolute URL), `price: number`, `stock: int ≥ 0`, `category` (lower-case, trimmed), `createdAt`, `updatedAt`, `countryOfOrigin?`, `lowStockThreshold?`, `sizeChart?{columns, rows, note}`, `variants?{axes[], items[{variantId, sku, options[{name,value}], price, mrp, stock, status}]}` (absent unless the product has variants; sparse unique index on `variants.items.sku`), `rev?` (bumped by every stock change) |
 | `orders` | `_id`, `shippingInfo{address, city, state, country, pinCode}`, `user: string` (user id), `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: Processing\|Shipped\|Delivered`, `orderItems[{name, photo, price, quantity, productId, sku?, taxRate?, variantId?, variantLabel?, options?[{name,value}]}]`, `payment{provider, orderId, paymentId, status, amount, currency, paidAt, method?, failureReason?, refundedPaise?, refunds?[{providerRefundId, amount, reason, status, actor, at}]}` (new, optional; the refund fields are changed only by atomic updates, and `refundedPaise` includes refunds still in flight), `termsVersion` (new, optional: the Terms version in force when the order was placed), `createdAt`, `updatedAt` |
 | `coupons` | `_id`, `coupon` (unique code), `amount` (flat ₹ discount; a percent for PERCENT), plus the optional rule fields `type, maxDiscount, minOrderValue, startsAt, expiresAt, usageLimit, usedCount, perUserLimit, active`, and `productIds[], categories[], firstOrderOnly` (scope; absent means everything) |
 | `payment_intents` (new) | `_id`, `userId`, `providerOrderId` (unique), `items[{productId, name, photo, price, quantity, variantId?, variantLabel?, options?}]`, `coupon`, `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: CREATED\|CONSUMED`, `createdAt` (TTL index: 24 h) |
@@ -60,10 +60,14 @@ Auth: `Authorization: Bearer <jwt>`. 🔓 means public, 👤 means any logged-in
 | `POST /new` | 🛡 | multipart: name, price, stock, category, photo, plus the optional catalogue fields below | 201 `{success, message, product}`. 409 on duplicate `sku`/`slug`, 400 on invalid fields |
 | `PUT /{id}` | 🛡 | multipart: any of name, price, stock, category, photo and the optional catalogue fields. Omitted or blank means keep the current value. On a product with variants, `price` and `stock` are ignored (derived from the variants) | `{success, message, product}` |
 | `PUT /{id}/variants` | 🛡 | JSON `{axes:[{name, type: text\|colour, values:[{label, hex?, images?}]}], variants:[{id?, sku?, options:[{name, value}], price, mrp?, stock?, status?: ACTIVE\|DISABLED}]}`. Full replace; `{axes:[], variants:[]}` removes variants. 403 while `app.products.variants-enabled` is off | `{success, message, product}`. 400 invalid, 404 unknown product, 409 duplicate SKU or concurrent change |
+| `PUT /{id}/size-chart` | 🛡 | JSON `{columns:[≤8], rows:[[cell…]] (≤30, one cell per column), note?}`; empty columns and rows remove it | `{success, message, product}`. 400 invalid |
+| `GET /low-stock` | 🛡 | — | `{success, alerts:[{productId, name, photo, variantId, label, sku, stock, threshold, out}]}`: public products without variants, and active variants, at or below their threshold, emptiest first |
+| `GET /export` | 🛡 | — | `text/csv` attachment (UTF-8 with BOM): `product_id,product_name,variant_id,variant,sku,price,mrp,stock,status,low_stock_threshold`, one row per product without variants and per variant. Text starting with `= + - @` is prefixed with `'` |
+| `POST /import` | 🛡 | multipart `file` (CSV ≤1 MB, ≤5000 rows), `?dryRun=true` (default) | `{success, applied, changes:[{line, productId, product, variant, changes:[…]}], unchanged}`. Rows match on `product_id`+`variant_id`, or `sku`; blank cells keep values; edits price, mrp, stock, status, low_stock_threshold of existing lines only. Any bad row → 400 `{success:false, message, errors:[{line, message}]}` and nothing is written |
 | `PATCH /{id}/variants/{variantId}/stock` | 🛡 | JSON `{delta}` or `{set}` (exactly one) | `{success, message, product}`. 409 if the result would be negative, 404 unknown variant |
 | `DELETE /{id}` | 🛡 | — | `{success, message}` |
 
-`product = {_id, name, photo, price, stock, category, createdAt, slug, sku, description, brand, mrp, taxRate, hsn, status, tags, images, categoryId, countryOfOrigin, variants:{axes:[{name, type: TEXT\|COLOUR, values:[{label, hex, images}]}], items:[{id, sku, label, options:[{name, value}], price, mrp, stock, status}]}}`.
+`product = {_id, name, photo, price, stock, category, createdAt, slug, sku, description, brand, mrp, taxRate, hsn, status, tags, images, categoryId, countryOfOrigin, lowStockThreshold (null = store default), lowStockAt (effective), sizeChart:{columns, rows, note}|null, variants:{axes:[{name, type: TEXT\|COLOUR, values:[{label, hex, images}]}], items:[{id, sku, label, options:[{name, value}], price, mrp, stock, status}]}}`.
 A product without variants has `variants:{axes:[], items:[]}`. With variants, `price` is the lowest sellable variant price and `stock` the sum of variant stock; both are kept in step by every stock change. Limits: 3 axes, 20 values per axis, 100 variants; option names cannot contain `:`; colour images must be paths from the product's own gallery. Blank variant SKUs are generated (`<product sku or slug>-<VALUES>`); SKUs are unique across all products and variants.
 The new fields are optional (null or empty for older products; `status` defaults to `ACTIVE`).
 
@@ -72,7 +76,7 @@ Optional catalogue fields on `POST /new` and `PUT /{id}`:
 `sku` (≤60, unique, blank means none), `description` (≤5000), `brand` (≤60), `mrp` (0–10,000,000 and not below `price`),
 `taxRate` (0–100), `hsn` (4–8 digits), `status` (`DRAFT|ACTIVE|ARCHIVED`, case-insensitive),
 `tags` (comma separated, lower-cased and de-duplicated, ≤20 of ≤30 characters), `categoryId` (must exist),
-`countryOfOrigin` (≤56), `images` (repeatable file part, ≤5; sending any replaces the whole gallery).
+`countryOfOrigin` (≤56), `lowStockThreshold` (0–1,000,000), `images` (repeatable file part, ≤5; sending any replaces the whole gallery).
 `DRAFT` and `ARCHIVED` products are left out of `/latest`, `/all`, `/categories` and cannot be bought (checkout treats them as missing).
 
 ### Category — `/category`
@@ -153,6 +157,7 @@ return **403** until the admin has accepted the current acceptable-use agreement
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`
 - `GET /pie` → `{success, charts:{orderFulfillment{processing,shipped,delivered}, productCategories:[{category, percent}], stockAvailability{inStock,outOfStock}, revenueDistribution{totalTax,totalShippingCharges,totalDiscount,totalIncome}, ageGroup{teen,adult,old}, userCategory{admin,customer}}}`
 - `GET /bar` → `{success, charts:{products[6], users[6], orders[12]}}`
+- `GET /products/{productId}/variants` → `{success, sales:[{variantId, label, sku, units, revenue, orders}]}` (one product's order lines grouped by variant, best sellers first; `variantId` null for sales before it had variants)
 - `GET /line` → `{success, charts:{products[12], users[12], discount[12], revenue[12]}}`
 
 Month arrays run oldest to newest and end with the current month. Buckets account for the year.

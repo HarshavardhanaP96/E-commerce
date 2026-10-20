@@ -1,6 +1,9 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import {
   CategoriesResponse,
+  CsvImportResponse,
+  SizeChartRequest,
+  StockAlertsResponse,
   OptionFacetsResponse,
   MessageResponse,
   ProductResponse,
@@ -72,6 +75,22 @@ export const productAPI = createApi({
       }),
       invalidatesTags: ["product"],
     }),
+    lowStock: builder.query<StockAlertsResponse, void>({
+      query: () => "low-stock",
+      providesTags: ["product"],
+    }),
+    replaceSizeChart: builder.mutation<ProductSavedResponse, { productId: string; body: SizeChartRequest }>({
+      query: ({ productId, body }) => ({ url: `${productId}/size-chart`, method: "PUT", body }),
+      invalidatesTags: ["product"],
+    }),
+    importProducts: builder.mutation<CsvImportResponse, { file: File; dryRun: boolean }>({
+      query: ({ file, dryRun }) => {
+        const body = new FormData();
+        body.set("file", file);
+        return { url: `import?dryRun=${dryRun}`, method: "POST", body };
+      },
+      invalidatesTags: ["product"],
+    }),
     deleteProduct: builder.mutation<MessageResponse, string>({
       query: (productId) => ({ url: productId, method: "DELETE" }),
       invalidatesTags: ["product"],
@@ -90,5 +109,8 @@ export const {
   useUpdateProductMutation,
   useReplaceVariantsMutation,
   useAdjustVariantStockMutation,
+  useLowStockQuery,
+  useReplaceSizeChartMutation,
+  useImportProductsMutation,
   useDeleteProductMutation,
 } = productAPI;

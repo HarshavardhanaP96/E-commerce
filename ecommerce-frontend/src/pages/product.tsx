@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { LuArrowLeft, LuMinus, LuPlus, LuShoppingBag } from "react-icons/lu";
 import Loader from "../components/loader";
+import SizeGuide from "../components/sizeGuide";
 import { useProductDetailsQuery } from "../redux/api/productAPI";
 import { addToCart } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
@@ -95,7 +96,7 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
   const showFrom = withVariants && !variant && range.min !== range.max;
   const discount = discountPercent(price, line?.mrp ?? product.mrp);
   const soldOut = !!line && line.stock < 1;
-  const lowStock = !!line && line.stock > 0 && line.stock <= 5;
+  const lowStock = !!line && line.stock > 0 && line.stock <= (product.lowStockAt ?? 5);
 
   return (
     <div className="product-page">
@@ -144,6 +145,8 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
 
           {!available && <p className="notice notice--warn">This product is not available right now.</p>}
 
+          {product.sizeChart && <SizeGuide chart={product.sizeChart} productName={product.name} />}
+
           {axes.map((axis) => (
             <fieldset key={axis.name} className="option">
               <legend>
@@ -174,7 +177,7 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
           ))}
 
           <p
-            className={`product-info__stock${soldOut ? " is-out" : ""}${withVariants && !variant ? " is-hint" : ""}`}
+            className={`product-info__stock${soldOut ? " is-out" : ""}${lowStock ? " is-low" : ""}${withVariants && !variant ? " is-hint" : ""}`}
             aria-live="polite"
           >
             {withVariants && !variant

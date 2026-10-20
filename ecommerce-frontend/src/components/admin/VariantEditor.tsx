@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { LuPlus, LuX } from "react-icons/lu";
 import { errorMessage } from "../../redux/api/baseQuery";
 import { useAdjustVariantStockMutation, useReplaceVariantsMutation } from "../../redux/api/productAPI";
+import { useGetVariantSalesQuery } from "../../redux/api/dashboardAPI";
 import { Product } from "../../types/types";
 import { VariantsRequest } from "../../types/api-types";
 import { formatINR, transformImage } from "../../utils/features";
@@ -83,6 +84,9 @@ const VariantEditor = ({ product }: { product: Product }) => {
   const [imagePicker, setImagePicker] = useState<string>("");
   const [saveVariants, { isLoading: saving }] = useReplaceVariantsMutation();
   const [adjustStock] = useAdjustVariantStockMutation();
+  const { data: salesData } = useGetVariantSalesQuery(product._id);
+  const sales = new Map((salesData?.sales ?? []).map((s) => [s.variantId ?? "", s]));
+  const lowAt = product.lowStockAt ?? 5;
 
   const gallery = [...new Set([product.photo, ...(product.images ?? [])].filter(Boolean))];
   const defaultPrice = String(product.price);
@@ -360,8 +364,9 @@ const VariantEditor = ({ product }: { product: Product }) => {
                 <th>SKU</th>
                 <th>Price (₹)</th>
                 <th>MRP (₹)</th>
-                <th>Stock{rows.some((r) => r.id) ? " (saves on leaving the field)" : ""}</th>
+                <th>Stock</th>
                 <th>Status</th>
+                <th title="Units sold across all orders">Sold</th>
               </tr>
             </thead>
             <tbody>
@@ -383,7 +388,7 @@ const VariantEditor = ({ product }: { product: Product }) => {
                   <td>
                     <input type="number" min={0} step="0.01" value={r.mrp} onChange={(e) => patchRow(i, { mrp: e.target.value })} aria-label="MRP" />
                   </td>
-                  <td>
+                  <td className={r.status === "ACTIVE" && Number(r.stock) <= lowAt ? "is-low" : ""}>
                     <input
                       type="number"
                       min={0}
@@ -401,10 +406,19 @@ const VariantEditor = ({ product }: { product: Product }) => {
                       <option value="DISABLED">Disabled</option>
                     </select>
                   </td>
+                  <td
+                    className="variant-table__sold"
+                    title={r.id && sales.get(r.id) ? `${formatINR(sales.get(r.id)!.revenue)} from ${sales.get(r.id)!.orders} order(s)` : undefined}
+                  >
+                    {r.id ? sales.get(r.id)?.units ?? 0 : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {rows.some((r) => r.id) && (
+            <p className="variant-table__hint">Stock of saved variants saves as soon as you leave the field.</p>
+          )}
         </div>
       )}
 

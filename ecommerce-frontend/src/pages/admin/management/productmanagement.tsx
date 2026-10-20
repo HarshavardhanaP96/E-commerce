@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import ProductForm from "../../../components/admin/ProductForm";
 import VariantEditor from "../../../components/admin/VariantEditor";
+import SizeChartEditor from "../../../components/admin/SizeChartEditor";
 import { ProductFormValues, emptyProductForm, toFormData } from "../../../components/admin/productFormData";
 import Loader from "../../../components/admin/Loader";
 import { errorMessage } from "../../../redux/api/baseQuery";
@@ -21,7 +22,7 @@ const ProductManagement = () => {
   const [updateProduct, { isLoading: saving }] = useUpdateProductMutation();
   const [deleteProduct, { isLoading: deleting }] = useDeleteProductMutation();
   const [values, setValues] = useState<ProductFormValues>(emptyProductForm);
-  const [tab, setTab] = useState<"details" | "variants">("details");
+  const [tab, setTab] = useState<"details" | "variants" | "size">("details");
 
   const product = data?.product;
   useEffect(() => {
@@ -40,6 +41,7 @@ const ProductManagement = () => {
         tags: (product.tags ?? []).join(", "),
         categoryId: product.categoryId ?? "",
         countryOfOrigin: product.countryOfOrigin ?? "",
+        lowStockThreshold: product.lowStockThreshold != null ? String(product.lowStockThreshold) : "",
       });
     }
   }, [product]);
@@ -87,7 +89,7 @@ const ProductManagement = () => {
       }
     >
       <div className="tabs" role="tablist">
-        {(["details", "variants"] as const).map((t) => (
+        {(["details", "variants", "size"] as const).map((t) => (
           <button
             key={t}
             role="tab"
@@ -95,7 +97,11 @@ const ProductManagement = () => {
             className={tab === t ? "is-active" : ""}
             onClick={() => setTab(t)}
           >
-            {t === "details" ? "Details" : `Variants${product.variants?.items.length ? ` (${product.variants.items.length})` : ""}`}
+            {t === "details"
+              ? "Details"
+              : t === "size"
+                ? `Size guide${product.sizeChart ? " ✓" : ""}`
+                : `Variants${product.variants?.items.length ? ` (${product.variants.items.length})` : ""}`}
           </button>
         ))}
       </div>
@@ -108,8 +114,10 @@ const ProductManagement = () => {
           currentImages={product.images}
           derived={(product.variants?.items.length ?? 0) > 0}
         />
-      ) : (
+      ) : tab === "variants" ? (
         <VariantEditor key={product._id} product={product} />
+      ) : (
+        <SizeChartEditor key={product._id} product={product} />
       )}
     </DetailLayout>
   );

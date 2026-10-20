@@ -4,6 +4,8 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.grou
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.sort;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwind;
 
 import com.sixpack.dashboard.domain.DashboardReadPort;
 import com.sixpack.dashboard.domain.Dataset;
@@ -22,6 +24,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.ArithmeticOperators;
 import org.springframework.data.mongodb.core.aggregation.DateOperators;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -199,6 +202,28 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
         query.fields().include("_id");
         return mongo.find(query, Document.class, collection(Dataset.PRODUCTS)).stream()
                 .map(d -> d.get("_id")).toList();
+    }
+
+    @Override
+    public List<VariantSales> variantSales(String productId) {
+        Criteria ofProduct = Criteria.where("orderItems.productId").is(id(productId));
+        Aggregation agg = newAggregation(
+                match(ofProduct),
+                sort(Sort.by(CREATED_AT)),
+                unwind("orderItems"),
+                match(ofProduct),
+                group("orderItems.variantId")
+                        .last("orderItems.variantLabel").as("label")
+                        .last("orderItems.sku").as("sku")
+                        .sum("orderItems.quantity").as("units")
+                        .sum(ArithmeticOperators.Multiply.valueOf("orderItems.price")
+                                .multiplyBy("orderItems.quantity")).as("revenue")
+                        .count().as("orders"),
+                sort(Sort.by(Sort.Direction.DESC, "units").and(Sort.by("label"))));
+        return mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class).getMappedResults().stream()
+                .map(d -> new VariantSales(d.getString("_id"), d.getString("label"), d.getString("sku"),
+                        (long) number(d.get("units")), number(d.get("revenue")), (long) number(d.get("orders"))))
+                .toList();
     }
 
     private static Object id(String value) {

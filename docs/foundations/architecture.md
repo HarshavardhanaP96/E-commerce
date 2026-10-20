@@ -125,6 +125,14 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   password-reset one) sent at registration and on request; a mail failure never fails registration; nothing is
   blocked while an address is unverified. Rejected: a token-version or revocation list (needs a store read per
   request anyway) and gating checkout on verification (would lock out every existing customer). Still active.
+- 2026-10-19: ADR-020 **Size guide and low-stock threshold are plain product fields; analytics and CSV add no
+  schema.** `sizeChart{columns, rows, note}` and `lowStockThreshold` live in `ProductDetails` (old documents load
+  with none, so no migration). One threshold per product covers its variants; alerts are computed on read. Per-variant
+  sales come from the order lines' existing `variantId`/label/SKU snapshots (dashboard aggregation). CSV import
+  matches rows on `product_id`+`variant_id` or SKU, validates the whole file before writing, and writes price/stock
+  through the same revision-checked update as the variant editor, so a concurrent sale is never overwritten. Rejected:
+  a shared size-chart collection (more moving parts; revisit if many products share one chart), per-variant
+  thresholds (no demand yet). Still active.
 - 2026-10-18: ADR-019 **Variants embedded in the product document as generic option axes plus a variants array;
   product `price`/`stock` are derived and stored.** Rejected: fixed size/colour fields (dead end for other axes),
   one product per variant (duplicated content, noisy search), a separate variants collection (cross-document

@@ -26,7 +26,7 @@ const ProductCard = ({ product, handler }: ProductsProps) => {
         {soldOut ? (
           <span className="product-card__tag product-card__tag--muted">Sold out</span>
         ) : (
-          stock <= 5 && <span className="product-card__tag">Only {stock} left</span>
+          stock <= (product.lowStockAt ?? 5) && <span className="product-card__tag">Only {stock} left</span>
         )}
       </Link>
 

@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { BarResponse, LineResponse, PieResponse, StatsResponse } from "../../types/api-types";
+import { BarResponse, LineResponse, PieResponse, StatsResponse, VariantSalesResponse } from "../../types/api-types";
 import { DashboardScope } from "../../types/types";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
@@ -21,6 +21,9 @@ export const dashboardAPI = createApi({
     getLineChart: builder.query<LineResponse, DashboardScope>({
       query: (params) => ({ url: "line", params: clean(params) }),
     }),
+    getVariantSales: builder.query<VariantSalesResponse, string>({
+      query: (productId) => `products/${productId}/variants`,
+    }),
   }),
 });
 
@@ -29,4 +32,5 @@ export const {
   useGetPieChartQuery,
   useGetBarChartQuery,
   useGetLineChartQuery,
+  useGetVariantSalesQuery,
 } = dashboardAPI;

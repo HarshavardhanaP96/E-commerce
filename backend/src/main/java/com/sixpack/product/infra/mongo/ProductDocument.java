@@ -35,6 +35,8 @@ class ProductDocument {
     @Indexed
     String categoryId;
     String countryOfOrigin;
+    Integer lowStockThreshold;
+    SizeChartDoc sizeChart;
     /** Absent for simple and legacy products. Only written through the variant operations. */
     VariantsDoc variants;
     /** Bumped by every stock change so a variant-structure write can detect a concurrent sale. */
@@ -77,5 +79,11 @@ class ProductDocument {
     static class ChoiceDoc {
         String name;
         String value;
+    }
+
+    static class SizeChartDoc {
+        List<String> columns;
+        List<List<String>> rows;
+        String note;
     }
 }

@@ -162,6 +162,16 @@ Verified with `npm run lint`, `npm run build` and a real browser run against an 
 - Search page: option groups (chips, colour swatches), one value per option, replaced on a second click.
 - Not done, on purpose: per-variant dashboard analytics, per-variant low-stock alerts, size-chart table, per-variant tax override, CSV import/export. The last two depend on the open questions about GST slabs and bulk stock editing, which were never answered. Each is additive on the current model.
 
+## Phase 6 as built (2026-10-19): the rest of the list, on the product itself
+
+Asked for as part of the main product with schema changes where needed; GST per variant postponed by the owner.
+- Size guide: `ProductDetails.sizeChart` (columns, rows, note; 8 × 30 max). Admin "Size guide" tab with clothing/footwear templates and rows pre-filled from the Size option; "Size guide" dialog on the product page.
+- Low-stock alerts: `ProductDetails.lowStockThreshold` (null = store default `app.products.low-stock-threshold`, 5). `GET /product/low-stock` (admin); Analytics "Low stock" card; "Low"/"N low" badge in the Products list; low cells highlighted in the Variants table; storefront "Only N left" uses the same level.
+- Per-variant analytics: `GET /dashboard/products/{id}/variants` groups order lines by `variantId` (no schema change); "Sold" column on the Variants tab (revenue and orders on hover).
+- CSV: `GET /product/export`, `POST /product/import?dryRun=` with preview dialog, whole-file validation with line numbers, formula-injection guard, SKU-only files. Uses commons-csv 1.11.0.
+- Verified: `mvn verify` 200 tests; lint/build; a scripted headless-Chrome run against an isolated stack (analytics low-stock card, product-list badges, real CSV download, import preview → apply, refused file with line numbers, Sold column, low highlighting, size-guide editor and storefront dialog, phone width). It caught layout bugs fixed before commit: dialogs not centred (global `margin: 0` reset), variant-table inputs overflowing (admin-wide input rule sets `width: auto`), low-stock highlight hidden by the same rule.
+- Not done: per-variant GST override (owner will decide later).
+
 ## Risks and mitigations
 
 | Risk | Mitigation |

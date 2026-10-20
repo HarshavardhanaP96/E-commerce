@@ -54,7 +54,8 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/legal/**").permitAll()
                         .requestMatchers("/api/v1/consent/**", "/api/v1/consent").authenticated()
                         // product
-                        .requestMatchers(GET, "/api/v1/product/admin-products").hasRole(ADMIN)
+                        .requestMatchers(GET, "/api/v1/product/admin-products", "/api/v1/product/low-stock",
+                                "/api/v1/product/export").hasRole(ADMIN)
                         .requestMatchers(GET, "/api/v1/product/**").permitAll()
                         .requestMatchers("/api/v1/product/**").hasRole(ADMIN)
                         .requestMatchers(GET, "/api/v1/category", "/api/v1/category/**").permitAll()

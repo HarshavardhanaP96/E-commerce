@@ -42,6 +42,7 @@ app:
   products:
     page-size: ${PRODUCT_PER_PAGE:10}
     variants-enabled: ${PRODUCT_VARIANTS_ENABLED:true}
+    low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).

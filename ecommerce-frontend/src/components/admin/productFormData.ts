@@ -11,6 +11,8 @@ export type ProductFormValues = {
   tags: string;
   categoryId: string;
   countryOfOrigin: string;
+  /** Blank keeps the current value (the store default when never set). */
+  lowStockThreshold: string;
   photo?: File;
   /** New gallery pictures. Sending any replaces the whole gallery. */
   images: File[];
@@ -31,6 +33,7 @@ export const emptyProductForm: ProductFormValues = {
   tags: "",
   categoryId: "",
   countryOfOrigin: "",
+  lowStockThreshold: "",
   photo: undefined,
   images: [],
 };
@@ -49,6 +52,7 @@ export const toFormData = (v: ProductFormValues) => {
   if (v.tags) fd.set("tags", v.tags);
   if (v.categoryId) fd.set("categoryId", v.categoryId);
   if (v.countryOfOrigin) fd.set("countryOfOrigin", v.countryOfOrigin);
+  if (v.lowStockThreshold !== "") fd.set("lowStockThreshold", v.lowStockThreshold);
   if (v.photo) fd.set("photo", v.photo);
   v.images.forEach((file) => fd.append("images", file));
   return fd;

@@ -4,13 +4,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sixpack.product.domain.Product;
 import com.sixpack.product.domain.ProductDetails;
 import com.sixpack.product.domain.ProductVariants;
+import com.sixpack.product.domain.SizeChart;
 import java.time.Instant;
 import java.util.List;
 
 record ProductView(@JsonProperty("_id") String id, String name, String photo, double price, int stock,
                    String category, Instant createdAt, String slug, String sku, String description, String brand,
                    Double mrp, Double taxRate, String hsn, String status, List<String> tags, List<String> images,
-                   String categoryId, String countryOfOrigin, VariantsView variants) {
+                   String categoryId, String countryOfOrigin, VariantsView variants, Integer lowStockThreshold,
+                   int lowStockAt, SizeChartView sizeChart) {
+
+    /** Null when the product has no size guide. */
+    record SizeChartView(List<String> columns, List<List<String>> rows, String note) {
+        static SizeChartView from(SizeChart c) {
+            return c.isEmpty() ? null : new SizeChartView(c.columns(), c.rows(), c.note());
+        }
+    }
 
     record VariantsView(List<AxisView> axes, List<VariantView> items) {
         static VariantsView from(ProductVariants v) {
@@ -36,10 +45,12 @@ record ProductView(@JsonProperty("_id") String id, String name, String photo, do
     record ChoiceView(String name, String value) {
     }
 
-    static ProductView from(Product p) {
+    /** @param lowStockDefault the store-wide threshold, used when the product has none of its own */
+    static ProductView from(Product p, int lowStockDefault) {
         ProductDetails d = p.details();
         return new ProductView(p.id(), p.name(), p.photo(), p.price(), p.stock(), p.category(), p.createdAt(),
                 d.slug(), d.sku(), d.description(), d.brand(), d.mrp(), d.taxRate(), d.hsn(), d.status().name(),
-                d.tags(), d.images(), d.categoryId(), d.countryOfOrigin(), VariantsView.from(d.variants()));
+                d.tags(), d.images(), d.categoryId(), d.countryOfOrigin(), VariantsView.from(d.variants()),
+                d.lowStockThreshold(), d.lowStockAt(lowStockDefault), SizeChartView.from(d.sizeChart()));
     }
 }

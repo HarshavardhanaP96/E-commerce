@@ -23,12 +23,13 @@ record ProductDetailsForm(
         @Size(max = 20) List<@Size(max = 30) String> tags,
         @Size(max = 64) String categoryId,
         @Size(max = 56) String countryOfOrigin,
+        @PositiveOrZero @jakarta.validation.constraints.Max(1_000_000) Integer lowStockThreshold,
         @Size(max = 5) List<MultipartFile> images) {
 
     DetailsCommand toCommand() {
         List<byte[]> files = images == null ? null : images.stream().map(Uploads::bytes)
                 .filter(Objects::nonNull).toList();
         return new DetailsCommand(slug, sku, description, brand, mrp, taxRate, hsn, status, tags, categoryId,
-                countryOfOrigin, files);
+                countryOfOrigin, lowStockThreshold, files);
     }
 }

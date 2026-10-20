@@ -15,6 +15,15 @@ public interface DashboardReadPort {
     record OrderTotals(double tax, double shippingCharges, double discount, double total) {
     }
 
+    /**
+     * Units and revenue of one product per variant, from the order lines' snapshots.
+     *
+     * @param variantId null for sales of the product while it had no variants
+     * @param label the variant's label on its most recent order (it survives renames and deletions)
+     */
+    record VariantSales(String variantId, String label, String sku, long units, double revenue, long orders) {
+    }
+
     record LatestTransaction(String id, double discount, double amount, int quantity, String status) {
     }
 
@@ -42,4 +51,7 @@ public interface DashboardReadPort {
     List<LocalDate> userBirthDates(Scope scope);
 
     List<LatestTransaction> latestOrders(Scope scope, int limit);
+
+    /** Sales of one product grouped by variant, best sellers first. */
+    List<VariantSales> variantSales(String productId);
 }

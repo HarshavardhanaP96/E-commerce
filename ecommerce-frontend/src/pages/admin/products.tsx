@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CellProps, Column } from "react-table";
 import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
+import ProductCsvTools from "../../components/admin/ProductCsvTools";
 import { useAdminProductsQuery, useCategoriesQuery } from "../../redux/api/productAPI";
 import { Product } from "../../types/types";
 import { formatINR, transformImage } from "../../utils/features";
@@ -22,8 +23,23 @@ const columns: Column<Product>[] = [
   {
     Header: "Stock",
     accessor: "stock",
-    width: 100,
-    Cell: ({ value }: CellProps<Product>) => <span className={value > 0 ? "" : "red"}>{value}</span>,
+    width: 140,
+    Cell: ({ value, row }: CellProps<Product>) => {
+      const p = row.original;
+      const at = p.lowStockAt ?? 5;
+      const active = (p.variants?.items ?? []).filter((v) => v.status === "ACTIVE");
+      const low = active.length ? active.filter((v) => v.stock <= at).length : value <= at ? 1 : 0;
+      return (
+        <span className="stock-cell">
+          <span className={value > 0 ? "" : "red"}>{value}</span>
+          {low > 0 && (
+            <span className="badge badge--processing" title={`At or below ${at}`}>
+              {active.length ? `${low} low` : "Low"}
+            </span>
+          )}
+        </span>
+      );
+    },
   } as Column<Product>,
 ];
 
@@ -55,9 +71,12 @@ const Products = () => {
           </select>
         }
         actions={
-          <Link to="/admin/product/new" className="btn btn--primary">
-            <LuPlus /> Add product
-          </Link>
+          <>
+            <ProductCsvTools />
+            <Link to="/admin/product/new" className="btn btn--primary">
+              <LuPlus /> Add product
+            </Link>
+          </>
         }
       />
     </AdminLayout>
