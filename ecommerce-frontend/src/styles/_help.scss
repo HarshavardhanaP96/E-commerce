@@ -3,8 +3,7 @@
 // ===================================
 
 .help {
-  max-width: 48rem;
-  margin: 0 auto;
+  // --gutter already centres content on the shared 1200px column edge, so no max-width here
   padding: $spacing-xl var(--gutter) $spacing-3xl;
   @include flex(column, flex-start, stretch, $spacing-lg);
   animation: fadeIn 0.3s ease;
@@ -17,9 +16,24 @@
     }
   }
 
+  // Topics + contact on the left, answers take the rest of the row
+  &__body {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 1fr);
+    gap: $spacing-2xl;
+    align-items: start;
+  }
+
+  &__side {
+    @include flex(column, flex-start, stretch, $spacing-lg);
+    position: sticky;
+    top: calc(var(--header-h) + #{$spacing-lg});
+  }
+
   &__search {
     position: relative;
     display: block;
+    max-width: 40rem;
 
     svg {
       position: absolute;
@@ -40,11 +54,11 @@
   }
 
   &__chips {
-    @include flex(row, flex-start, center, $spacing-sm);
-    flex-wrap: wrap;
+    @include flex(column, flex-start, stretch, $spacing-xs);
 
     button {
-      height: 2.25rem;
+      height: 2.5rem;
+      text-align: left;
       padding: 0 $spacing-md;
       border: 1px solid $color-border;
       border-radius: $radius-full;
@@ -132,9 +146,7 @@
   }
 
   &__contact {
-    @include flex(row, space-between, center, $spacing-md);
-    flex-wrap: wrap;
-    margin-top: $spacing-md;
+    @include flex(column, flex-start, stretch, $spacing-md);
     padding: $spacing-lg;
     background: $color-bg-secondary;
     border: 1px solid $color-border;
@@ -153,9 +165,45 @@
       font-weight: 600;
     }
 
+    p a {
+      overflow-wrap: anywhere; // long support address in a narrow column
+    }
+
     .help__mail {
       @include button(primary);
       color: var(--on-primary);
+    }
+  }
+}
+
+// Single column: chips wrap in a row above the answers, contact card drops to the end
+@media (max-width: 860px) {
+  .help {
+    &__body {
+      grid-template-columns: minmax(0, 1fr);
+      gap: $spacing-lg;
+    }
+
+    &__side {
+      display: contents;
+    }
+
+    &__chips {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: $spacing-sm;
+
+      button {
+        height: 2.25rem;
+      }
+    }
+
+    &__contact {
+      order: 1;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
     }
   }
 }

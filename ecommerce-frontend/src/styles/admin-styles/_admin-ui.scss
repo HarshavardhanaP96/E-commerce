@@ -558,7 +558,6 @@
 
 // ---------- knowledge base (admin help) ----------
 .kb {
-  max-width: 56rem;
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
@@ -585,6 +584,7 @@
   &__search {
     position: relative;
     display: block;
+    max-width: 32rem;
     margin-top: $spacing-xs;
 
     svg {
@@ -612,7 +612,7 @@
 
   &__cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); // 3 per row on a laptop, matching the largest guide group
     gap: $spacing-md;
   }
 
@@ -700,6 +700,39 @@
   &__open {
     align-self: flex-start;
     margin-top: $spacing-xs;
+  }
+
+  // Article fills the row; related guides sit in a right-hand column instead of below it
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    gap: $spacing-lg;
+    align-items: start;
+
+    &:has(> :only-child) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__related .kb__cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  article {
+    p,
+    ol {
+      max-width: 80ch; // readable line length inside a wide card
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .kb__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kb__related .kb__cards {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   }
 }
 

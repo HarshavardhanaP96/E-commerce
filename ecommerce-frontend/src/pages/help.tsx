@@ -34,50 +34,54 @@ const Help = () => {
         </label>
       </header>
 
-      <div className="help__chips" role="group" aria-label="Topic">
-        {[{ id: "all" as const, label: "All" }, ...HELP_CATEGORIES].map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={category === c.id}
-            className={category === c.id ? "is-active" : undefined}
-            onClick={() => setCategory(c.id)}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      <div className="help__body">
+        <aside className="help__side">
+          <div className="help__chips" role="group" aria-label="Topic">
+            {[{ id: "all" as const, label: "All" }, ...HELP_CATEGORIES].map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={category === c.id}
+                className={category === c.id ? "is-active" : undefined}
+                onClick={() => setCategory(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
 
-      <div className="help__list" aria-live="polite">
-        {results.length === 0 ? (
-          <p className="help__empty">
-            Nothing matches “{query}”. Try a different word, or <Link to="/legal/contact">contact us</Link>.
-          </p>
-        ) : (
-          results.map((a) => (
-            <details key={a.id} className="help__item">
-              <summary>
-                <span>{a.question}</span>
-                <LuChevronDown aria-hidden />
-              </summary>
-              <div className="help__answer">
-                {a.answer.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-                {a.link && <Link to={a.link.to}>{a.link.label} →</Link>}
-              </div>
-            </details>
-          ))
-        )}
-      </div>
+          <section className="help__contact">
+            <div>
+              <h2>Still need help?</h2>
+              <p>Email us at <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a> and include your order ID if you have one.</p>
+            </div>
+            <a className="help__mail" href={`mailto:${BUSINESS.email}`}>Email support</a>
+          </section>
+        </aside>
 
-      <aside className="help__contact">
-        <div>
-          <h2>Still need help?</h2>
-          <p>Email us at <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a> and include your order ID if you have one.</p>
+        <div className="help__list" aria-live="polite">
+          {results.length === 0 ? (
+            <p className="help__empty">
+              Nothing matches “{query}”. Try a different word, or <Link to="/legal/contact">contact us</Link>.
+            </p>
+          ) : (
+            results.map((a) => (
+              <details key={a.id} className="help__item">
+                <summary>
+                  <span>{a.question}</span>
+                  <LuChevronDown aria-hidden />
+                </summary>
+                <div className="help__answer">
+                  {a.answer.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                  {a.link && <Link to={a.link.to}>{a.link.label} →</Link>}
+                </div>
+              </details>
+            ))
+          )}
         </div>
-        <a className="help__mail" href={`mailto:${BUSINESS.email}`}>Email support</a>
-      </aside>
+      </div>
     </div>
   );
 };
