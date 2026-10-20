@@ -106,7 +106,10 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   `TenantFeatures`; `variants` is the first). Per-store limits (`TenantQuotas`, defaults `app.tenant.limits.*`):
   product count (checked on create), upload bytes (`LocalFileStorage` measures a store's folder once, then
   counts writes and deletes), and requests per minute (`TenantRateLimitFilter`, a fixed window right after tenant
-  resolution, 429 with `Retry-After`). All three are per backend instance, like the login limiter, so the default tenant keeps running on today's environment; payment secrets are
+  resolution, 429 with `Retry-After`). All three are per backend instance, like the login limiter. Store
+  statuses: `TRIAL` (until `trialEndsAt`, then suspended by `TenantTrials`), `ACTIVE`, `SUSPENDED` (closed by the
+  platform), `CANCELLED` (closed because the owner left), `SCHEDULED_FOR_DELETION` and `DELETED` (offboarding,
+  `TenantPurge`). Both jobs run on `app.tenant.purge-interval` and record their changes with actor `SYSTEM`, so the default tenant keeps running on today's environment; payment secrets are
   never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
   gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
   and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an

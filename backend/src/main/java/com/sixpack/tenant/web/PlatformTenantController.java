@@ -45,7 +45,8 @@ class PlatformTenantController {
                          @Size(max = 20) List<String> domains, Map<String, String> theme,
                          @Size(max = 16) String locale, @Size(max = 8) String currency, LegalSettings legal,
                          PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                         Map<String, Boolean> features, TenantLimits limits, @Valid AdminRequest admin) {
+                         Map<String, Boolean> features, TenantLimits limits, Boolean trial,
+                         @Valid AdminRequest admin) {
     }
 
     record UpdateRequest(@Size(max = 80) String name, @Size(max = 20) List<String> domains,
@@ -57,11 +58,11 @@ class PlatformTenantController {
     record TenantView(@JsonProperty("id") String id, String slug, String name, String status, List<String> domains,
                       Map<String, String> theme, String locale, String currency, LegalSettings legal,
                       PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                      Map<String, Boolean> features, TenantLimits limits, Instant deletionDueAt,
-                      Instant createdAt) {
+                      Map<String, Boolean> features, TenantLimits limits, Instant trialEndsAt,
+                      Instant deletionDueAt, Instant createdAt) {
         static TenantView from(Tenant t) {
             return new TenantView(t.id(), t.slug(), t.name(), t.status().name(), t.domains(), t.theme(), t.locale(),
-                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.limits(), t.deletionDueAt(),
+                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.limits(), t.trialEndsAt(), t.deletionDueAt(),
                     t.createdAt());
         }
     }
@@ -90,7 +91,7 @@ class PlatformTenantController {
         AdminCommand admin = r.admin() == null ? null
                 : new AdminCommand(r.admin().name(), r.admin().email(), r.admin().password());
         Tenant created = service.create(new CreateCommand(r.slug(), r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits(), admin));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits(), Boolean.TRUE.equals(r.trial()), admin));
         return ApiResponse.of("message", "Tenant " + created.slug() + " created", "tenant", TenantView.from(created));
     }
 
@@ -119,6 +120,11 @@ class PlatformTenantController {
     Map<String, Object> offboard(@PathVariable String id) {
         return ApiResponse.of("message", "Store closed and scheduled for deletion", "tenant",
                 TenantView.from(service.offboard(id)));
+    }
+
+    @PostMapping("/{id}/cancel")
+    Map<String, Object> cancel(@PathVariable String id) {
+        return ApiResponse.of("message", "Store cancelled", "tenant", TenantView.from(service.cancel(id)));
     }
 
     @PostMapping("/{id}/restore")

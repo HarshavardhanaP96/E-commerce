@@ -22,7 +22,7 @@ final class TenantAudit {
     }
 
     private static List<String> fields() {
-        List<String> fields = new ArrayList<>(List.of("slug", "name", "status", "deletionDueAt", "domains", "locale", "currency",
+        List<String> fields = new ArrayList<>(List.of("slug", "name", "status", "trialEndsAt", "deletionDueAt", "domains", "locale", "currency",
                 "theme", "legal.termsVersion", "legal.privacyVersion", "legal.adminAupVersion", "payment.provider",
                 "payment.keyId", "payment.secretRef", "mail.baseUrl", "storefront.logoUrl", "storefront.legalName",
                 "storefront.address", "storefront.email", "storefront.phone", "storefront.grievanceOfficer",
@@ -38,6 +38,7 @@ final class TenantAudit {
         v.put("slug", t.slug());
         v.put("name", t.name());
         v.put("status", t.status().name());
+        v.put("trialEndsAt", t.trialEndsAt() == null ? null : t.trialEndsAt().toString());
         v.put("deletionDueAt", t.deletionDueAt() == null ? null : t.deletionDueAt().toString());
         v.put("domains", t.domains());
         v.put("locale", t.locale());

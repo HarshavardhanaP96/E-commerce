@@ -28,6 +28,7 @@ class TenantDocument {
     StorefrontDoc storefront;
     Map<String, Boolean> features;
     Instant deletionDueAt;
+    Instant trialEndsAt;
     LimitsDoc limits;
 
     static class LimitsDoc {

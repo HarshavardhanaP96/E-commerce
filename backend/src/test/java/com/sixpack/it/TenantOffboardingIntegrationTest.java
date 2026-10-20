@@ -212,6 +212,8 @@ class TenantOffboardingIntegrationTest extends TenantIntegrationTest {
         assertThat(purged.domains()).isEmpty();
         assertThat(mongo.getCollection("audit_log").countDocuments(new Document("tenantId", acme.id())
                 .append("action", "TENANT_PURGED"))).isEqualTo(1);
+        assertThat(mongo.getCollection("audit_log").find(new Document("tenantId", acme.id())
+                .append("action", "TENANT_PURGED")).first().getString("actorRole")).isEqualTo("SYSTEM");
         assertThat(ownedBy(acme, "audit_log")).isGreaterThan(1);
         tenantRegistry.refresh();
         mvc.perform(get("/api/v1/product/latest").with(host(hostOf(acme)))).andExpect(status().isNotFound());

@@ -66,6 +66,8 @@ app:
     # Offboarding: how long a closed store can be restored before its data is purged, and how often to check.
     deletion-grace: ${TENANT_DELETION_GRACE:30d}
     purge-interval: ${TENANT_PURGE_INTERVAL:1h}
+    # A store created as a trial is suspended when this has passed (the platform admin activates it to keep it).
+    trial-length: ${TENANT_TRIAL_LENGTH:14d}
     # Platform default limits per store; a platform admin can set a store's own (PUT /platform/tenants/{id}).
     limits:
       products: ${TENANT_MAX_PRODUCTS:5000}

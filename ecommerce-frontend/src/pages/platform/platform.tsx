@@ -155,6 +155,7 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
   const [updateTenant, { isLoading: saving }] = useUpdateTenantMutation();
   const [setStatus] = useSetTenantStatusMutation();
   const [form, setForm] = useState({ slug: "", name: "", domain: "", adminName: "", adminEmail: "", adminPassword: "" });
+  const [trial, setTrial] = useState(false);
   const [editing, setEditing] = useState<PlatformTenant | null>(null);
   const [json, setJson] = useState("");
 
@@ -171,10 +172,11 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
     const admin = form.adminEmail
       ? { name: form.adminName, email: form.adminEmail, password: form.adminPassword }
       : undefined;
-    const res = await createTenant({ slug: form.slug.trim(), name: form.name.trim(), domains: [form.domain.trim()], admin });
+    const res = await createTenant({ slug: form.slug.trim(), name: form.name.trim(), domains: [form.domain.trim()], trial, admin });
     if ("error" in res) return toast.error(errorMessage(res.error));
     toast.success(res.data.message);
     setForm({ slug: "", name: "", domain: "", adminName: "", adminEmail: "", adminPassword: "" });
+    setTrial(false);
   };
 
   const startEdit = (t: PlatformTenant) => {
@@ -196,8 +198,9 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
     setEditing(null);
   };
 
-  const change = async (t: PlatformTenant, action: "suspend" | "activate" | "offboard" | "restore") => {
+  const change = async (t: PlatformTenant, action: "suspend" | "activate" | "cancel" | "offboard" | "restore") => {
     if (action === "suspend" && !confirm(`Suspend ${t.name}? Its storefront will stop working until reactivated.`)) return;
+    if (action === "cancel" && !confirm(`Cancel ${t.name}? Use this when the store owner leaves; the storefront closes.`)) return;
     if (
       action === "offboard" &&
       !confirm(
@@ -257,9 +260,14 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
                 </td>
                 <td>{t.domains.join(", ")}</td>
                 <td>
-                  <span className={`badge badge--${t.status === "ACTIVE" ? "active" : "inactive"}`}>
+                  <span className={`badge badge--${t.status === "ACTIVE" || t.status === "TRIAL" ? "active" : "inactive"}`}>
                     {t.status.toLowerCase().replace(/_/g, " ")}
                   </span>
+                  {t.trialEndsAt && (
+                    <small className="platform__due">
+                      trial ends {new Date(t.trialEndsAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                    </small>
+                  )}
                   {t.deletionDueAt && (
                     <small className="platform__due">
                       data deleted on {new Date(t.deletionDueAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
@@ -277,11 +285,23 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
                       </button>
                     </>
                   )}
-                  {t.slug !== "default" && (t.status === "ACTIVE" || t.status === "SUSPENDED") && (
+                  {t.slug !== "default" && !["SCHEDULED_FOR_DELETION", "DELETED"].includes(t.status) && (
                     <>
-                      <button className="btn" onClick={() => change(t, t.status === "ACTIVE" ? "suspend" : "activate")}>
-                        {t.status === "ACTIVE" ? "Suspend" : "Activate"}
-                      </button>
+                      {t.status !== "ACTIVE" && (
+                        <button className="btn" onClick={() => change(t, "activate")}>
+                          Activate
+                        </button>
+                      )}
+                      {(t.status === "ACTIVE" || t.status === "TRIAL") && (
+                        <button className="btn" onClick={() => change(t, "suspend")}>
+                          Suspend
+                        </button>
+                      )}
+                      {t.status !== "CANCELLED" && (
+                        <button className="btn" onClick={() => change(t, "cancel")}>
+                          Cancel
+                        </button>
+                      )}
                       <button className="btn" onClick={() => change(t, "offboard")}>
                         Offboard
                       </button>
@@ -346,6 +366,10 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
         <label className="span-2">
           First admin password (12+ characters)
           <input type="password" value={form.adminPassword} onChange={set("adminPassword")} minLength={12} autoComplete="new-password" />
+        </label>
+        <label className="span-2 platform__check">
+          <input type="checkbox" checked={trial} onChange={(e) => setTrial(e.target.checked)} />
+          Start as a trial (suspended when the trial ends unless activated)
         </label>
         <button className="btn btn--primary span-2" disabled={creating}>
           Create tenant

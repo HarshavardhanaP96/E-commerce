@@ -79,6 +79,7 @@ class MongoTenantRepository implements TenantRepository {
         doc.storefront.grievanceEmail = sf.grievanceEmail();
         doc.features = t.features();
         doc.deletionDueAt = t.deletionDueAt();
+        doc.trialEndsAt = t.trialEndsAt();
         doc.limits = new TenantDocument.LimitsDoc();
         doc.limits.products = t.limits().products();
         doc.limits.uploadBytes = t.limits().uploadBytes();
@@ -107,6 +108,7 @@ class MongoTenantRepository implements TenantRepository {
                         d.storefront.grievanceEmail),
                 d.features, d.deletionDueAt,
                 d.limits == null ? null : new TenantLimits(d.limits.products, d.limits.uploadBytes,
-                        d.limits.requestsPerMinute));
+                        d.limits.requestsPerMinute),
+                d.trialEndsAt);
     }
 }

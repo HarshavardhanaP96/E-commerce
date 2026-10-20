@@ -8,7 +8,9 @@ export type PlatformTenant = {
   id: string;
   slug: string;
   name: string;
-  status: "ACTIVE" | "SUSPENDED" | "SCHEDULED_FOR_DELETION" | "DELETED";
+  status: "TRIAL" | "ACTIVE" | "SUSPENDED" | "CANCELLED" | "SCHEDULED_FOR_DELETION" | "DELETED";
+  /** When a trial store is suspended unless activated. */
+  trialEndsAt?: string | null;
   /** When a store scheduled for deletion will be purged. */
   deletionDueAt?: string | null;
   domains: string[];
@@ -30,6 +32,7 @@ export type NewTenantInput = {
   slug: string;
   name: string;
   domains: string[];
+  trial?: boolean;
   admin?: { name: string; email: string; password: string };
 };
 
@@ -82,7 +85,7 @@ export const platformAPI = createApi({
       query: ({ id, body }) => ({ url: `tenants/${id}`, method: "PUT", body }),
       invalidatesTags: ["tenants", "audit"],
     }),
-    setTenantStatus: builder.mutation<TenantResponse, { id: string; action: "suspend" | "activate" | "offboard" | "restore" }>({
+    setTenantStatus: builder.mutation<TenantResponse, { id: string; action: "suspend" | "activate" | "cancel" | "offboard" | "restore" }>({
       query: ({ id, action }) => ({ url: `tenants/${id}/${action}`, method: "POST" }),
       invalidatesTags: ["tenants", "audit"],
     }),

@@ -18,7 +18,7 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
                      Map<String, String> theme, String locale, String currency, Instant createdAt,
                      LegalSettings legal, PaymentSettings payment, MailSettings mail,
                      StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt,
-                     TenantLimits limits) {
+                     TenantLimits limits, Instant trialEndsAt) {
 
     public Tenant {
         status = status == null ? TenantStatus.ACTIVE : status;
@@ -30,6 +30,17 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
         storefront = storefront == null ? StorefrontSettings.NONE : storefront;
         features = features == null ? Map.of() : Map.copyOf(features);
         limits = limits == null ? TenantLimits.NONE : limits;
+        trialEndsAt = status == TenantStatus.TRIAL ? trialEndsAt : null;
+    }
+
+    /** Not on trial. */
+    public Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
+                  Map<String, String> theme, String locale, String currency, Instant createdAt,
+                  LegalSettings legal, PaymentSettings payment, MailSettings mail,
+                  StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt,
+                  TenantLimits limits) {
+        this(id, slug, name, status, domains, theme, locale, currency, createdAt, legal, payment, mail, storefront,
+                features, deletionDueAt, limits, null);
     }
 
     /** With the platform's default limits. */
@@ -50,10 +61,14 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
                 features, null);
     }
 
-    /** The same store in another status; {@code deletionDueAt} is only kept while scheduled for deletion. */
+    /**
+     * The same store in another status; {@code deletionDueAt} is only kept while scheduled for deletion, and the
+     * trial end only while still on trial.
+     */
     public Tenant withStatus(TenantStatus newStatus, Instant newDeletionDueAt) {
         return new Tenant(id, slug, name, newStatus, newStatus == TenantStatus.DELETED ? List.of() : domains, theme,
-                locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt, limits);
+                locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt, limits,
+                trialEndsAt);
     }
 
     /** Without feature switches. */

@@ -77,7 +77,7 @@ public class TenantPurge {
         });
         Tenant deleted = tenants.save(t.withStatus(TenantStatus.DELETED, null));
         registry.refresh();
-        admin.record(AuditAction.TENANT_PURGED, t, deleted);
+        admin.record(AuditAction.TENANT_PURGED, t, deleted, true);
         log.info("Tenant '{}' purged", t.slug());
     }
 }

@@ -53,7 +53,7 @@ public class TenantAdminService {
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
                                 MailSettings mail, StorefrontSettings storefront, Map<String, Boolean> features,
-                                TenantLimits limits, AdminCommand admin) {
+                                TenantLimits limits, boolean trial, AdminCommand admin) {
     }
 
     /**
@@ -91,9 +91,15 @@ public class TenantAdminService {
     }
 
     void record(AuditAction action, Tenant before, Tenant after) {
+        record(action, before, after, false);
+    }
+
+    void record(AuditAction action, Tenant before, Tenant after, boolean bySystem) {
         Map<String, Object> was = before == null ? Map.of() : TenantAudit.view(before);
-        TenantContext.runAs(new TenantRef(after.id(), after.slug()), () -> audit.record(AuditEvent.of(action)
-                .on("tenant", after.id()).changing(Changes.diff(was, TenantAudit.view(after), TenantAudit.POLICY))));
+        AuditEvent event = AuditEvent.of(action).on("tenant", after.id())
+                .changing(Changes.diff(was, TenantAudit.view(after), TenantAudit.POLICY));
+        TenantContext.runAs(new TenantRef(after.id(), after.slug()),
+                () -> audit.record(bySystem ? event.bySystem() : event));
     }
 
     public List<Tenant> list() {
@@ -125,9 +131,12 @@ public class TenantAdminService {
             requireAdmin(c.admin());
         }
 
-        Tenant created = tenants.save(new Tenant(null, slug, name, TenantStatus.ACTIVE, domains, theme,
+        Instant trialEndsAt = c.trial()
+                ? Instant.now().plus(lifecycle.trialLength()).truncatedTo(ChronoUnit.MILLIS) : null;
+        Tenant created = tenants.save(new Tenant(null, slug, name,
+                c.trial() ? TenantStatus.TRIAL : TenantStatus.ACTIVE, domains, theme,
                 blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront,
-                features, null, limits));
+                features, null, limits, trialEndsAt));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -162,7 +171,8 @@ public class TenantAdminService {
                 u.storefront() != null ? validStorefront(u.storefront()) : current.storefront(),
                 u.features() != null ? validFeatures(u.features()) : current.features(),
                 current.deletionDueAt(),
-                u.limits() != null ? validLimits(u.limits()) : current.limits()));
+                u.limits() != null ? validLimits(u.limits()) : current.limits(),
+                current.trialEndsAt()));
         registry.refresh();
         record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());
@@ -225,6 +235,28 @@ public class TenantAdminService {
         }
         requireNotOffboarded(current);
         return setStatus(current, TenantStatus.SCHEDULED_FOR_DELETION, Instant.now().plus(lifecycle.deletionGrace()).truncatedTo(ChronoUnit.MILLIS));
+    }
+
+    /** The store owner is leaving: the storefront closes. It can be activated again, or offboarded. */
+    public Tenant cancel(String id) {
+        Tenant current = get(id);
+        if (current.slug().equals(props.defaultSlug())) {
+            throw ApiException.badRequest("The default tenant cannot be cancelled");
+        }
+        requireNotOffboarded(current);
+        return setStatus(current, TenantStatus.CANCELLED, null);
+    }
+
+    /** Suspends every trial that ended on or before {@code now}; recorded with actor SYSTEM. */
+    void expireTrials(Instant now) {
+        for (Tenant t : tenants.findAll()) {
+            if (t.status() == TenantStatus.TRIAL && t.trialEndsAt() != null && !t.trialEndsAt().isAfter(now)) {
+                Tenant saved = tenants.save(t.withStatus(TenantStatus.SUSPENDED, null));
+                registry.refresh();
+                record(AuditAction.TENANT_STATUS_CHANGED, t, saved, true);
+                log.info("Trial of tenant '{}' ended; suspended", t.slug());
+            }
+        }
     }
 
     /** Cancels a scheduled deletion; the store is active again. */

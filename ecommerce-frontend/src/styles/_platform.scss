@@ -45,6 +45,17 @@
   }
 }
 
+// A checkbox row inside the shared .form-grid, whose labels stack and stretch their inputs.
+.form-grid label.platform__check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    width: auto !important;
+  }
+}
+
 .header__logo-img {
   height: 1.75rem;
   width: auto;

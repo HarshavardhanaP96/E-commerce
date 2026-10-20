@@ -72,7 +72,7 @@ class AuditService implements AuditTrail {
     }
 
     private static Actor actor(AuditEvent e, boolean inRequest) {
-        if (e.actorId() != null) {
+        if (e.actorId() != null || e.actorRole() != null) {
             return new Actor(e.actorId(), e.actorRole());
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
