@@ -117,7 +117,7 @@ const CategoryAdmin = () => {
     {
       Header: "",
       id: "actions",
-      width: 90,
+      width: 110,
       disableSortBy: true,
       Cell: ({ row }: CellProps<Row>) => (
         <>

@@ -100,7 +100,7 @@ const App = () => {
         }}
       />
 
-      {user && user.emailVerified === false && <VerifyEmailBanner key={user._id} />}
+      {user && user.emailVerified === false && <VerifyEmailBanner key={`verify-${user._id}`} />}
 
       {/* .app-main is a plain block that grows, so the footer sits at the bottom of short pages */}
       <div className="app-main">
