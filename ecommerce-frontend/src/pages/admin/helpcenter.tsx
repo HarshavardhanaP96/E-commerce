@@ -91,38 +91,40 @@ const Article = ({ guide }: { guide: Guide }) => (
     <Link to="/admin/help" className="kb__back">
       <LuArrowLeft aria-hidden /> All guides
     </Link>
-    <article className="card">
-      <p className="kb__group-label">{guide.group}</p>
-      <h2>{guide.title}</h2>
-      <p className="kb__summary">{guide.summary}</p>
-      {guide.body.map((block, i) => (
-        <Block key={i} block={block} />
-      ))}
-      {guide.openLabel && (
-        <Link to={guide.openLabel.to} className="btn btn--primary kb__open">
-          {guide.openLabel.label} <LuArrowRight aria-hidden />
-        </Link>
-      )}
-    </article>
+    <div className="kb__layout">
+      <article className="card">
+        <p className="kb__group-label">{guide.group}</p>
+        <h2>{guide.title}</h2>
+        <p className="kb__summary">{guide.summary}</p>
+        {guide.body.map((block, i) => (
+          <Block key={i} block={block} />
+        ))}
+        {guide.openLabel && (
+          <Link to={guide.openLabel.to} className="btn btn--primary kb__open">
+            {guide.openLabel.label} <LuArrowRight aria-hidden />
+          </Link>
+        )}
+      </article>
 
-    {guide.related.length > 0 && (
-      <section className="kb__group">
-        <h3>Related guides</h3>
-        <div className="kb__cards">
-          {guide.related.map((slug) => {
-            const g = guideBySlug(slug);
-            return (
-              g && (
-                <Link key={slug} to={`/admin/help/${slug}`} className="kb__card">
-                  <strong>{g.title}</strong>
-                  <span>{g.summary}</span>
-                </Link>
-              )
-            );
-          })}
-        </div>
-      </section>
-    )}
+      {guide.related.length > 0 && (
+        <aside className="kb__group kb__related">
+          <h3>Related guides</h3>
+          <div className="kb__cards">
+            {guide.related.map((slug) => {
+              const g = guideBySlug(slug);
+              return (
+                g && (
+                  <Link key={slug} to={`/admin/help/${slug}`} className="kb__card">
+                    <strong>{g.title}</strong>
+                    <span>{g.summary}</span>
+                  </Link>
+                )
+              );
+            })}
+          </div>
+        </aside>
+      )}
+    </div>
   </div>
 );
 
