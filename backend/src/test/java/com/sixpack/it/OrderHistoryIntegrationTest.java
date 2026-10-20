@@ -64,6 +64,7 @@ class OrderHistoryIntegrationTest extends IntegrationTest {
                 .append("orderItems", List.of(new Document("name", "Tee").append("photo", "").append("price", 250.0)
                         .append("quantity", 2).append("productId", new ObjectId())))
                 .append("createdAt", new Date()));
+        backfillLegacy();
 
         mvc.perform(get("/api/v1/order/" + id.toHexString()).header("Authorization", bearer(user)))
                 .andExpect(status().isOk())

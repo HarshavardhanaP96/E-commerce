@@ -1,5 +1,6 @@
 package com.sixpack.order.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderDetails;
@@ -14,7 +15,6 @@ import com.sixpack.order.domain.StatusEntry;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -25,15 +25,15 @@ class MongoOrderRepository implements OrderRepository {
 
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt");
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoOrderRepository(MongoTemplate mongo) {
+    MongoOrderRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
     @Override
     public Order save(Order order) {
-        OrderDocument doc = order.id() == null ? null : mongo.findById(order.id(), OrderDocument.class);
+        OrderDocument doc = order.id() == null ? null : mongo.findById(order.id(), OrderDocument.class).orElse(null);
         if (doc == null) {
             doc = new OrderDocument();
         }
@@ -78,7 +78,7 @@ class MongoOrderRepository implements OrderRepository {
 
     @Override
     public Optional<Order> findById(String id) {
-        return Optional.ofNullable(mongo.findById(id, OrderDocument.class)).map(MongoOrderRepository::toDomain);
+        return mongo.findById(id, OrderDocument.class).map(MongoOrderRepository::toDomain);
     }
 
     @Override

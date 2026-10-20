@@ -30,6 +30,7 @@ const Help = lazy(() => import("./pages/help"));
 const AdminHelp = lazy(() => import("./pages/admin/helpcenter"));
 const PrivacySettings = lazy(() => import("./pages/account/privacy"));
 const Addresses = lazy(() => import("./pages/account/addresses"));
+const Platform = lazy(() => import("./pages/platform/platform"));
 
 // Admin Routes
 const Products = lazy(() => import("./pages/admin/products"));
@@ -114,6 +115,7 @@ const App = () => {
           <Route path="/legal/:slug" element={<Legal />} />
           <Route path="/help" element={<Help />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/platform" element={<Platform />} />
 
           {/* only for not logged in */}
           <Route

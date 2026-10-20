@@ -1,5 +1,6 @@
 package com.sixpack.product.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.product.domain.OptionAxis;
 import com.sixpack.product.domain.OptionFacet;
 import com.sixpack.product.domain.OptionFilter;
@@ -27,7 +28,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
+
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -39,15 +40,15 @@ class MongoProductRepository implements ProductRepository {
     private static final int MAX_ATTEMPTS = 5;
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt");
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoProductRepository(MongoTemplate mongo) {
+    MongoProductRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
     @Override
     public Optional<Product> findById(String id) {
-        return Optional.ofNullable(mongo.findById(id, ProductDocument.class)).map(MongoProductRepository::toDomain);
+        return mongo.findById(id, ProductDocument.class).map(MongoProductRepository::toDomain);
     }
 
     @Override
@@ -126,7 +127,7 @@ class MongoProductRepository implements ProductRepository {
 
     @Override
     public Optional<Product> findBySlug(String slug) {
-        return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("slug").is(slug)), ProductDocument.class))
+        return mongo.findOne(Query.query(Criteria.where("slug").is(slug)), ProductDocument.class)
                 .map(MongoProductRepository::toDomain);
     }
 
@@ -134,7 +135,7 @@ class MongoProductRepository implements ProductRepository {
     public Optional<Product> findBySku(String sku) {
         Criteria matches = new Criteria().orOperator(Criteria.where("sku").is(sku),
                 Criteria.where("variants.items.sku").is(sku));
-        return Optional.ofNullable(mongo.findOne(Query.query(matches), ProductDocument.class))
+        return mongo.findOne(Query.query(matches), ProductDocument.class)
                 .map(MongoProductRepository::toDomain);
     }
 
@@ -145,7 +146,7 @@ class MongoProductRepository implements ProductRepository {
 
     @Override
     public Product save(Product p) {
-        ProductDocument doc = p.id() == null ? null : mongo.findById(p.id(), ProductDocument.class);
+        ProductDocument doc = p.id() == null ? null : mongo.findById(p.id(), ProductDocument.class).orElse(null);
         if (doc == null) {
             doc = new ProductDocument();
         }
@@ -200,7 +201,7 @@ class MongoProductRepository implements ProductRepository {
     @Override
     public Optional<Product> updateVariants(String id, UnaryOperator<Product> change) {
         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            ProductDocument doc = mongo.findById(id, ProductDocument.class);
+            ProductDocument doc = mongo.findById(id, ProductDocument.class).orElse(null);
             if (doc == null) {
                 return Optional.empty();
             }

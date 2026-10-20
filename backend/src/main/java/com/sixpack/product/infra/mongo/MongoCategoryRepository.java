@@ -1,11 +1,12 @@
 package com.sixpack.product.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.product.domain.Category;
 import com.sixpack.product.domain.CategoryRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
+
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -13,20 +14,20 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoCategoryRepository implements CategoryRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoCategoryRepository(MongoTemplate mongo) {
+    MongoCategoryRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
     @Override
     public Optional<Category> findById(String id) {
-        return Optional.ofNullable(mongo.findById(id, CategoryDocument.class)).map(MongoCategoryRepository::toDomain);
+        return mongo.findById(id, CategoryDocument.class).map(MongoCategoryRepository::toDomain);
     }
 
     @Override
     public Optional<Category> findBySlug(String slug) {
-        return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("slug").is(slug)), CategoryDocument.class))
+        return mongo.findOne(Query.query(Criteria.where("slug").is(slug)), CategoryDocument.class)
                 .map(MongoCategoryRepository::toDomain);
     }
 
@@ -43,7 +44,7 @@ class MongoCategoryRepository implements CategoryRepository {
 
     @Override
     public Category save(Category c) {
-        CategoryDocument doc = c.id() == null ? null : mongo.findById(c.id(), CategoryDocument.class);
+        CategoryDocument doc = c.id() == null ? null : mongo.findById(c.id(), CategoryDocument.class).orElse(null);
         if (doc == null) {
             doc = new CategoryDocument();
         }

@@ -13,10 +13,51 @@
   (`PaymentDetailsAndRefundIntegrationTest`), the Razorpay REST calls against a mock server (`RazorpayGatewayTest`),
   invoices (`InvoiceIntegrationTest`) and email verification with a mocked mail sender (`EmailVerificationIntegrationTest`).
   These tests need Docker. CI's `ubuntu-latest` has it.
+- Tenant isolation matrix: `TenantCatalogueIsolationIntegrationTest`, `TenantCommerceIsolationIntegrationTest`, `TenantIdentityIsolationIntegrationTest` (two tenants, same shapes, every entity), `TenantConfigurationIntegrationTest`, `PlatformAdminIntegrationTest`, and the rehearsal `LegacyMigrationIntegrationTest` (a single-tenant database upgraded in place).
+- Tenancy: `TenantContextTest`, `TenantMongoIntegrationTest` (two tenants, same shapes), `TenantBootstrapIntegrationTest`, `TenantResolutionIntegrationTest`, `TenantTokenIntegrationTest`, and `TenantIsolationArchitectureTest` (no raw `MongoTemplate` outside the wrapper, with a shrinking allowlist). Tests that need a second tenant extend `TenantIntegrationTest`.
 - Architecture: `ModularityTests` (`ApplicationModules.of(SixPackApplication.class).verify()`) fails the build
   on illegal cross-module access, and writes module docs to `target/spring-modulith-docs`.
 - Frontend: `tsc` + ESLint in CI. E2E with Playwright against `docker compose` is TBD; add it when the UI
   stabilises after this migration.
+
+## Before the first deploy of everything built since the migration
+Run these once, in this order. The first two have never been done for this work.
+1. **Click through it in a browser** (`docker compose up --build`), as a customer and as an admin: register and log in; the
+   address book and the saved-address picker at checkout; checkout with recipient name, phone, billing address and notes;
+   the order page with its number and timeline; coupon create, pause and apply in the cart (percent coupon with a minimum);
+   the product, category and variant admin screens; the audit log page; the admin agreement dialog; the privacy page data
+   export. Then open `/platform`, create a second tenant on another hostname, and check its theme, name, logo and
+   legal pages differ from the first store.
+2. **Let CI run**: push, then watch the pipeline (a branch named `fix/ci-trivy-action-tag` exists for a CI change; check whether it has been merged first). There is no
+   end-to-end browser test yet; this is the only automated check of the frontend beyond `build` and `lint`.
+3. **Merge order**: the audit, admin-agreement and variants-backend work already on `main` came from other branches that
+   still receive commits (`feat/multi-tenancy` is misnamed and holds audit work; `feat/product-variants` holds the storefront
+   work). Merge those once, then this branch, and expect small conflicts in the shared test base class and the docs.
+4. **History**: the first consent/auth commit (`feat/consent-auth-wip`) was committed unreviewed in one piece and later
+   split into four commits on the `main-split` branch. Decide whether to adopt that branch before pushing, because it
+   rewrites local history.
+5. **Environment**: the secrets and variables listed in the multi-tenancy rollout below, `LEGAL_*` versions, `CONSENT_IP_SALT`
+   (the audit log's hashed email evidence is only as strong as this salt), and product tax rates checked (any non-18% rate
+   changes quotes).
+
+## Multi-tenancy rollout (run before the first deploy that contains it)
+1. Back up the database. Restore the backup into a scratch database and start the new build against it (`MONGO_DB=<scratch>`).
+2. At startup it creates the `default` tenant, assigns every existing document to it (`TenantBackfill`) and drops the old
+   global unique indexes (`LegacyIndexCleanup`). The log lines say how many documents and which indexes. A second start must
+   report zero of both.
+3. Verify against the scratch copy: a document count per collection before and after; none without `tenantId`
+   (`db.<collection>.countDocuments({tenantId:{$exists:false}})` is 0 for users, products, categories, coupons,
+   coupon_redemptions, orders, payment_intents, password_reset_tokens, consents, audit_log); a known customer can log in; the
+   catalogue, an old order and a coupon show up; checkout works.
+4. Environment: nothing is required for a single store (with one tenant every host resolves to it). Before creating a
+   second tenant set `TENANT_DEFAULT_DOMAINS` to the current production hosts, add `PLATFORM_ADMIN_EMAIL` and
+   `PLATFORM_ADMIN_PASSWORD`, and add each tenant's `TENANT_SECRET_<REF>` to the sealed secret.
+5. Deploy. The tenant is chosen from the request host (`X-Forwarded-Host` when present), so the ingress must set that header
+   itself and not pass on a value sent by the client (ingress-nginx does this by default). Tokens issued before the deploy keep
+   working on the default tenant until they expire (24 h).
+6. Rollback: redeploy the previous image. It ignores `tenantId` and the new indexes. The old global unique indexes are not
+   recreated by it, which is harmless while only the default tenant exists. Roll back **before** creating a second tenant:
+   two tenants' data cannot live under the old single-tenant constraints.
 
 ## Rollout plan
 1. Merge the branch, which runs CI and deploys to `test-env` automatically from the branch push.
@@ -25,7 +66,7 @@
 3. Create the prod secret, which must include `JWT_SECRET`. Note that all existing 30-day Node-issued tokens
    become invalid, so users have to log in again. This is expected.
 4. Merge to `main` to deploy to prod with a rolling update (`maxUnavailable: 0`). Readiness gates traffic.
-5. Data: no migration needed. Existing coupons keep working as always-active flat coupons; the `coupon_redemptions` collection and its unique index are created at startup. Before deploying, check product tax rates: any product with a non-18% `taxRate` now changes its quote. Existing products load with default catalogue fields; the new sparse unique
+5. Data: no migration needed. The `tenants` collection and the `default` tenant are created at startup. With one tenant every host resolves to it, so no configuration is required; set `TENANT_DEFAULT_DOMAINS` before a second tenant is created. Tokens issued before this release stay valid on the default tenant until they expire. Existing coupons keep working as always-active flat coupons; the `coupon_redemptions` collection and its unique index are created at startup. Before deploying, check product tax rates: any product with a non-18% `taxRate` now changes its quote. Existing products load with default catalogue fields; the new sparse unique
    indexes on `slug`/`sku` and the `categories` collection are created at startup.
    Earlier collections (`payment_intents`, `password_reset_tokens`) and their indexes
    are created at startup (`spring.data.mongodb.auto-index-creation=true` on annotated documents only).

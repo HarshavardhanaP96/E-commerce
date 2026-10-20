@@ -86,6 +86,7 @@ class ProductVariantsIntegrationTest extends IntegrationTest {
         mongo.getCollection("products").insertOne(new Document("_id", id).append("name", "Old")
                 .append("photo", "uploads/o.png").append("price", 10.0).append("stock", 2)
                 .append("category", "misc"));
+        backfillLegacy();
 
         mvc.perform(get("/api/v1/product/" + id.toHexString())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.product.variants.axes.length()").value(0))
@@ -257,6 +258,12 @@ class ProductVariantsIntegrationTest extends IntegrationTest {
                 .doesNotContainKey("variants");
     }
 
+    /** Pool threads do not inherit the test thread's tenant, so hand it over explicitly. */
+    private static Runnable asTenant(Runnable task) {
+        var tenant = com.sixpack.shared.tenant.TenantContext.require();
+        return () -> com.sixpack.shared.tenant.TenantContext.runAs(tenant, task);
+    }
+
     @Test
     void concurrentSalesOfTheLastUnitsNeverOversellAndKeepTheTotalInStep() throws Exception {
         String token = adminToken();
@@ -266,11 +273,11 @@ class ProductVariantsIntegrationTest extends IntegrationTest {
         AtomicInteger sold = new AtomicInteger();
         List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < 40; i++) {
-            futures.add(pool.submit(() -> {
+            futures.add(pool.submit(asTenant(() -> {
                 if (products.adjustVariantStock(id, target.id(), -1)) {
                     sold.incrementAndGet();
                 }
-            }));
+            })));
         }
         for (Future<?> f : futures) {
             f.get();
@@ -297,11 +304,11 @@ class ProductVariantsIntegrationTest extends IntegrationTest {
         AtomicInteger sold = new AtomicInteger();
         List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < 150; i++) {
-            futures.add(pool.submit(() -> {
+            futures.add(pool.submit(asTenant(() -> {
                 if (products.adjustVariantStock(id, variantId, -1)) {
                     sold.incrementAndGet();
                 }
-            }));
+            })));
             if (i % 10 == 0) {
                 futures.add(pool.submit(() -> {
                     try {

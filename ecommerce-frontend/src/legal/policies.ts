@@ -33,9 +33,8 @@ export type Policy = {
   sections: { heading: string; body: string[] }[];
 };
 
-const b = BUSINESS;
-
-export const POLICIES: Record<PolicySlug, Policy> = {
+/** Builds the policy text for a store's business details. */
+const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
   terms: {
     slug: "terms",
     title: "Terms & Conditions",
@@ -304,6 +303,23 @@ export const POLICIES: Record<PolicySlug, Policy> = {
       },
     ],
   },
+});
+
+/** Live policy text. Replaced in place by {@link refreshPolicies} once the store's details are known. */
+export const POLICIES: Record<PolicySlug, Policy> = build(BUSINESS);
+
+const rebrand = <T,>(value: T, name: string): T => {
+  if (typeof value === "string") return value.split("6Pack").join(name) as unknown as T;
+  if (Array.isArray(value)) return value.map((v) => rebrand(v, name)) as unknown as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, rebrand(v, name)])) as T;
+  }
+  return value;
+};
+
+/** Rebuilds the policy text after BUSINESS changed, using the store's own name instead of the built-in one. */
+export const refreshPolicies = (brandName: string) => {
+  Object.assign(POLICIES, rebrand(build(BUSINESS), brandName));
 };
 
 /** Footer order. */

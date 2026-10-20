@@ -1,3 +1,4 @@
+import { brand } from "../tenant/tenant";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LuBookOpen, LuLogIn, LuSearch, LuShoppingBag, LuUser } from "react-icons/lu";
@@ -23,7 +24,13 @@ const Header = () => {
     // --compact: on mobile the bottom nav carries these actions, so the header shows only the logo.
     <nav className={`header${showsBottomNav(pathname) ? " header--compact" : ""}`} aria-label="Site">
       <Link className="header__logo" onClick={() => setIsOpen(false)} to={"/"}>
-        6PACK<span>.</span>
+        {brand.logoUrl ? (
+          <img className="header__logo-img" src={brand.logoUrl} alt={brand.name} />
+        ) : (
+          <>
+            {brand.name.toUpperCase()}<span>.</span>
+          </>
+        )}
         {isAdmin && <small>Admin</small>}
       </Link>
 

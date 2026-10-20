@@ -46,6 +46,7 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
         mongo.getCollection("products").insertOne(new Document("_id", id).append("name", "Old")
                 .append("photo", "uploads/o.png").append("price", 10.0).append("stock", 2)
                 .append("category", "misc"));
+        backfillLegacy();
 
         Product p = products.findById(id.toHexString()).orElseThrow();
 
@@ -138,6 +139,7 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
         mongo.getCollection("products").insertOne(new Document("_id", id).append("name", "Old Lamp")
                 .append("photo", "uploads/o.png").append("price", 10.0).append("stock", 2)
                 .append("category", "misc"));
+        backfillLegacy();
 
         mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id.toHexString()).param("stock", "7")
                         .header("Authorization", bearer(adminToken())))
@@ -159,6 +161,7 @@ class ProductDetailsIntegrationTest extends IntegrationTest {
         mongo.getCollection("products").insertOne(new Document("name", "Legacy").append("photo", "uploads/o.png")
                 .append("price", 10.0).append("stock", 1).append("category", "misc")
                 .append("createdAt", java.time.Instant.now()));
+        backfillLegacy();
 
         mvc.perform(get("/api/v1/product/all")).andExpect(jsonPath("$.total").value(2));
         mvc.perform(get("/api/v1/product/latest")).andExpect(jsonPath("$.products.length()").value(2));

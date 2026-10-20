@@ -1,5 +1,7 @@
 package com.sixpack.audit.application;
 
+import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantRef;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.domain.AuditEntry;
@@ -59,7 +61,8 @@ class AuditService implements AuditTrail {
         Actor actor = actor(e, request != null);
         String userAgent = request == null || request.getHeader(HttpHeaders.USER_AGENT) == null ? ""
                 : truncate(request.getHeader(HttpHeaders.USER_AGENT));
-        return new AuditEntry(null, Instant.now(), null, actor.id(), actor.role(), e.action(), e.entityType(),
+        return new AuditEntry(null, Instant.now(),
+                TenantContext.current().map(TenantRef::id).orElse(null), actor.id(), actor.role(), e.action(), e.entityType(),
                 e.entityId(), e.outcome(), e.changes(), hasher.hash(normalise(e.subject())), traceId(),
                 request == null ? "" : hasher.hash(request.getRemoteAddr()), userAgent);
     }

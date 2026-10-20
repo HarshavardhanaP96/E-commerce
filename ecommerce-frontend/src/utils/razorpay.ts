@@ -1,3 +1,4 @@
+import { brand } from "../tenant/tenant";
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void; on: (e: string, cb: () => void) => void };
@@ -38,7 +39,7 @@ export const payWithRazorpay = async (options: {
       order_id: options.orderId,
       amount: options.amount,
       currency: options.currency,
-      name: "6Pack",
+      name: brand.name,
       prefill: { name: options.name, email: options.email },
       theme: { color: "#6366f1" },
       handler: (response: RazorpaySuccess) => resolve(response),

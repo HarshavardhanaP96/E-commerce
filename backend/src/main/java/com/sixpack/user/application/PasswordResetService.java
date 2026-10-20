@@ -1,5 +1,6 @@
 package com.sixpack.user.application;
 
+import com.sixpack.shared.tenant.TenantSettings;
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
@@ -33,15 +34,17 @@ public class PasswordResetService {
     private final MailSender mail;
     private final PasswordEncoder encoder;
     private final UserProperties props;
+    private final TenantSettings tenant;
     private final AuditTrail audit;
 
     PasswordResetService(UserRepository users, PasswordResetTokenRepository tokens, MailSender mail,
-                         PasswordEncoder encoder, UserProperties props, AuditTrail audit) {
+                         PasswordEncoder encoder, UserProperties props, AuditTrail audit, TenantSettings tenant) {
         this.users = users;
         this.tokens = tokens;
         this.mail = mail;
         this.encoder = encoder;
         this.props = props;
+        this.tenant = tenant;
         this.audit = audit;
     }
 
@@ -60,8 +63,19 @@ public class PasswordResetService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
         tokens.deleteByUserId(user.id());
         tokens.save(new PasswordResetToken(null, user.id(), sha256(token), Instant.now().plus(TOKEN_TTL)));
-        String base = props.frontendUrl() == null ? "" : props.frontendUrl().replaceAll("/+$", "");
+        String base = storefrontUrl().replaceAll("/+$", "");
         mail.sendPasswordReset(user.email(), user.name(), base + "/forgot-password?token=" + token);
+    }
+
+    /** The tenant's own storefront; the default tenant keeps using {@code app.user.frontend-url}. */
+    private String storefrontUrl() {
+        if (tenant.mail().baseUrl() != null) {
+            return tenant.mail().baseUrl();
+        }
+        if (!tenant.isDefaultTenant() && tenant.primaryDomain() != null) {
+            return "https://" + tenant.primaryDomain();
+        }
+        return props.frontendUrl() == null ? "" : props.frontendUrl();
     }
 
     public void reset(String token, String newPassword) {

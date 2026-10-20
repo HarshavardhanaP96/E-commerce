@@ -1,5 +1,6 @@
 package com.sixpack.shared.security;
 
+import com.sixpack.shared.tenant.TenantContext;
 import java.time.Instant;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -22,14 +23,14 @@ public class TokenService {
 
     public String issue(String userId, String role) {
         Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(JwtConfig.ISSUER)
                 .subject(userId)
                 .issuedAt(now)
                 .expiresAt(now.plus(props.jwtTtl()))
-                .claim(AuthUser.ROLE_CLAIM, role)
-                .build();
+                .claim(AuthUser.ROLE_CLAIM, role);
+        TenantContext.current().ifPresent(t -> claims.claim(TenantClaimValidator.CLAIM, t.id()));
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+        return encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();
     }
 }

@@ -159,6 +159,8 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 
 | Data | Keep for | Then |
 |---|---|---|
+| Platform administrator accounts (`platform_admins`: name, email, password hash) | While the person operates the platform. They are not customers of any store and have no access to store data. | Deleted when the role ends |
+| A store's own data (customers, orders, consents, audit log, uploads) | Each tenant is its own controller of its customers' data. A tenant's data is kept apart from every other tenant's and is erased per account like before (`DELETE /user/me`). Offboarding a whole tenant (export then delete) is not built yet and needs a procedure before the first outside tenant. | Per tenant |
 | Per-customer coupon usage counters (`coupon_redemptions`) | While the account exists. Deleted on `UserDeletedEvent`. Each coupon's total `usedCount` is anonymous and stays. | Deleted with the account |
 | Order contact snapshot, billing address, recipient name/phone, delivery notes | Until the account is deleted, then erased from its orders by `OrderAccountPolicy`. Orders keep amounts, order number and status history for tax. | Erased with the account |
 | Phone, locale, saved addresses, last-login time | Same as the account profile. They are stored on the user record, erased with it (`DELETE /user/me`), included in the data export, and never used for marketing. | Deleted with the account |

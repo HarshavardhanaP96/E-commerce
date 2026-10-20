@@ -1,5 +1,6 @@
 package com.sixpack.audit.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantDocument;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.annotation.Id;
@@ -11,11 +12,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 /** Append-only audit log; see docs/superpowers/specs/2026-10-18-admin-agreement-and-audit-design.md. */
 @Document("audit_log")
 @CompoundIndexes({
+        @CompoundIndex(name = "tenant_at", def = "{'tenantId': 1, 'at': -1}"),
         @CompoundIndex(name = "entity_at", def = "{'entityType': 1, 'entityId': 1, 'at': -1}"),
         @CompoundIndex(name = "actor_at", def = "{'actorId': 1, 'at': -1}"),
         @CompoundIndex(name = "action_at", def = "{'action': 1, 'at': -1}")
 })
-class AuditDocument {
+class AuditDocument extends TenantDocument {
 
     static class ChangeDocument {
         String field;
@@ -33,7 +35,6 @@ class AuditDocument {
      */
     @Indexed(expireAfter = "365d")
     Instant at;
-    String tenantId;
     String actorId;
     String actorRole;
     String action;

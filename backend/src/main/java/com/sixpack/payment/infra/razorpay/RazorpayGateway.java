@@ -44,17 +44,25 @@ class RazorpayGateway implements PaymentGateway {
     private final RestClient client;
 
     RazorpayGateway(PaymentProperties props, RestClient.Builder builder) {
-        this(props, build(props, builder));
+        this(props.razorpay(), builder);
+    }
+
+    /** One gateway per tenant payment account, built from that tenant's own keys. */
+    RazorpayGateway(PaymentProperties.Razorpay razorpay, RestClient.Builder builder) {
+        this(razorpay, build(razorpay, builder));
     }
 
     /** Takes a ready client, so tests can put a mock server behind it. */
     RazorpayGateway(PaymentProperties props, RestClient client) {
-        this.config = props.razorpay();
+        this(props.razorpay(), client);
+    }
+
+    private RazorpayGateway(PaymentProperties.Razorpay razorpay, RestClient client) {
+        this.config = razorpay;
         this.client = client;
     }
 
-    private static RestClient build(PaymentProperties props, RestClient.Builder builder) {
-        PaymentProperties.Razorpay config = props.razorpay();
+    private static RestClient build(PaymentProperties.Razorpay config, RestClient.Builder builder) {
         if (isBlank(config.keyId()) || isBlank(config.keySecret())) {
             throw new IllegalStateException("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required when PAYMENT_PROVIDER=razorpay");
         }

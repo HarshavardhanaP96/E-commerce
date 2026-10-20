@@ -1,5 +1,6 @@
 package com.sixpack.consent.application;
 
+import com.sixpack.shared.tenant.TenantSettings;
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
@@ -38,12 +39,15 @@ public class ConsentService implements ConsentLedger {
 
     private final ConsentRepository records;
     private final LegalProperties legal;
+    private final TenantSettings tenant;
     private final EvidenceHasher hasher;
     private final AuditTrail audit;
 
-    ConsentService(ConsentRepository records, LegalProperties legal, EvidenceHasher hasher, AuditTrail audit) {
+    ConsentService(ConsentRepository records, LegalProperties legal, TenantSettings tenant, EvidenceHasher hasher,
+                   AuditTrail audit) {
         this.records = records;
         this.legal = legal;
+        this.tenant = tenant;
         this.hasher = hasher;
         this.audit = audit;
     }
@@ -64,9 +68,9 @@ public class ConsentService implements ConsentLedger {
     public String currentVersion(Purpose purpose) {
         // Marketing consent is described in the Privacy Policy, so it follows that version.
         return switch (purpose) {
-            case TERMS -> legal.termsVersion();
-            case ADMIN_AUP -> legal.adminAupVersion();
-            case PRIVACY, MARKETING_EMAIL -> legal.privacyVersion();
+            case TERMS -> terms();
+            case ADMIN_AUP -> adminAup();
+            case PRIVACY, MARKETING_EMAIL -> privacy();
         };
     }
 
@@ -76,8 +80,24 @@ public class ConsentService implements ConsentLedger {
     }
 
     public Map<Purpose, String> currentVersions() {
-        return Map.of(Purpose.TERMS, legal.termsVersion(), Purpose.PRIVACY, legal.privacyVersion(),
-                Purpose.ADMIN_AUP, legal.adminAupVersion());
+        return Map.of(Purpose.TERMS, terms(), Purpose.PRIVACY, privacy(), Purpose.ADMIN_AUP, adminAup());
+    }
+
+    // A tenant's own version wins; anything it has not set falls back to the platform default (app.legal.*).
+    private String terms() {
+        return firstNonBlank(tenant.legal().termsVersion(), legal.termsVersion());
+    }
+
+    private String privacy() {
+        return firstNonBlank(tenant.legal().privacyVersion(), legal.privacyVersion());
+    }
+
+    private String adminAup() {
+        return firstNonBlank(tenant.legal().adminAupVersion(), legal.adminAupVersion());
+    }
+
+    private static String firstNonBlank(String preferred, String fallback) {
+        return preferred != null && !preferred.isBlank() ? preferred : fallback;
     }
 
     /** @param admin whether the caller holds the ADMIN role (taken from the JWT; {@code consent} can't call {@code user}) */

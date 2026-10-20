@@ -77,6 +77,7 @@ class AuthIntegrationTest extends IntegrationTest {
                 .append("photo", "uploads/old.jpg").append("role", "user").append("gender", "male")
                 .append("dob", java.util.Date.from(java.time.Instant.parse("1996-01-01T00:00:00Z")))
                 .append("__v", 0));
+        backfillLegacy();
         mvc.perform(post("/api/v1/user/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"legacy@test.dev\",\"password\":\"legacy-pass\"}"))
                 .andExpect(status().isOk())

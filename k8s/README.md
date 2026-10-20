@@ -23,6 +23,10 @@ config, host, and replica counts. CI renders an overlay with `kustomize edit set
    ADMIN_EMAIL=admin@yourdomain.com
    ADMIN_PASSWORD=a-long-unique-password
    CONSENT_IP_SALT=<openssl rand -base64 32>   # salts IPs kept as consent evidence; never change it
+   # Multi-tenancy (optional until a second tenant exists):
+   # PLATFORM_ADMIN_EMAIL=ops@yourdomain.com      # signs in at /platform; manages tenants, sees no store data
+   # PLATFORM_ADMIN_PASSWORD=<12+ characters>
+   # TENANT_SECRET_ACME=<that tenant's Razorpay key secret>   # one per tenant, named by its payment.secretRef
    ENV
    k8s/scripts/seal-backend-secrets.sh prod /tmp/prod.secret.env && rm /tmp/prod.secret.env
    ```

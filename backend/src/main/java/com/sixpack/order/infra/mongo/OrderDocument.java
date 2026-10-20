@@ -1,10 +1,12 @@
 package com.sixpack.order.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantDocument;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -12,7 +14,9 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 
 /** Mirrors the legacy `orders` schema; {@code payment} and {@code termsVersion} are new and optional. */
 @Document("orders")
-class OrderDocument {
+@CompoundIndex(name = "tenant_order_number", def = "{'tenantId': 1, 'orderNumber': 1}", unique = true,
+        partialFilter = "{'orderNumber': {$type: 'string'}}")
+class OrderDocument extends TenantDocument {
 
     @Id
     String id;
@@ -29,7 +33,6 @@ class OrderDocument {
     List<OrderItemDoc> orderItems;
     PaymentDoc payment;
     String termsVersion;
-    @Indexed(unique = true, sparse = true)
     String orderNumber;
     ShippingInfoDoc billingInfo;
     CustomerDoc customer;

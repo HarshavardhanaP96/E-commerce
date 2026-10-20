@@ -19,7 +19,8 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 
 | Module      | Public API (root package)                         | Internals |
 |-------------|---------------------------------------------------|-----------|
-| `shared`    | (open module) error model, security config, JWT, rate limit, web config | — |
+| `shared`    | (open module) error model, security config, JWT, rate limit, web config; `shared.tenant`: `TenantContext`, `TenantMongo`, `TenantOwned`, `BackfillTarget` | — |
+| `tenant`    | — (others use `shared.tenant`)                    | tenants and platform administrators (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, legacy index cleanup, tenant settings, `/tenant/config` and `/platform/**` |
 | `user`      | `UserDirectory` (look up name / exists), `UserDeletedEvent`, `AccountDeletionGuard` (other modules can veto a deletion) | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
 | `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering; also owns `Category` (`/category`) |
 | `coupon`    | `CouponLookup` (discount for a code)              | same layering |
@@ -133,6 +134,39 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   through the same revision-checked update as the variant editor, so a concurrent sale is never overwritten. Rejected:
   a shared size-chart collection (more moving parts; revisit if many products share one chart), per-variant
   thresholds (no demand yet). Still active.
+- 2026-10-19: ADR-021 **Multi-tenancy completed: every collection on `TenantMongo`, accounts per tenant, per-tenant
+  settings, a separate platform administrator.** All tenant-owned documents extend `TenantDocument`; the guard test
+  forbids `MongoTemplate` outside the wrapper and the tenant module (its allowlist is now empty) and requires every stored
+  document to be tenant-owned or declared global (`tenants`, `platform_admins`). Unique indexes are per tenant (partial
+  filters for optional fields); `LegacyIndexCleanup` drops the old global ones at startup because Spring Data only adds
+  indexes, and `TenantBackfill` gives existing documents to the default tenant. Users are per tenant (the same email is a
+  separate account in each store), so reset tokens, consents, the audit log and the dashboard follow. Caches are keyed by
+  tenant in one `CacheManager` decorator that fails closed; uploads go to `uploads/<tenantId>/`; rate limits include the
+  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details) sit on the `Tenant`
+  and fall back to `app.*` properties, so the default tenant keeps running on today's environment; payment secrets are
+  never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
+  gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
+  and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an
+  explicitly empty tenant. Rejected: one global user table with memberships (the questions on shared customers were left
+  open and separate accounts are the safer default), per-tenant signing keys (more key management, no stated need), and
+  a database per tenant (`TenantMongo` stays the single seam where one could be chosen). Known limits: platform
+  administrator actions are logged but not yet written to `audit_log` (it is tenant-scoped); there is no cross-tenant
+  dashboard or audit view; custom-domain verification and self-serve signup are not built. Still active.
+- 2026-10-18: ADR-020 **Tenancy foundation: host-resolved tenant, a fail-closed `TenantMongo` wrapper, and a
+  guard that can only shrink.** A filter ahead of Spring Security maps the request host (after the
+  forwarded-header filter) to a tenant and binds it to the thread; unknown host is 404 and a suspended tenant is
+  403. Tenant-owned data is reached through `TenantMongo` (in the open `shared` module, so no module depends on
+  `tenant`), which adds the tenant to every query, stamps it on every save, refuses to overwrite another tenant's
+  document and throws when no tenant is in context. `TenantIsolationArchitectureTest` forbids `MongoTemplate`
+  outside the wrapper and the tenant module, with an allowlist of the repositories not yet migrated that must
+  shrink (it also fails on stale entries). While exactly one tenant exists every host resolves to it, so existing
+  deployments need no configuration; a second tenant switches to exact-host matching. Access tokens carry a
+  `tid` claim and are valid only for that tenant; tokens from before the change are honoured for the default
+  tenant only, until they expire (24 h). `tenants` is platform-global data and stays on `MongoTemplate`.
+  Limitation: users are still global, so no second real tenant may be created before the identity migration.
+  Rejected: a Mongo-level interceptor that rewrites every query (invisible, and it would also touch global
+  data), a database per tenant now (no dedicated-storage requirement, but `TenantMongo` is the single seam where
+  one could be chosen), and per-tenant signing keys (more key management with no stated need). Still active.
 - 2026-10-18: ADR-019 **Variants embedded in the product document as generic option axes plus a variants array;
   product `price`/`stock` are derived and stored.** Rejected: fixed size/colour fields (dead end for other axes),
   one product per variant (duplicated content, noisy search), a separate variants collection (cross-document

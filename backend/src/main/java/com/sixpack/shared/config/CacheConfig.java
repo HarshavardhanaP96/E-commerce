@@ -35,6 +35,6 @@ public class CacheConfig {
         }
         manager.registerCustomCache(DASHBOARD, Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(120)).maximumSize(500).recordStats().build());
-        return manager;
+        return new com.sixpack.shared.tenant.TenantCacheManager(manager);
     }
 }

@@ -262,6 +262,7 @@ class VariantCheckoutIntegrationTest extends IntegrationTest {
                         .append("country", "India").append("pinCode", 560001L))
                 .append("orderItems", List.of(new Document("name", "Old").append("photo", "p.png")
                         .append("price", 100.0).append("quantity", 1).append("productId", productId))));
+        backfillLegacy();
 
         mvc.perform(get("/api/v1/order/" + orderId.toHexString()).header("Authorization", bearer(user)))
                 .andExpect(status().isOk())

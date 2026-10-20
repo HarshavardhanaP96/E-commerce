@@ -99,9 +99,11 @@ class CouponCheckoutIntegrationTest extends IntegrationTest {
         mongo.getCollection("coupons").insertOne(new Document("coupon", "OLDONE").append("amount", 10.0)
                 .append("type", "FLAT").append("active", true)
                 .append("expiresAt", Date.from(Instant.now().minusSeconds(3600))));
+        backfillLegacy();
         mongo.getCollection("coupons").insertOne(new Document("coupon", "SOON").append("amount", 10.0)
                 .append("type", "FLAT").append("active", true)
                 .append("startsAt", Date.from(Instant.now().plusSeconds(3600))));
+        backfillLegacy();
         checkout(user, product, "OLDONE").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("This coupon has expired"));
         checkout(user, product, "SOON").andExpect(status().isBadRequest())
@@ -120,6 +122,7 @@ class CouponCheckoutIntegrationTest extends IntegrationTest {
         String admin = adminToken();
         String product = createProduct(admin, "Pen", 500, 5, "office");
         mongo.getCollection("coupons").insertOne(new Document("coupon", "LEGACY").append("amount", 100.0));
+        backfillLegacy();
         String user = register("legacy@test.dev");
 
         JsonNode quote = body(checkout(user, product, "LEGACY").andExpect(status().isCreated()).andReturn())

@@ -1,5 +1,6 @@
 package com.sixpack.consent.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantDocument;
 import java.time.Instant;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -8,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 /** Append-only consent log; see docs/foundations/compliance-consent.md §6. */
 @Document("consents")
-class ConsentDocument {
+class ConsentDocument extends TenantDocument {
 
     @Id
     String id;
