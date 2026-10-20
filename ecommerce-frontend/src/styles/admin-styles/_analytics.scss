@@ -39,3 +39,34 @@
     &.l4 { background: var(--accent); }
   }
 }
+
+// Sales tab: category rows carry money and a change badge, so the badge gets its own line under the bar.
+.category-bars--money li {
+  grid-template-columns: minmax(5rem, 8rem) minmax(3rem, 1fr) auto;
+  row-gap: 0.125rem;
+
+  > small {
+    grid-column: 2 / -1;
+    justify-self: end;
+    text-transform: none;
+  }
+}
+
+.category-bars .category-bars__empty {
+  display: block;
+  color: $color-text-secondary;
+}
+
+.sales-breakdown {
+  overflow-y: auto;
+  @include custom-scrollbar();
+
+  .mini-table th,
+  .mini-table td {
+    padding-block: 0.25rem;
+  }
+
+  .mini-table td {
+    text-align: right;
+  }
+}

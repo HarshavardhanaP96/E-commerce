@@ -34,3 +34,15 @@ export type OverviewSection = SectionWindow & {
   byHour: number[];
   heat: number[][];
 };
+
+export type SalesSection = SectionWindow & {
+  basis: "net" | "gross";
+  series: SeriesPoint[];
+  previousSeries?: SeriesPoint[] | null;
+  byCategory: { category: string; revenue: number; units: number; share: number; change?: number | null }[];
+  breakdown?: {
+    charged: number; discount: number; tax: number; shipping: number; refunds: number; net: number;
+    couponOrders: number; couponOrderShare: number;
+  } | null;
+  byPaymentMethod?: { method: string; orders: number; revenue: number; share: number }[] | null;
+};

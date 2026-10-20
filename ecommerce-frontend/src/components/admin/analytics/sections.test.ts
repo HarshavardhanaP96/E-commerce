@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketLabel, csvPath, fileNameFrom, heatLevel, tabFrom } from "./sections";
+import { alignPrevious, bucketLabel, csvPath, fileNameFrom, heatLevel, tabFrom } from "./sections";
 
 describe("analytics sections", () => {
   it("reads the tab from the URL and falls back to overview", () => {
@@ -29,5 +29,17 @@ describe("analytics sections", () => {
   it("labels buckets without shifting the date", () => {
     expect(bucketLabel("2026-10-05", "day")).toBe("5 Oct");
     expect(bucketLabel("2026-10-01", "month")).toBe("Oct 2026");
+  });
+});
+
+describe("alignPrevious", () => {
+  const point = (start: string, revenue: number) => ({ start, revenue, orders: 0 });
+
+  it("lines the comparison up by position and pads with zeros", () => {
+    expect(alignPrevious([point("2026-10-01", 1), point("2026-10-02", 2)], [point("2026-09-29", 5)])).toEqual([5, 0]);
+  });
+
+  it("is empty when there is no comparison", () => {
+    expect(alignPrevious([point("2026-10-01", 1)], null)).toEqual([]);
   });
 });

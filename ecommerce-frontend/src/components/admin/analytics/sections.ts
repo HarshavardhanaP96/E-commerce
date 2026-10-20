@@ -1,4 +1,4 @@
-import { SectionName } from "../../../types/analytics";
+import { SectionName, SeriesPoint } from "../../../types/analytics";
 
 export const TABS: { id: SectionName; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -40,3 +40,7 @@ export const csvPath = (section: SectionName, params: Record<string, string | nu
 
 export const fileNameFrom = (disposition: string | null, fallback: string) =>
   disposition?.match(/filename="?([^";]+)"?/)?.[1] ?? fallback;
+
+/** The comparison period's revenue at the same position as each current bucket. */
+export const alignPrevious = (current: SeriesPoint[], previous?: SeriesPoint[] | null): number[] =>
+  previous ? current.map((_, i) => previous[i]?.revenue ?? 0) : [];

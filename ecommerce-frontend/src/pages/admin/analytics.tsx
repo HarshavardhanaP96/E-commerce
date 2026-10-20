@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
 import OverviewTab from "../../components/admin/analytics/OverviewTab";
+import SalesTab from "../../components/admin/analytics/SalesTab";
 import { TABS, tabFrom } from "../../components/admin/analytics/sections";
 import { useCategoriesQuery } from "../../redux/api/productAPI";
 import { SectionParams } from "../../types/analytics";
@@ -77,6 +78,7 @@ const Analytics = () => {
         </nav>
         <div className="analytics__body" role="tabpanel">
           {tab === "overview" && <OverviewTab params={section} />}
+          {tab === "sales" && <SalesTab params={section} />}
         </div>
       </div>
     </AdminLayout>
