@@ -56,7 +56,7 @@ class TenantResolutionFilter extends OncePerRequestFilter {
             reject(response, HttpServletResponse.SC_NOT_FOUND, "Store not found");
             return;
         }
-        if (tenant.get().status() == TenantStatus.SUSPENDED) {
+        if (tenant.get().status() != TenantStatus.ACTIVE) {
             reject(response, HttpServletResponse.SC_FORBIDDEN, "This store is currently unavailable");
             return;
         }

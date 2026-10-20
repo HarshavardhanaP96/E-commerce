@@ -16,7 +16,7 @@ import java.util.Map;
 public record Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
                      Map<String, String> theme, String locale, String currency, Instant createdAt,
                      LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                     StorefrontSettings storefront, Map<String, Boolean> features) {
+                     StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt) {
 
     public Tenant {
         status = status == null ? TenantStatus.ACTIVE : status;
@@ -27,6 +27,21 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
         mail = mail == null ? MailSettings.NONE : mail;
         storefront = storefront == null ? StorefrontSettings.NONE : storefront;
         features = features == null ? Map.of() : Map.copyOf(features);
+    }
+
+    /** Not scheduled for deletion. */
+    public Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
+                  Map<String, String> theme, String locale, String currency, Instant createdAt,
+                  LegalSettings legal, PaymentSettings payment, MailSettings mail,
+                  StorefrontSettings storefront, Map<String, Boolean> features) {
+        this(id, slug, name, status, domains, theme, locale, currency, createdAt, legal, payment, mail, storefront,
+                features, null);
+    }
+
+    /** The same store in another status; {@code deletionDueAt} is only kept while scheduled for deletion. */
+    public Tenant withStatus(TenantStatus newStatus, Instant newDeletionDueAt) {
+        return new Tenant(id, slug, name, newStatus, newStatus == TenantStatus.DELETED ? List.of() : domains, theme,
+                locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt);
     }
 
     /** Without feature switches. */

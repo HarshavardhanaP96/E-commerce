@@ -5,11 +5,15 @@ import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.storage.ImageType;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -80,6 +84,56 @@ class LocalFileStorage implements FileStorage {
             return false;
         }
         return TenantContext.current().map(t -> !t.id().equals(first)).orElse(false);
+    }
+
+    @Override
+    public List<String> tenantFiles() {
+        Path dir = tenantDir();
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        try (Stream<Path> files = Files.walk(dir)) {
+            return files.filter(Files::isRegularFile)
+                    .map(f -> PUBLIC_PREFIX + root.relativize(f).toString().replace('\\', '/'))
+                    .sorted().toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not list uploads", e);
+        }
+    }
+
+    @Override
+    public InputStream open(String path) {
+        Path dir = tenantDir();
+        Path target = path == null || !path.startsWith(PUBLIC_PREFIX) ? null
+                : root.resolve(path.substring(PUBLIC_PREFIX.length())).normalize();
+        if (target == null || !target.startsWith(dir)) {
+            throw new IllegalArgumentException("Not a file of this tenant: " + path);
+        }
+        try {
+            return Files.newInputStream(target);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read " + path, e);
+        }
+    }
+
+    @Override
+    public void deleteTenantFiles() {
+        Path dir = tenantDir();
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (Stream<Path> files = Files.walk(dir)) {
+            for (Path p : files.sorted(Comparator.reverseOrder()).toList()) {
+                Files.delete(p);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not delete uploads of tenant", e);
+        }
+    }
+
+    /** {@code <root>/<tenantId>}; requires a tenant so a purge can never reach the shared root. */
+    private Path tenantDir() {
+        return root.resolve(TenantContext.require().id()).normalize();
     }
 
     Path root() {

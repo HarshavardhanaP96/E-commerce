@@ -11,7 +11,11 @@ import com.sixpack.tenant.application.TenantAdminService.AdminCommand;
 import com.sixpack.tenant.application.TenantAdminService.CreateCommand;
 import com.sixpack.tenant.application.TenantAdminService.UpdateCommand;
 import com.sixpack.tenant.domain.Tenant;
+import com.sixpack.tenant.application.TenantExport;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import org.springframework.http.HttpHeaders;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -52,17 +56,20 @@ class PlatformTenantController {
     record TenantView(@JsonProperty("id") String id, String slug, String name, String status, List<String> domains,
                       Map<String, String> theme, String locale, String currency, LegalSettings legal,
                       PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                      Map<String, Boolean> features, Instant createdAt) {
+                      Map<String, Boolean> features, Instant deletionDueAt, Instant createdAt) {
         static TenantView from(Tenant t) {
             return new TenantView(t.id(), t.slug(), t.name(), t.status().name(), t.domains(), t.theme(), t.locale(),
-                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.createdAt());
+                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.deletionDueAt(),
+                    t.createdAt());
         }
     }
 
     private final TenantAdminService service;
+    private final TenantExport export;
 
-    PlatformTenantController(TenantAdminService service) {
+    PlatformTenantController(TenantAdminService service, TenantExport export) {
         this.service = service;
+        this.export = export;
     }
 
     @GetMapping
@@ -95,6 +102,27 @@ class PlatformTenantController {
     @PostMapping("/{id}/suspend")
     Map<String, Object> suspend(@PathVariable String id) {
         return ApiResponse.of("message", "Tenant suspended", "tenant", TenantView.from(service.suspend(id)));
+    }
+
+    /** Downloads the store's data and photos as a ZIP. */
+    @GetMapping("/{id}/export")
+    void export(@PathVariable String id, HttpServletResponse response) throws IOException {
+        String slug = service.get(id).slug();
+        response.setContentType("application/zip");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + slug + "-export.zip\"");
+        export.exportTo(id, response.getOutputStream());
+    }
+
+    @PostMapping("/{id}/offboard")
+    Map<String, Object> offboard(@PathVariable String id) {
+        return ApiResponse.of("message", "Store closed and scheduled for deletion", "tenant",
+                TenantView.from(service.offboard(id)));
+    }
+
+    @PostMapping("/{id}/restore")
+    Map<String, Object> restore(@PathVariable String id) {
+        return ApiResponse.of("message", "Deletion cancelled; the store is active", "tenant",
+                TenantView.from(service.restore(id)));
     }
 
     @PostMapping("/{id}/activate")

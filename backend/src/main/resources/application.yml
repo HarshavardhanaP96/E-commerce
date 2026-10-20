@@ -63,6 +63,9 @@ app:
     # Hosts that belong to the default tenant when it is first created. Not needed for a single-store setup
     # (with one tenant every host resolves to it).
     default-domains: ${TENANT_DEFAULT_DOMAINS:localhost,127.0.0.1}
+    # Offboarding: how long a closed store can be restored before its data is purged, and how often to check.
+    deletion-grace: ${TENANT_DELETION_GRACE:30d}
+    purge-interval: ${TENANT_PURGE_INTERVAL:1h}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
     razorpay:

@@ -8,7 +8,9 @@ export type PlatformTenant = {
   id: string;
   slug: string;
   name: string;
-  status: "ACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "SUSPENDED" | "SCHEDULED_FOR_DELETION" | "DELETED";
+  /** When a store scheduled for deletion will be purged. */
+  deletionDueAt?: string | null;
   domains: string[];
   theme: Record<string, string>;
   locale?: string;
@@ -40,6 +42,20 @@ type TenantResponse = { success: boolean; message: string; tenant: PlatformTenan
  * Platform administration. Uses its own token (never the store session's) because platform credentials are
  * separate from any store's customers and admins.
  */
+/** Downloads a store's export ZIP (a plain fetch: the response is a file, not JSON). */
+export const downloadTenantExport = async (tenant: { id: string; slug: string }) => {
+  const res = await fetch(`${server}/api/v1/platform/tenants/${tenant.id}/export`, {
+    headers: { Authorization: `Bearer ${localStorage.getItem(PLATFORM_TOKEN_KEY) ?? ""}` },
+  });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${tenant.slug}-export.zip`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 export const platformAPI = createApi({
   reducerPath: "platformApi",
   baseQuery: fetchBaseQuery({
@@ -64,7 +80,7 @@ export const platformAPI = createApi({
       query: ({ id, body }) => ({ url: `tenants/${id}`, method: "PUT", body }),
       invalidatesTags: ["tenants", "audit"],
     }),
-    setTenantStatus: builder.mutation<TenantResponse, { id: string; action: "suspend" | "activate" }>({
+    setTenantStatus: builder.mutation<TenantResponse, { id: string; action: "suspend" | "activate" | "offboard" | "restore" }>({
       query: ({ id, action }) => ({ url: `tenants/${id}/${action}`, method: "POST" }),
       invalidatesTags: ["tenants", "audit"],
     }),

@@ -15,7 +15,8 @@ public enum AuditAction {
     PASSWORD_RESET_REQUESTED, PASSWORD_RESET_COMPLETED,
     CONSENT_CHANGED,
     /** Platform administrator actions, recorded in the affected store's own log. */
-    TENANT_CREATED, TENANT_UPDATED, TENANT_STATUS_CHANGED;
+    TENANT_CREATED, TENANT_UPDATED, TENANT_STATUS_CHANGED,
+    TENANT_EXPORTED, TENANT_PURGED;
 
     public static AuditAction parse(String value) {
         try {

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { AUDIT_ACTIONS, summariseChanges } from "../../redux/api/auditAPI";
 import { errorMessage } from "../../redux/api/baseQuery";
 import {
+  downloadTenantExport,
   PLATFORM_TOKEN_KEY,
   PlatformTenant,
   useCreateTenantMutation,
@@ -194,11 +195,27 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
     setEditing(null);
   };
 
-  const toggle = async (t: PlatformTenant) => {
-    const action = t.status === "ACTIVE" ? "suspend" : "activate";
+  const change = async (t: PlatformTenant, action: "suspend" | "activate" | "offboard" | "restore") => {
     if (action === "suspend" && !confirm(`Suspend ${t.name}? Its storefront will stop working until reactivated.`)) return;
+    if (
+      action === "offboard" &&
+      !confirm(
+        `Offboard ${t.name}? The storefront closes now and all its data and photos are deleted after the grace period. ` +
+          "Export the store first if its data is needed.",
+      )
+    )
+      return;
     const res = await setStatus({ id: t.id, action });
     if ("error" in res) toast.error(errorMessage(res.error));
+    else toast.success(res.data.message);
+  };
+
+  const exportStore = async (t: PlatformTenant) => {
+    try {
+      await downloadTenantExport(t);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (
@@ -239,15 +256,39 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
                 </td>
                 <td>{t.domains.join(", ")}</td>
                 <td>
-                  <span className={`badge badge--${t.status === "ACTIVE" ? "active" : "inactive"}`}>{t.status.toLowerCase()}</span>
+                  <span className={`badge badge--${t.status === "ACTIVE" ? "active" : "inactive"}`}>
+                    {t.status.toLowerCase().replace(/_/g, " ")}
+                  </span>
+                  {t.deletionDueAt && (
+                    <small className="platform__due">
+                      data deleted on {new Date(t.deletionDueAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                    </small>
+                  )}
                 </td>
-                <td>
-                  <button className="btn" onClick={() => startEdit(t)}>
-                    Edit
-                  </button>{" "}
-                  {t.slug !== "default" && (
-                    <button className="btn" onClick={() => toggle(t)}>
-                      {t.status === "ACTIVE" ? "Suspend" : "Activate"}
+                <td className="platform__actions">
+                  {t.status !== "DELETED" && (
+                    <>
+                      <button className="btn" onClick={() => startEdit(t)}>
+                        Edit
+                      </button>
+                      <button className="btn" onClick={() => exportStore(t)}>
+                        Export
+                      </button>
+                    </>
+                  )}
+                  {t.slug !== "default" && (t.status === "ACTIVE" || t.status === "SUSPENDED") && (
+                    <>
+                      <button className="btn" onClick={() => change(t, t.status === "ACTIVE" ? "suspend" : "activate")}>
+                        {t.status === "ACTIVE" ? "Suspend" : "Activate"}
+                      </button>
+                      <button className="btn" onClick={() => change(t, "offboard")}>
+                        Offboard
+                      </button>
+                    </>
+                  )}
+                  {t.status === "SCHEDULED_FOR_DELETION" && (
+                    <button className="btn" onClick={() => change(t, "restore")}>
+                      Restore
                     </button>
                   )}
                 </td>

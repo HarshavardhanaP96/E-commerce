@@ -27,6 +27,7 @@ class TenantDocument {
     MailDoc mail;
     StorefrontDoc storefront;
     Map<String, Boolean> features;
+    Instant deletionDueAt;
 
     static class LegalDoc {
         String termsVersion;

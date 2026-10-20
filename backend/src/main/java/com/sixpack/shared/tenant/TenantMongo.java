@@ -130,6 +130,11 @@ public class TenantMongo {
         return mongo.findDistinct(scoped(query), field, entity, result);
     }
 
+    /** Deletes every document of the current tenant in {@code collection}; for purging an offboarded store. */
+    public long removeAll(String collection) {
+        return mongo.remove(scoped(new Query()), collection).getDeletedCount();
+    }
+
     /**
      * Reads across every tenant. Only for read-only platform views (the platform audit log): the caller must be
      * behind the platform administrator role. There is deliberately no cross-tenant write.

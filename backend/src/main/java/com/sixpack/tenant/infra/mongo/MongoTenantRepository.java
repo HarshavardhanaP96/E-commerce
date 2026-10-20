@@ -77,6 +77,7 @@ class MongoTenantRepository implements TenantRepository {
         doc.storefront.grievanceOfficer = sf.grievanceOfficer();
         doc.storefront.grievanceEmail = sf.grievanceEmail();
         doc.features = t.features();
+        doc.deletionDueAt = t.deletionDueAt();
         return toDomain(mongo.save(doc));
     }
 
@@ -99,6 +100,6 @@ class MongoTenantRepository implements TenantRepository {
                 d.storefront == null ? null : new StorefrontSettings(d.storefront.logoUrl, d.storefront.legalName,
                         d.storefront.address, d.storefront.email, d.storefront.phone, d.storefront.grievanceOfficer,
                         d.storefront.grievanceEmail),
-                d.features);
+                d.features, d.deletionDueAt);
     }
 }

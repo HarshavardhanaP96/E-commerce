@@ -20,6 +20,7 @@
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
 - [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.
 - [ ] FR13: Data changes (products, categories, coupons, orders, users) and security events (logins, password resets, consent changes) are recorded in an append-only audit log that admins can search, without storing personal values.
+- [x] FR13b: A platform administrator can export a store's data and photos, close it with a grace period during which it can be restored, after which its data and photos are deleted and only its audit log (365 days) and a `DELETED` tenant record remain (answers Q13; procedure in `compliance-consent.md` §7).
 - [x] FR13a: Platform administrator actions on a store (create, settings and payment-account edits, feature switches, suspend, activate) are recorded in that store's audit log with actor role `PLATFORM_ADMIN`, visible to the store's admins. Platform administrators can read every store's log, read-only (`GET /platform/audit`), answering Q17.
 
 ## Non-functional requirements
@@ -50,7 +51,7 @@ default. Each is cheaper to change before a second real tenant exists.
 - **Existing data (Q14):** today's data becomes the `default` tenant. Confirm there is no data that should be split
   or archived instead.
 - **Still open:** cross-tenant platform reporting (Q8); dedicated databases for regulated tenants (Q9); a procedure for
-  tenant offboarding, i.e. export then delete (Q13); whether the platform administrator must accept the admin agreement
+  whether the platform administrator must accept the admin agreement
   (Q16); sender address per tenant when a mail provider
   arrives (Q11); wildcard or custom-domain support (Q12).
 

@@ -25,6 +25,18 @@
     margin-bottom: 1rem;
   }
 
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__due {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+  }
+
   &__json {
     width: 100%;
     font-family: ui-monospace, monospace;
