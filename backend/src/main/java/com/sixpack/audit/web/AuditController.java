@@ -52,14 +52,16 @@ class AuditController {
             @RequestParam(required = false) String outcome,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(defaultValue = "1") int page) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "" + PAGE_SIZE) int limit) {
+        int size = Math.clamp(limit, 1, PAGE_SIZE);
         PageResult<AuditEntry> result = entries.search(new AuditQuery(blankToNull(entityType),
                 blankToNull(entityId), blankToNull(actorId),
                 blankToNull(action) == null ? null : AuditAction.parse(action),
-                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), PAGE_SIZE));
-        long totalPage = (result.total() + PAGE_SIZE - 1) / PAGE_SIZE;
+                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), size));
+        long totalPage = (result.total() + size - 1) / size;
         return ApiResponse.of("entries", result.items().stream().map(EntryView::from).toList(),
-                "totalPage", totalPage);
+                "totalPage", totalPage, "total", result.total());
     }
 
     private static Outcome parseOutcome(String value) {
