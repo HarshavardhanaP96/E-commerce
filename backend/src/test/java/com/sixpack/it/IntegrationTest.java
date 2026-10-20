@@ -38,7 +38,8 @@ import org.testcontainers.containers.MongoDBContainer;
         "app.storage.local-dir=target/test-uploads",
         "app.payment.provider=fake",
         "app.user.admin-email=",
-        "app.products.variants-enabled=true"
+        "app.products.variants-enabled=true",
+        "app.analytics.summary.startup-delay=-1s" // tests run the daily summary job themselves
 })
 @AutoConfigureMockMvc
 public abstract class IntegrationTest {

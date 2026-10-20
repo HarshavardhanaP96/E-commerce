@@ -5,6 +5,9 @@ public interface StoreConfig {
 
     Effective effective();
 
+    /** The store's currency code (ISO 4217, e.g. INR). */
+    String currency();
+
     /** Who sold the goods, as the store's invoices print it. */
     Seller seller();
 

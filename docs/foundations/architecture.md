@@ -93,6 +93,16 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-20: ADR-024 **Shop dashboard trends come from a daily summary table, with live numbers after it.**
+  `DailySummaryJob` (nightly at `ANALYTICS_SUMMARY_CRON`, plus once after startup) writes `daily_sales`: one row
+  per store per local day per currency, built from the same live aggregations the dashboard already used, so the
+  numbers match by construction (a test compares both). Each run redoes the last 30 days (late refunds, edits);
+  the first run, or a run after the store changes its time zone, rebuilds from the store's first order. A per-store
+  `daily_sales_state` records the last complete day and its zone. `SummaryService` reads covered days from the
+  table and everything later (always today) live; product, category and customer views stay fully live, and a
+  table cut in another zone is ignored until rebuilt. The run clears the dashboard cache. One instance runs it
+  (ADR-008); overlapping runs only repeat work. This is the store-level half of the analytics plan's option B; the
+  platform view (step 4) will read the same rows across stores.
 - 2026-10-20: ADR-023 **Shop rules are store settings; platform values are only the fallback.** A store owner sets
   `Tenant.settings` (`StoreSettings`: `commerce`, `catalog`, `invoice`, `regional`; every field nullable) and the
   storefront details through `GET/PUT /store/settings` (role ADMIN, audited `STORE_SETTINGS_UPDATED`). Modules read

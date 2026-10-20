@@ -17,6 +17,8 @@ The collection names and field names match the old Mongoose models, so existing 
 | `audit_log` (new, append-only) | `_id`, `at` (TTL index, fixed at 365 d in `AuditDocument`), `tenantId?` (reserved), `actorId?`, `actorRole: ADMIN\|USER\|ANONYMOUS\|SYSTEM`, `action` (see below), `entityType?`, `entityId?`, `outcome: SUCCESS\|FAILURE`, `changes[{field, before?, after?, redacted}]` (personal fields have `redacted: true` and no values), `subjectHash?` (salted hash of an attempted login email), `requestId?`, `ipHash`, `userAgent`. Never updated or deleted by the app |
 | `email_verification_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256, unique), `expiresAt` (TTL index, 24 h) |
 | `password_reset_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256), `expiresAt` (TTL index), `used` |
+| `daily_sales` (new, analytics step 2) | `_id`, `tenantId`, `day` (store-local `YYYY-MM-DD`), `currency`, `timeZone`, `orders`, `grossRevenue`, `refunds`, `netRevenue`, `discount`, `tax`, `units`, `newCustomers`, `computedAt`; unique (`tenantId`, `currency`, `day`). Counts and sums only, no customer data. Days with no orders and no refunds have no row |
+| `daily_sales_state` (new) | `_id`, `tenantId`, `key` (= tenantId, unique), `through` (last complete day), `timeZone`, `computedAt` |
 
 Pricing rule (store rules from `StoreConfig`, ADR-023): `subtotal = Σ price×qty`, `shipping = subtotal > freeShippingAbove ? 0 : shippingFee` (platform default 1000 / 200), `tax = Σ per rate round(group × rate)` with the store's `defaultTaxRate` (platform default 18) for products without their own rate, stamped on each order line at checkout,
 `discount = min(coupon.amount, subtotal)`, `total = subtotal + tax + shipping − discount`.
@@ -205,6 +207,7 @@ Month arrays run oldest to newest and end with the current month. Buckets accoun
     was issued (so a refund can fall in a later period than its order). **Net revenue** = gross revenue − refunds.
     **Average order value** = revenue ÷ orders (0 with no orders). **Units** = the sum of item quantities.
     **Discount** and **tax** = the sum of the order fields. Change % is rounded; growth from zero is 100.
+    **New customers** (daily summary) = shoppers whose first order with the store was placed that day.
   - With `productId` or `category`, only the matching items count: revenue = their price × quantity, units = their
     quantities, orders = the orders containing them. `refunds`, `discount` and `tax` are then absent, since they
     belong to the whole order. The series takes refunds off the bucket they were issued in (net basis only).

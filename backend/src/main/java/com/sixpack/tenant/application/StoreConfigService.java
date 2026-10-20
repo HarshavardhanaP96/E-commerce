@@ -45,6 +45,12 @@ class StoreConfigService implements StoreConfig {
     }
 
     @Override
+    public String currency() {
+        String currency = tenant().currency();
+        return currency == null || currency.isBlank() ? "INR" : currency;
+    }
+
+    @Override
     public Seller seller() {
         Tenant t = tenant();
         StorefrontSettings sf = t.storefront();

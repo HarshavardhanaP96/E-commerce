@@ -79,6 +79,13 @@ app:
     # First platform administrator (manages tenants). Created at startup if missing; needs 12+ characters.
     admin-email: ${PLATFORM_ADMIN_EMAIL:}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
+  analytics:
+    # Daily summary (one row per store per day) behind the shop dashboard; recomputes recent days each run.
+    summary:
+      cron: ${ANALYTICS_SUMMARY_CRON:0 30 2 * * *}
+      recent-days: ${ANALYTICS_SUMMARY_RECENT_DAYS:30}
+      # One extra run this long after startup; a negative value turns it off.
+      startup-delay: ${ANALYTICS_SUMMARY_STARTUP_DELAY:1m}
   tenant:
     default-slug: ${TENANT_DEFAULT_SLUG:default}
     default-name: ${TENANT_DEFAULT_NAME:6Pack}

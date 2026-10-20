@@ -21,6 +21,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
@@ -186,6 +188,28 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
         Map<LocalDate, Double> out = new LinkedHashMap<>();
         for (Document d : mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class)) {
             out.put(LocalDate.parse(d.getString("_id")), number(d.get("amount")));
+        }
+        return out;
+    }
+
+    @Override
+    public Optional<Instant> firstOrderAt() {
+        Query query = new Query().with(Sort.by(Sort.Direction.ASC, CREATED_AT)).limit(1);
+        query.fields().include(CREATED_AT);
+        return mongo.find(query, Document.class, collection(Dataset.ORDERS)).stream()
+                .map(d -> d.getDate(CREATED_AT)).filter(Objects::nonNull).map(Date::toInstant).findFirst();
+    }
+
+    @Override
+    public Map<LocalDate, Long> newCustomers(Instant from, Instant to, ZoneId zone) {
+        List<AggregationOperation> agg = List.of(
+                match(Criteria.where("user").ne(null)),
+                stage("$group", new Document("_id", "$user").append("first", new Document("$min", "$" + CREATED_AT))),
+                match(Criteria.where("first").gte(Date.from(from)).lt(Date.from(to))),
+                stage("$group", new Document("_id", localDay("$first", zone)).append("count", new Document("$sum", 1))));
+        Map<LocalDate, Long> out = new LinkedHashMap<>();
+        for (Document d : mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class)) {
+            out.put(LocalDate.parse(d.getString("_id")), (long) number(d.get("count")));
         }
         return out;
     }

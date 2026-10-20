@@ -6,6 +6,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Read-side port for analytics. Kept separate from the write-side module repositories so it can be backed by
@@ -64,4 +65,10 @@ public interface DashboardReadPort {
 
     /** Refunds issued in [from, to) on orders in scope, by local day in {@code zone}; failed refunds are left out. */
     Map<LocalDate, Double> dailyRefunds(Scope scope, Instant from, Instant to, ZoneId zone);
+
+    /** When the store's first order was placed, if it has any. */
+    Optional<Instant> firstOrderAt();
+
+    /** Shoppers whose first order was placed in [from, to), by local day in {@code zone}. */
+    Map<LocalDate, Long> newCustomers(Instant from, Instant to, ZoneId zone);
 }
