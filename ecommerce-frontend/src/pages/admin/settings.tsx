@@ -129,7 +129,7 @@ const StoreSettings = () => {
                   {zones.map((z) => <option key={z} value={z} />)}
                 </datalist>
               </label>
-              <p className="span-2 store-settings__hint">Dates on orders and invoices are shown in this zone.</p>
+              <p className="span-2 store-settings__hint">Analytics days, and dates on orders and invoices, follow this zone.</p>
             </section>
 
             <div className="store-settings__actions">

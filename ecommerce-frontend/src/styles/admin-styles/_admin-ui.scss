@@ -1556,10 +1556,20 @@
 }
 
 // ---------- store settings ----------
+// main.admin-main clips its content (overflow: hidden), so the page scrolls itself, like .kb.
 .store-settings {
-  max-width: 52rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  @include custom-scrollbar();
   display: grid;
+  align-content: start;
   gap: $spacing-lg;
+
+  > * {
+    width: 100%;
+    max-width: 52rem;
+  }
 
   &__head {
     h2 {
