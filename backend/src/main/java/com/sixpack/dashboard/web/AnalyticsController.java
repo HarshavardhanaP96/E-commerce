@@ -1,6 +1,7 @@
 package com.sixpack.dashboard.web;
 
 import com.sixpack.dashboard.application.OverviewService;
+import com.sixpack.dashboard.application.SalesService;
 import com.sixpack.dashboard.application.StoreTime;
 import com.sixpack.dashboard.domain.Section;
 import com.sixpack.dashboard.domain.SectionQuery;
@@ -28,15 +29,22 @@ class AnalyticsController {
 
     private final StoreTime time;
     private final OverviewService overview;
+    private final SalesService sales;
 
-    AnalyticsController(StoreTime time, OverviewService overview) {
+    AnalyticsController(StoreTime time, OverviewService overview, SalesService sales) {
         this.time = time;
         this.overview = overview;
+        this.sales = sales;
     }
 
     @GetMapping("/overview")
     ResponseEntity<?> overview(@Valid SectionRequest req) {
         return respond("overview", req, overview::section);
+    }
+
+    @GetMapping("/sales")
+    ResponseEntity<?> sales(@Valid SectionRequest req) {
+        return respond("sales", req, sales::section);
     }
 
     private ResponseEntity<?> respond(String name, SectionRequest req, Function<SectionQuery, ? extends Section> load) {
