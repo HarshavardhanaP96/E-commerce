@@ -79,6 +79,16 @@ abstract class TenantIntegrationTest extends IntegrationTest {
         return tenant.domains().get(0);
     }
 
+    /** Gives the tenant its own (fake) payment account, as every real store other than the default one needs. */
+    protected Tenant withFakePayments(Tenant tenant) {
+        Tenant updated = tenantRepository.save(new Tenant(tenant.id(), tenant.slug(), tenant.name(), tenant.status(),
+                tenant.domains(), tenant.theme(), tenant.locale(), tenant.currency(), tenant.createdAt(),
+                tenant.legal(), new com.sixpack.shared.tenant.PaymentSettings("fake", null, null), tenant.mail(),
+                tenant.storefront()));
+        tenantRegistry.refresh();
+        return updated;
+    }
+
     protected Tenant suspend(Tenant tenant) {
         Tenant suspended = tenantRepository.save(new Tenant(tenant.id(), tenant.slug(), tenant.name(),
                 TenantStatus.SUSPENDED, tenant.domains(), tenant.theme(), tenant.locale(), tenant.currency(),

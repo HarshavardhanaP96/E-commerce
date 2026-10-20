@@ -31,8 +31,8 @@ class TenantCommerceIsolationIntegrationTest extends TenantIntegrationTest {
 
     @BeforeEach
     void twoTenants() throws Exception {
-        acme = createTenant("acme", "Acme", "shop.acme.test");
-        globex = createTenant("globex", "Globex", "shop.globex.test");
+        acme = withFakePayments(createTenant("acme", "Acme", "shop.acme.test"));
+        globex = withFakePayments(createTenant("globex", "Globex", "shop.globex.test"));
         adminA = adminTokenFor(acme);
         adminB = adminTokenFor(globex);
     }
