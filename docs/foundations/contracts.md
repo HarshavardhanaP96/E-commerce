@@ -212,6 +212,16 @@ Month arrays run oldest to newest and end with the current month. Buckets accoun
     quantities, orders = the orders containing them. `refunds`, `discount` and `tax` are then absent, since they
     belong to the whole order. The series takes refunds off the bucket they were issued in (net basis only).
 
+Sections (analytics step 3). Each takes `?from=&to=` with the same rules as `/summary` (no scope filters, no
+comparison) and reads live data. Revenue here is the gross value of orders placed in the range: order `total`s, or
+price × quantity for product figures. Shares are percentages with 1 decimal. Ranked lists hold the top 20 (places: 50).
+- `GET /products` → `{success, products:{top:[{productId, name, units, revenue, orders}], categories:[{category, revenue, units, share}], stock:[{productId, name, variantId?, label?, stock, threshold, unitsSold, daysLeft?}], idle:[{productId, name, stock}]}}`. `categories` looks the category up on the product (`uncategorised` when missing). `stock` = the low-stock lines (same rule as `GET /product/low-stock`); `daysLeft` = floor(stock × days in range ÷ units sold in range), 0 when out of stock, null when nothing sold. `idle` = products on sale (ACTIVE) created before the range ended with no sales in it.
+- `GET /customers` → `{success, customers:{customers, newCustomers, returningCustomers, repeatRate, top:[{userId, name?, email?, orders, revenue}], places:[{state?, city?, orders, revenue}]}}`. Returning = ordered before the range; `repeatRate` = share of the range's buyers with 2+ orders in it; name and email from the buyer's latest order in the range (absent once erased); places by delivery address.
+- `GET /coupons` → `{success, coupons:{ordersWithCoupon, shareOfOrders, discount, codes:[{code, uses, discount, revenue}]}}` (codes upper-cased; `revenue` = totals of the orders that used it).
+- `GET /payments` → `{success, payments:{granularity, methods:[{method, orders, amount, share}], refunds:[{start, count, amount}]}}` (`method` `unknown` when not recorded; `share` of orders; refunds bucketed as the summary series, failed ones left out).
+- `GET /tax` → `{success, tax:{sellerState?, rows:[{month, rate, taxableValue, cgst, sgst, igst, tax}], totalTaxable, totalTax}}`. Per order and rate, tax = round(taxable × rate) to whole rupees as checkout charged it (lines saved without a rate count at 18%); buyer state (billing, else delivery) equal to the seller's state → half CGST, half SGST, otherwise IGST. Refunds are not deducted.
+- `GET /export/{table}` → `text/csv` (UTF-8 with BOM, every row, text cells starting with `= + - @` prefixed with `'`), `Content-Disposition: attachment; filename="<table>_<from>_<to>.csv"`. Tables: `top-products, categories, stock, idle-products, top-customers, places, coupons, payment-methods, refunds, tax`; unknown → 404. Each download is audited as `ANALYTICS_EXPORTED` (`entityType` `report`, `entityId` the table).
+
 ### Ops
 - `GET /actuator/health/liveness`, `/actuator/health/readiness`, `/actuator/prometheus`, `/actuator/info`
 - `GET /api-docs` (springdoc OpenAPI JSON), `/swagger-ui.html`. Both are disabled in prod (`SPRINGDOC_ENABLED=false`).

@@ -12,7 +12,7 @@ export const AUDIT_ACTIONS = [
   "PASSWORD_RESET_REQUESTED", "PASSWORD_RESET_COMPLETED",
   "CONSENT_CHANGED",
   "TENANT_CREATED", "TENANT_UPDATED", "TENANT_STATUS_CHANGED",
-  "STORE_SETTINGS_UPDATED",
+  "STORE_SETTINGS_UPDATED", "ANALYTICS_EXPORTED",
 ] as const;
 
 export type AuditChange = { field: string; before?: unknown; after?: unknown; redacted: boolean };

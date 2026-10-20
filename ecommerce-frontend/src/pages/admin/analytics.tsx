@@ -13,9 +13,10 @@ import {
   useGetSummaryQuery,
 } from "../../redux/api/dashboardAPI";
 import { useCategoriesQuery, useLowStockQuery } from "../../redux/api/productAPI";
-import { Summary } from "../../types/api-types";
 import { SummaryParams } from "../../types/types";
-import { PRESETS, Preset, presetRange } from "../../utils/dateRange";
+import { PRESETS, Preset, bucketLabel, presetRange } from "../../utils/dateRange";
+import { SECTION_TABS, SectionTab } from "../../utils/sections";
+import AnalyticsSection from "../../components/admin/AnalyticsSections";
 import { formatMoney, lastMonths, transformImage } from "../../utils/features";
 
 const COMPARE_LABEL = { previous: "vs previous period", year: "vs last year", none: "" } as const;
@@ -35,14 +36,8 @@ const Widget = ({ label, value, change, against }: {
   </article>
 );
 
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "5 Oct" for days and weeks, "Oct 2026" for months; the date string is read as is, never shifted by time zone. */
-const bucketLabel = (start: string, granularity: Summary["granularity"]) => {
-  const [y, m, d] = start.split("-").map(Number);
-  return granularity === "month" ? `${MONTH_SHORT[m - 1]} ${y}` : `${d} ${MONTH_SHORT[m - 1]}`;
-};
-
 const Analytics = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -59,16 +54,86 @@ const Analytics = () => {
     setParams(next, { replace: true });
   };
 
+  const tab = SECTION_TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") as SectionTab : "overview";
+  const overview = tab === "overview";
+
   const scope = { category };
+  const skip = { skip: !overview };
   const { data: categories } = useCategoriesQuery();
-  const summary = useGetSummaryQuery({ ...scope, ...range, compare, basis });
-  const stats = useGetDashboardStatsQuery(scope);
-  const pie = useGetPieChartQuery(scope);
-  const bar = useGetBarChartQuery(scope);
-  const line = useGetLineChartQuery(scope);
-  const { data: lowStock } = useLowStockQuery();
+  const summary = useGetSummaryQuery({ ...scope, ...range, compare, basis }, skip);
+  const stats = useGetDashboardStatsQuery(scope, skip);
+  const pie = useGetPieChartQuery(scope, skip);
+  const bar = useGetBarChartQuery(scope, skip);
+  const line = useGetLineChartQuery(scope, skip);
+  const { data: lowStock } = useLowStockQuery(undefined, skip);
   // Not narrowed by the category filter: alerts are store-wide.
   const alerts = lowStock?.alerts ?? [];
+
+  const toolbar = (
+    <header className="analytics__toolbar">
+      <h2>Analytics</h2>
+      <div className="analytics__filters">
+        <select value={preset} onChange={(e) => setParam(e.target.value === "custom"
+                  ? { range: "custom", from: range.from, to: range.to }
+                  : { range: e.target.value, from: "", to: "" })}
+                aria-label="Date range">
+          {PRESETS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+        </select>
+        {preset === "custom" && (
+          <>
+            <input type="date" value={range.from} max={range.to} aria-label="From"
+                   onChange={(e) => e.target.value && setParam({ from: e.target.value })} />
+            <input type="date" value={range.to} min={range.from} aria-label="To"
+                   onChange={(e) => e.target.value && setParam({ to: e.target.value })} />
+          </>
+        )}
+        {overview && (
+          <>
+            <select value={compare} onChange={(e) => setParam({ compare: e.target.value })} aria-label="Compare with">
+              <option value="previous">Compare: previous period</option>
+              <option value="year">Compare: same period last year</option>
+              <option value="none">No comparison</option>
+            </select>
+            <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
+              <option value="net">Net revenue (after refunds)</option>
+              <option value="gross">Gross revenue</option>
+            </select>
+            <select value={category} onChange={(e) => setParam({ category: e.target.value })}
+                    aria-label="Scope by category">
+              <option value="">All categories</option>
+              {categories?.categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+      <nav className="tabs analytics__tabs" aria-label="Analytics sections"
+           ref={(el) => el?.querySelector(".is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" })}>
+        {SECTION_TABS.map((t) => (
+          <button key={t.value} type="button" className={t.value === tab ? "is-active" : undefined}
+                  aria-current={t.value === tab ? "page" : undefined}
+                  onClick={() => setParam({ tab: t.value === "overview" ? "" : t.value })}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+    </header>
+  );
+
+  if (!overview) {
+    return (
+      <AdminLayout>
+        <div className="analytics">
+          {toolbar}
+          <p className="analytics__note">
+            {range.from} to {range.to}, in the store&apos;s time zone. Revenue here is the value of orders placed.
+          </p>
+          <AnalyticsSection tab={tab} range={range} />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   if (summary.isLoading || stats.isLoading || pie.isLoading || bar.isLoading || line.isLoading) return <Loader />;
   if (summary.isError || stats.isError || !summary.data || !stats.data || !pie.data || !bar.data || !line.data) {
@@ -93,41 +158,7 @@ const Analytics = () => {
   return (
     <AdminLayout>
       <div className="analytics">
-        <header className="analytics__toolbar">
-          <h2>Analytics</h2>
-          <div className="analytics__filters">
-            <select value={preset} onChange={(e) => setParam(e.target.value === "custom"
-                      ? { range: "custom", from: range.from, to: range.to }
-                      : { range: e.target.value, from: "", to: "" })}
-                    aria-label="Date range">
-              {PRESETS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
-            {preset === "custom" && (
-              <>
-                <input type="date" value={range.from} max={range.to} aria-label="From"
-                       onChange={(e) => e.target.value && setParam({ from: e.target.value })} />
-                <input type="date" value={range.to} min={range.from} aria-label="To"
-                       onChange={(e) => e.target.value && setParam({ to: e.target.value })} />
-              </>
-            )}
-            <select value={compare} onChange={(e) => setParam({ compare: e.target.value })} aria-label="Compare with">
-              <option value="previous">Compare: previous period</option>
-              <option value="year">Compare: same period last year</option>
-              <option value="none">No comparison</option>
-            </select>
-            <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
-              <option value="net">Net revenue (after refunds)</option>
-              <option value="gross">Gross revenue</option>
-            </select>
-            <select value={category} onChange={(e) => setParam({ category: e.target.value })}
-                    aria-label="Scope by category">
-              <option value="">All categories</option>
-              {categories?.categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </header>
+        {toolbar}
 
         <section className="kpi-row">
           <Widget label={basis === "net" ? "Net revenue" : "Gross revenue"} value={formatMoney(now.revenue)}

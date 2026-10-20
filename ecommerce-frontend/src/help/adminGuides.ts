@@ -66,7 +66,7 @@ export const GUIDES: Guide[] = [
     summary: "Revenue, customers, products and orders at a glance.",
     openLabel: { to: "/admin/analytics", label: "Open Analytics" },
     body: [
-      { type: "p", text: "The four cards at the top show totals for revenue, customers, products and orders, each with the change versus last month (green is up, red is down). The charts below break the numbers down." },
+      { type: "p", text: "Pick a date range at the top (and what to compare it with). The four cards show revenue, orders, average order value and units sold for that range, each with the change against the comparison (green is up, red is down). Days follow your store's time zone. The charts below break the numbers down." },
       { type: "steps", title: "What the charts show", items: [
         "Revenue & orders (6 months): purple bars are revenue and use the left axis (₹); blue bars are order counts and use the right axis.",
         "Inventory by category, Gender ratio, Customers by age: how your catalogue and customers split.",
@@ -77,6 +77,30 @@ export const GUIDES: Guide[] = [
       { type: "tip", text: "Use the category drop-down at the top right to scope the whole dashboard to one category." },
     ],
     related: ["orders", "products"],
+  },
+  {
+    slug: "analytics-sections",
+    group: "Start here",
+    title: "Analytics sections and CSV downloads",
+    summary: "Top sellers, customers, coupons, payment methods and monthly GST for any date range.",
+    openLabel: { to: "/admin/analytics?tab=products", label: "Open Analytics" },
+    body: [
+      { type: "steps", items: [
+        "Go to Analytics and pick a date range.",
+        "Choose a tab: Products, Customers, Coupons, Payments or Tax.",
+        "Click CSV on any card to download that table with every row (the page shows the top rows).",
+      ] },
+      { type: "steps", title: "What each tab shows", items: [
+        "Products: top sellers, revenue by category, products that did not sell in the range, and low-stock items with the days of stock left at the range's selling rate.",
+        "Customers: new and returning customers, how many ordered twice or more, your top customers, and orders by city.",
+        "Coupons: how often each code was used, what the discount cost you, and the revenue from those orders.",
+        "Payments: the mix of payment methods and the refunds over time.",
+        "Tax: GST by month and rate, split into CGST + SGST (buyers in your state) and IGST, as on your invoices.",
+      ] },
+      { type: "p", text: "Revenue in these tabs is the value of orders placed in the range. Refunds are shown on the Payments tab but not taken off the GST figures, so check credit notes with your accountant before filing." },
+      { type: "tip", text: "Set your GSTIN and state under Store settings first: without the state, all tax shows as IGST. Each CSV download is recorded in the audit log, because the customer list holds personal data." },
+    ],
+    related: ["analytics", "store-settings"],
   },
   {
     slug: "products",

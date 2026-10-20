@@ -4,6 +4,7 @@ import static com.sixpack.shared.config.CacheConfig.PRODUCTS_ADMIN;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_BY_ID;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_LATEST;
 
+import com.sixpack.product.LowStockLine;
 import com.sixpack.product.ProductCatalog;
 import com.sixpack.product.ProductChangedEvent;
 import com.sixpack.product.ProductSnapshot;
@@ -29,10 +30,18 @@ class ProductCatalogService implements ProductCatalog {
 
     private final ProductRepository products;
     private final ApplicationEventPublisher events;
+    private final ProductService service;
 
-    ProductCatalogService(ProductRepository products, ApplicationEventPublisher events) {
+    ProductCatalogService(ProductRepository products, ApplicationEventPublisher events, ProductService service) {
         this.products = products;
         this.events = events;
+        this.service = service;
+    }
+
+    @Override
+    public List<LowStockLine> lowStock() {
+        return service.lowStock().stream().map(a -> new LowStockLine(a.productId(), a.name(), a.variantId(),
+                a.label(), a.sku(), a.stock(), a.threshold())).toList();
     }
 
     @Override

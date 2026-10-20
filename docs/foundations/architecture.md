@@ -93,6 +93,14 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-20: ADR-025 **Dashboard sections read live; exports are audited.** Products, customers, coupons,
+  payments and tax (`/dashboard/{section}`) are drill-downs, so they aggregate `orders` (and `products`) live for
+  the range instead of widening the daily summary; cached per store, zone and range like the summary, cleared on
+  order changes. Low-stock lines come through `ProductCatalog.lowStock()` so the dashboard does not copy the
+  product rules. The category join (`$lookup` on `products`) matches `tenantId` itself, since `TenantMongo` only
+  scopes the collection being aggregated. GST is recomputed per order and rate with checkout's rounding and split
+  CGST/SGST/IGST like the invoice; it does not net off refunds (no credit notes yet). Every CSV download is an
+  `ANALYTICS_EXPORTED` audit entry because the customer table holds names and emails.
 - 2026-10-20: ADR-024 **Shop dashboard trends come from a daily summary table, with live numbers after it.**
   `DailySummaryJob` (nightly at `ANALYTICS_SUMMARY_CRON`, plus once after startup) writes `daily_sales`: one row
   per store per local day per currency, built from the same live aggregations the dashboard already used, so the
