@@ -16,6 +16,14 @@ type DataTableProps<T extends object> = {
   onRowClick?: (row: T) => void;
   /** When this value changes the table returns to its first page (e.g. server-side filters/paging feeding new data). */
   resetKey?: string;
+  /** Server-side paging: `data` is already one page, and the footer drives the server's page and page size. */
+  serverPaging?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+  };
 };
 
 const PAGE_SIZES = [10, 25, 50];
@@ -34,6 +42,7 @@ function DataTable<T extends object>({
   emptyText = "No records found",
   onRowClick,
   resetKey,
+  serverPaging,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
 
@@ -54,7 +63,7 @@ function DataTable<T extends object>({
     rows,
     state: { pageIndex, pageSize },
   } = useTable<T>(
-    { columns, data, autoResetPage: false, initialState: { pageSize: PAGE_SIZES[0] } } as never,
+    { columns, data, autoResetPage: false, manualPagination: !!serverPaging, initialState: { pageSize: PAGE_SIZES[0] } } as never,
     useGlobalFilter,
     useSortBy,
     usePagination
@@ -67,8 +76,34 @@ function DataTable<T extends object>({
     gotoPage(0);
   }, [resetKey, gotoPage]);
 
-  const from = rows.length === 0 ? 0 : pageIndex * pageSize + 1;
-  const to = Math.min((pageIndex + 1) * pageSize, rows.length);
+  // With server paging `page` is every loaded row, and the footer counts against the server's total.
+  const pager = serverPaging
+    ? {
+        index: serverPaging.page - 1,
+        size: serverPaging.pageSize,
+        count: Math.ceil(serverPaging.total / serverPaging.pageSize),
+        total: serverPaging.total,
+        shown: rows.length,
+        canPrevious: serverPaging.page > 1,
+        canNext: serverPaging.page * serverPaging.pageSize < serverPaging.total,
+        previous: () => serverPaging.onPageChange(serverPaging.page - 1),
+        next: () => serverPaging.onPageChange(serverPaging.page + 1),
+        setSize: serverPaging.onPageSizeChange,
+      }
+    : {
+        index: pageIndex,
+        size: pageSize,
+        count: pageCount,
+        total: rows.length,
+        shown: page.length,
+        canPrevious: canPreviousPage,
+        canNext: canNextPage,
+        previous: previousPage,
+        next: nextPage,
+        setSize: setPageSize,
+      };
+  const from = pager.shown === 0 ? 0 : pager.index * pager.size + 1;
+  const to = pager.index * pager.size + pager.shown;
 
   return (
     <section className="data-table">
@@ -147,22 +182,22 @@ function DataTable<T extends object>({
 
       <footer className="data-table__footer">
         <span>
-          {from}–{to} of {rows.length}
+          {from}–{to} of {pager.total}
         </span>
         <label>
           Rows per page
-          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+          <select value={pager.size} onChange={(e) => pager.setSize(Number(e.target.value))}>
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>{size}</option>
             ))}
           </select>
         </label>
         <div className="data-table__pager">
-          <button onClick={() => previousPage()} disabled={!canPreviousPage} aria-label="Previous page"><LuChevronLeft /></button>
-          <span>
-            {pageCount === 0 ? 0 : pageIndex + 1} / {pageCount}
+          <button onClick={() => pager.previous()} disabled={!pager.canPrevious} aria-label="Previous page"><LuChevronLeft /></button>
+          <span aria-live="polite">
+            {pager.count === 0 ? 0 : pager.index + 1} / {pager.count}
           </span>
-          <button onClick={() => nextPage()} disabled={!canNextPage} aria-label="Next page"><LuChevronRight /></button>
+          <button onClick={() => pager.next()} disabled={!pager.canNext} aria-label="Next page"><LuChevronRight /></button>
         </div>
       </footer>
     </section>

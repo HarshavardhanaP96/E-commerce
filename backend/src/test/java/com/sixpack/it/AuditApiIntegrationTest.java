@@ -93,6 +93,22 @@ class AuditApiIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void pageSizeFollowsTheLimitUpToAHundred() throws Exception {
+        String admin = adminToken();
+        for (int i = 0; i < 105; i++) {
+            seed(AuditAction.PRODUCT_UPDATED, "product", "p" + i, "a1");
+        }
+
+        search(admin, "action", "PRODUCT_UPDATED", "limit", "25", "page", "5")
+                .andExpect(jsonPath("$.entries", hasSize(5)))
+                .andExpect(jsonPath("$.totalPage").value(5))
+                .andExpect(jsonPath("$.total").value(105));
+        search(admin, "action", "PRODUCT_UPDATED", "limit", "1000").andExpect(jsonPath("$.entries", hasSize(100)));
+        search(admin, "action", "PRODUCT_UPDATED", "limit", "0").andExpect(jsonPath("$.entries", hasSize(1)));
+        search(admin, "limit", "abc").andExpect(status().isBadRequest());
+    }
+
+    @Test
     void badFiltersAreRejectedNotCrashed() throws Exception {
         String admin = adminToken();
         search(admin, "action", "NOT_A_THING").andExpect(status().isBadRequest());

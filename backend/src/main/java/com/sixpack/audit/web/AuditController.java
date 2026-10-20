@@ -52,22 +52,34 @@ class AuditController {
             @RequestParam(required = false) String outcome,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(defaultValue = "1") int page) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "" + PAGE_SIZE) int limit) {
+        int size = Math.clamp(limit, 1, PAGE_SIZE);
         PageResult<AuditEntry> result = entries.search(
-                query(entityType, entityId, actorId, action, outcome, from, to, page));
+                query(entityType, entityId, actorId, action, outcome, from, to, page, size));
         return ApiResponse.of("entries", result.items().stream().map(EntryView::from).toList(),
-                "totalPage", totalPages(result));
+                "totalPage", totalPages(result, size), "total", result.total());
     }
 
     static AuditQuery query(String entityType, String entityId, String actorId, String action, String outcome,
                             Instant from, Instant to, int page) {
+        return query(entityType, entityId, actorId, action, outcome, from, to, page, PAGE_SIZE);
+    }
+
+    /** @param size entries per page, already clamped to 1..{@link #PAGE_SIZE} */
+    static AuditQuery query(String entityType, String entityId, String actorId, String action, String outcome,
+                            Instant from, Instant to, int page, int size) {
         return new AuditQuery(blankToNull(entityType), blankToNull(entityId), blankToNull(actorId),
                 blankToNull(action) == null ? null : AuditAction.parse(action),
-                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), PAGE_SIZE);
+                blankToNull(outcome) == null ? null : parseOutcome(outcome), from, to, Math.max(page, 1), size);
     }
 
     static long totalPages(PageResult<?> result) {
-        return (result.total() + PAGE_SIZE - 1) / PAGE_SIZE;
+        return totalPages(result, PAGE_SIZE);
+    }
+
+    static long totalPages(PageResult<?> result, int size) {
+        return (result.total() + size - 1) / size;
     }
 
     private static Outcome parseOutcome(String value) {

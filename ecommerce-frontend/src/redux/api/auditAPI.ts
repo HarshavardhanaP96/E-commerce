@@ -48,9 +48,10 @@ export type AuditFilters = {
   from?: string;
   to?: string;
   page: number;
+  limit: number;
 };
 
-export type AuditResponse = { success: boolean; entries: AuditEntry[]; totalPage: number };
+export type AuditResponse = { success: boolean; entries: AuditEntry[]; totalPage: number; total: number };
 
 export const auditAPI = createApi({
   reducerPath: "auditApi",

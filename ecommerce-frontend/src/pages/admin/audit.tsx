@@ -47,6 +47,7 @@ const AuditLog = () => {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10); // the table's default rows per page
 
   // currentData (not data) so rows from a previous filter are never shown for the current one.
   const { currentData, isLoading, isFetching, isError, error } = useAuditLogQuery({
@@ -58,6 +59,7 @@ const AuditLog = () => {
     from: startOfDay(from),
     to: endOfDay(to),
     page,
+    limit: pageSize,
   });
 
   const rows: Row[] = useMemo(
@@ -70,7 +72,6 @@ const AuditLog = () => {
       })),
     [currentData]
   );
-  const totalPage = currentData?.totalPage ?? 1;
   const failure = isError ? errorMessage(error, "Could not load the audit log") : null;
 
   // Changing a filter returns to the first page.
@@ -87,7 +88,6 @@ const AuditLog = () => {
         </p>
       )}
       <DataTable
-        resetKey={`${entityType}|${entityId.trim()}|${actorId.trim()}|${action}|${outcome}|${from}|${to}|${page}`}
         columns={columns}
         data={rows}
         isLoading={isLoading || isFetching}
@@ -130,13 +130,16 @@ const AuditLog = () => {
             <input type="date" value={to} onChange={(e) => filter(setTo)(e.target.value)} aria-label="To date" />
           </>
         }
-        actions={
-          <>
-            <button type="button" className="btn" disabled={page <= 1} onClick={() => setPage(page - 1)}>Newer</button>
-            <span aria-live="polite">Page {page} of {Math.max(totalPage, 1)}</span>
-            <button type="button" className="btn" disabled={page >= totalPage} onClick={() => setPage(page + 1)}>Older</button>
-          </>
-        }
+        serverPaging={{
+          page,
+          pageSize,
+          total: currentData?.total ?? 0,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+        }}
       />
     </AdminLayout>
   );
