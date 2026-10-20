@@ -21,8 +21,10 @@
   compared with the previous period or the same period last year, with a trend by day, week or month, in the store's
   own time zone (Store settings). Filters live in the page URL. Past days come from a daily summary table that a
   nightly job keeps (recomputing the last 30 days, rebuilding a store's history on its first run or after a time-zone
-  change); days it does not cover yet, today included, are read live. *Steps 1–2 of the analytics plan; more
-  sections and the super admin view follow.*
+  change); days it does not cover yet, today included, are read live. Tabs for Products (top sellers, category
+  share, idle products, days of stock left), Customers (new vs returning, repeat rate, top customers, places),
+  Coupons, Payments (method mix, refunds over time) and Tax (GST by month and rate, CGST/SGST/IGST), each table
+  downloadable as CSV with the download audited. *Steps 1–3 of the analytics plan; the super admin view follows.*
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
 - [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.
@@ -72,10 +74,11 @@ default. Each is cheaper to change before a second real tenant exists.
   working until it expires (24 h). Enforcing it per request costs a database read per call.
 - **Coupons can be over-used** by the number of checkouts open at the same moment, and deleting an order does not
   return a use (ADR-018).
-- **Product variants are off** (`app.products.variants-enabled=false`) until the storefront and admin editor exist.
-- **`emailVerified` is stored but nothing sets it**; there is no verification flow.
+- **Product variants are on by default** (`PRODUCT_VARIANTS_ENABLED`); a platform admin can switch them off per store.
+- **No real mail provider:** verification and password-reset links are only logged (`LoggingMailSender`), so production cannot send them yet.
 - **Platform logins are not audited.** Platform actions on a store (create, edit, suspend, activate) are, in that
   store's own log; a platform login belongs to no store, so it is only a log line.
 - **The tenant is chosen from the request host**, so the ingress must overwrite any client-supplied
   `X-Forwarded-Host`, and a second tenant needs `TENANT_DEFAULT_DOMAINS` set first.
-- **Payment method and failure reason** are not recorded; a captured payment whose order failed is still refunded by hand.
+- **Failed payments are not recorded** (the payment method of a paid order is); a captured payment whose order failed is still refunded by hand.
+- **Analytics, store settings and integration:** the open problems, by-design limits and lessons are in `docs/CHALLENGES_AND_LIMITATIONS.md`.
