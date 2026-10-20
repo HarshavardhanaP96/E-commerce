@@ -1,6 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { BarResponse, LineResponse, PieResponse, StatsResponse, VariantSalesResponse } from "../../types/api-types";
-import { DashboardScope } from "../../types/types";
+import { BarResponse, LineResponse, PieResponse, StatsResponse, SummaryResponse, VariantSalesResponse } from "../../types/api-types";
+import { DashboardScope, SummaryParams } from "../../types/types";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
 
@@ -9,6 +9,9 @@ export const dashboardAPI = createApi({
   baseQuery: authedBaseQuery("dashboard/"),
   keepUnusedDataFor: 0,
   endpoints: (builder) => ({
+    getSummary: builder.query<SummaryResponse, SummaryParams>({
+      query: (params) => ({ url: "summary", params: clean(params) }),
+    }),
     getDashboardStats: builder.query<StatsResponse, DashboardScope>({
       query: (params) => ({ url: "stats", params: clean(params) }),
     }),
@@ -28,6 +31,7 @@ export const dashboardAPI = createApi({
 });
 
 export const {
+  useGetSummaryQuery,
   useGetDashboardStatsQuery,
   useGetPieChartQuery,
   useGetBarChartQuery,

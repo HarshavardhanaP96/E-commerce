@@ -772,10 +772,29 @@
 
   &__toolbar {
     @include flex(row, space-between, center);
+    flex-wrap: wrap;
+    gap: $spacing-md;
 
     h2 {
       @include text(h2);
     }
+  }
+
+  &__filters {
+    @include flex(row, flex-end, center, $spacing-sm);
+    flex-wrap: wrap;
+
+    select,
+    input {
+      max-width: 100%;
+    }
+  }
+
+  &__note {
+    @include text(body-sm);
+    @include tabular;
+    margin-top: calc(-1 * #{$spacing-md});
+    color: $color-text-secondary;
   }
 
   &__grid {

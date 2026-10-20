@@ -291,3 +291,9 @@ export type Bar = { users: number[]; products: number[]; orders: number[] };
 export type Line = { users: number[]; products: number[]; discount: number[]; revenue: number[] };
 
 export type DashboardScope = { productId?: string; category?: string; userId?: string };
+export type SummaryParams = DashboardScope & {
+  from?: string;
+  to?: string;
+  compare?: "previous" | "year" | "none";
+  basis?: "gross" | "net";
+};

@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { LuTrendingDown, LuTrendingUp } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { BarChart, DoughnutChart, LineChart } from "../../components/admin/Charts";
 import { chartColors as c } from "../../components/admin/chartTheme";
@@ -11,26 +10,58 @@ import {
   useGetDashboardStatsQuery,
   useGetLineChartQuery,
   useGetPieChartQuery,
+  useGetSummaryQuery,
 } from "../../redux/api/dashboardAPI";
 import { useCategoriesQuery, useLowStockQuery } from "../../redux/api/productAPI";
+import { Summary } from "../../types/api-types";
+import { SummaryParams } from "../../types/types";
+import { PRESETS, Preset, presetRange } from "../../utils/dateRange";
 import { formatMoney, lastMonths, transformImage } from "../../utils/features";
 
-const Widget = ({ label, value, change }: { label: string; value: string; change: number }) => (
+const COMPARE_LABEL = { previous: "vs previous period", year: "vs last year", none: "" } as const;
+
+const Widget = ({ label, value, change, against }: {
+  label: string; value: string; change?: number | null; against: string;
+}) => (
   <article className="kpi">
     <span>{label}</span>
     <strong>{value}</strong>
-    <small className={change >= 0 ? "green" : "red"}>
-      {change >= 0 ? <LuTrendingUp /> : <LuTrendingDown />} {change > 0 ? "+" : ""}
-      {change}% <em>vs last month</em>
-    </small>
+    {change != null && (
+      <small className={change >= 0 ? "green" : "red"}>
+        {change >= 0 ? <LuTrendingUp /> : <LuTrendingDown />} {change > 0 ? "+" : ""}
+        {change}% <em>{against}</em>
+      </small>
+    )}
   </article>
 );
 
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "5 Oct" for days and weeks, "Oct 2026" for months; the date string is read as is, never shifted by time zone. */
+const bucketLabel = (start: string, granularity: Summary["granularity"]) => {
+  const [y, m, d] = start.split("-").map(Number);
+  return granularity === "month" ? `${MONTH_SHORT[m - 1]} ${y}` : `${d} ${MONTH_SHORT[m - 1]}`;
+};
+
 const Analytics = () => {
   const navigate = useNavigate();
-  const [category, setCategory] = useState("");
+  const [params, setParams] = useSearchParams();
+  const category = params.get("category") ?? "";
+  const preset = (params.get("range") as Preset) || "30d";
+  const range = preset === "custom"
+    ? { from: params.get("from") ?? presetRange("30d").from, to: params.get("to") ?? presetRange("30d").to }
+    : presetRange(preset);
+  const compare = (params.get("compare") as SummaryParams["compare"]) || "previous";
+  const basis = (params.get("basis") as SummaryParams["basis"]) || "net";
+  const setParam = (changes: Record<string, string>) => {
+    const next = new URLSearchParams(params);
+    Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
+    setParams(next, { replace: true });
+  };
+
   const scope = { category };
   const { data: categories } = useCategoriesQuery();
+  const summary = useGetSummaryQuery({ ...scope, ...range, compare, basis });
   const stats = useGetDashboardStatsQuery(scope);
   const pie = useGetPieChartQuery(scope);
   const bar = useGetBarChartQuery(scope);
@@ -39,8 +70,8 @@ const Analytics = () => {
   // Not narrowed by the category filter: alerts are store-wide.
   const alerts = lowStock?.alerts ?? [];
 
-  if (stats.isLoading || pie.isLoading || bar.isLoading || line.isLoading) return <Loader />;
-  if (stats.isError || !stats.data || !pie.data || !bar.data || !line.data) {
+  if (summary.isLoading || stats.isLoading || pie.isLoading || bar.isLoading || line.isLoading) return <Loader />;
+  if (summary.isError || stats.isError || !summary.data || !stats.data || !pie.data || !bar.data || !line.data) {
     return (
       <AdminLayout>
         <p className="data-table__empty">Could not load analytics. Please retry.</p>
@@ -48,6 +79,10 @@ const Analytics = () => {
     );
   }
 
+  const sum = summary.data.summary;
+  const now = sum.current;
+  const change = sum.changePercent;
+  const against = COMPARE_LABEL[compare ?? "previous"];
   const s = stats.data.stats;
   const p = pie.data.charts;
   const b = bar.data.charts;
@@ -60,20 +95,55 @@ const Analytics = () => {
       <div className="analytics">
         <header className="analytics__toolbar">
           <h2>Analytics</h2>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Scope by category">
-            <option value="">All categories</option>
-            {categories?.categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="analytics__filters">
+            <select value={preset} onChange={(e) => setParam(e.target.value === "custom"
+                      ? { range: "custom", from: range.from, to: range.to }
+                      : { range: e.target.value, from: "", to: "" })}
+                    aria-label="Date range">
+              {PRESETS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            {preset === "custom" && (
+              <>
+                <input type="date" value={range.from} max={range.to} aria-label="From"
+                       onChange={(e) => e.target.value && setParam({ from: e.target.value })} />
+                <input type="date" value={range.to} min={range.from} aria-label="To"
+                       onChange={(e) => e.target.value && setParam({ to: e.target.value })} />
+              </>
+            )}
+            <select value={compare} onChange={(e) => setParam({ compare: e.target.value })} aria-label="Compare with">
+              <option value="previous">Compare: previous period</option>
+              <option value="year">Compare: same period last year</option>
+              <option value="none">No comparison</option>
+            </select>
+            <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
+              <option value="net">Net revenue (after refunds)</option>
+              <option value="gross">Gross revenue</option>
+            </select>
+            <select value={category} onChange={(e) => setParam({ category: e.target.value })}
+                    aria-label="Scope by category">
+              <option value="">All categories</option>
+              {categories?.categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </header>
 
         <section className="kpi-row">
-          <Widget label="Revenue" value={formatMoney(s.count.revenue)} change={s.changePercent.revenue} />
-          <Widget label="Customers" value={String(s.count.user)} change={s.changePercent.user} />
-          <Widget label="Products" value={String(s.count.product)} change={s.changePercent.product} />
-          <Widget label="Orders" value={String(s.count.order)} change={s.changePercent.order} />
+          <Widget label={basis === "net" ? "Net revenue" : "Gross revenue"} value={formatMoney(now.revenue)}
+                  change={change?.revenue} against={against} />
+          <Widget label="Orders" value={String(now.orders)} change={change?.orders} against={against} />
+          <Widget label="Average order value" value={formatMoney(now.averageOrderValue)}
+                  change={change?.averageOrderValue} against={against} />
+          <Widget label="Units sold" value={String(now.units)} change={change?.units} against={against} />
         </section>
+        <p className="analytics__note">
+          {now.refunds != null && <>Refunds {formatMoney(now.refunds)} · </>}
+          {now.discount != null && <>Discounts {formatMoney(now.discount)} · </>}
+          {now.tax != null && <>Tax collected {formatMoney(now.tax)} · </>}
+          {category && <>Revenue counts only items in this category · </>}
+          Days in {sum.timezone}
+        </p>
 
         <section className="analytics__grid">
           <div className="card chart-card chart-card--wide low-stock">
@@ -102,9 +172,10 @@ const Analytics = () => {
             )}
           </div>
           <div className="card chart-card chart-card--wide">
-            <h4>Revenue & orders (6 months)</h4>
-            <BarChart data_1={s.chart.revenue} data_2={s.chart.order} title_1="Revenue" title_2="Orders" dualAxis
-                      bgColor_1={c.series[0]} bgColor_2={c.series[1]} labels={six} />
+            <h4>Revenue & orders by {sum.granularity}</h4>
+            <BarChart data_1={sum.series.map((p) => p.revenue)} data_2={sum.series.map((p) => p.orders)}
+                      title_1="Revenue" title_2="Orders" dualAxis bgColor_1={c.series[0]} bgColor_2={c.series[1]}
+                      labels={sum.series.map((p) => bucketLabel(p.start, sum.granularity))} />
           </div>
           <div className="card chart-card">
             <h4>Inventory by category</h4>

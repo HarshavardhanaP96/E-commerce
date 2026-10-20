@@ -9,10 +9,12 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwi
 
 import com.sixpack.dashboard.domain.DashboardReadPort;
 import com.sixpack.dashboard.domain.Dataset;
+import com.sixpack.dashboard.domain.DayTotals;
 import com.sixpack.dashboard.domain.Scope;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,6 +39,7 @@ import org.springframework.stereotype.Component;
 class MongoDashboardReadAdapter implements DashboardReadPort {
 
     private static final String CREATED_AT = "createdAt";
+    private static final String REFUNDS = "payment.refunds";
 
     private final TenantMongo mongo;
 
@@ -136,6 +139,75 @@ class MongoDashboardReadAdapter implements DashboardReadPort {
                     number(d.get("total")), items.size(), d.getString("status")));
         }
         return out;
+    }
+
+    @Override
+    public Map<LocalDate, DayTotals> dailyOrders(Scope scope, Instant from, Instant to, ZoneId zone) {
+        boolean itemScoped = scope.productId() != null || scope.category() != null;
+        List<AggregationOperation> agg = new ArrayList<>();
+        agg.add(match(criteria(Dataset.ORDERS, scope, from, to)));
+        if (itemScoped) {
+            agg.add(stage("$unwind", "$orderItems"));
+            agg.add(match(itemCriteria(scope)));
+            agg.add(stage("$group", new Document("_id", localDay("$createdAt", zone))
+                    .append("orders", new Document("$addToSet", "$_id"))
+                    .append("sales", new Document("$sum", new Document("$multiply", List.of(
+                            orZero("$orderItems.price"), orZero("$orderItems.quantity")))))
+                    .append("units", new Document("$sum", orZero("$orderItems.quantity")))));
+        } else {
+            agg.add(stage("$group", new Document("_id", localDay("$createdAt", zone))
+                    .append("orders", new Document("$sum", 1))
+                    .append("sales", new Document("$sum", "$total"))
+                    .append("discount", new Document("$sum", "$discount"))
+                    .append("tax", new Document("$sum", "$tax"))
+                    .append("units", new Document("$sum", new Document("$sum", "$orderItems.quantity")))));
+        }
+        Map<LocalDate, DayTotals> out = new LinkedHashMap<>();
+        for (Document d : mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class)) {
+            long orders = itemScoped ? d.getList("orders", Object.class, List.of()).size()
+                    : (long) number(d.get("orders"));
+            out.put(LocalDate.parse(d.getString("_id")), new DayTotals(orders, number(d.get("sales")),
+                    number(d.get("units")), itemScoped ? null : number(d.get("discount")),
+                    itemScoped ? null : number(d.get("tax"))));
+        }
+        return out;
+    }
+
+    @Override
+    public Map<LocalDate, Double> dailyRefunds(Scope scope, Instant from, Instant to, ZoneId zone) {
+        Criteria issued = Criteria.where(REFUNDS + ".at").gte(Date.from(from)).lt(Date.from(to));
+        List<AggregationOperation> agg = List.of(
+                match(criteria(Dataset.ORDERS, scope, null, null).andOperator(issued)),
+                stage("$unwind", "$" + REFUNDS),
+                match(new Criteria().andOperator(issued,
+                        Criteria.where(REFUNDS + ".status").nin("failed", "FAILED"))),
+                stage("$group", new Document("_id", localDay("$" + REFUNDS + ".at", zone))
+                        .append("amount", new Document("$sum", "$" + REFUNDS + ".amount"))));
+        Map<LocalDate, Double> out = new LinkedHashMap<>();
+        for (Document d : mongo.aggregate(agg, collection(Dataset.ORDERS), Document.class)) {
+            out.put(LocalDate.parse(d.getString("_id")), number(d.get("amount")));
+        }
+        return out;
+    }
+
+    /** After unwinding orderItems: keep only the items of the scoped product or category. */
+    private Criteria itemCriteria(Scope scope) {
+        return scope.productId() != null
+                ? Criteria.where("orderItems.productId").is(id(scope.productId()))
+                : Criteria.where("orderItems.productId").in(productIdsInCategory(scope.category()));
+    }
+
+    private static Document localDay(String dateField, ZoneId zone) {
+        return new Document("$dateToString", new Document("format", "%Y-%m-%d").append("date", dateField)
+                .append("timezone", zone.getId()));
+    }
+
+    private static Document orZero(String field) {
+        return new Document("$ifNull", List.of(field, 0));
+    }
+
+    private static AggregationOperation stage(String operator, Object body) {
+        return context -> new Document(operator, body);
     }
 
     private Map<String, Long> countBy(Dataset dataset, String field, Scope scope) {
