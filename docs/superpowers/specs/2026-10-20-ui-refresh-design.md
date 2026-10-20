@@ -133,3 +133,17 @@ Visual check: Playwright screenshots of home, search, product and cart at 1366px
 - **Conflicts:** `feat/analytics` and other branches also edit `_admin-ui.scss` and `analytics.tsx`. Keep admin commits small, and rebase on `dev` before merging.
 - **Stores with existing themes** may have set `--accent` only. The derived `--accent-strong` covers badges, but a store accent used as `--primary` is outside this work (stores don't set it today).
 - **Native range input** styling differs across browsers. The min and max number inputs are the accessible fallback.
+
+## 9. Corrections made while planning (2026-10-20)
+
+These came out of reading the code and measuring the real data. The plan follows these, not the earlier text.
+
+1. **Product photos (§4.1):** a square tile with the photo contained on a blurred, enlarged copy of itself, instead of 4:5 `cover`. The seeded photos are 3:2, 16:9, 4:5, 2:3 and 1:1, and a 4:5 crop would cut off more than half of a 16:9 product. The tile is still filled edge to edge, now with the photo's own colour.
+2. **Store theme selector (§3.3):** `[data-surface="store"]` only. A `:root` rule injected after the stylesheet has the same specificity as `[data-surface="admin"]` and would win, so it would still leak. `data-surface` is set in `main.tsx` before the first render, so store pages never fall back to `:root` while a theme loads.
+3. **Derived shades (§3.3):** a store accent also gets a derived `--accent-text` (4.5:1 on the store backdrop), not only `--accent-strong`. Otherwise a blue store would keep orange links.
+4. **Chart lead colour (§5.6):** series 1 is `#0079b0`. Peacock `#0b6a88` fails the validator's chroma floor (it reads as grey at chart size); the UI accent stays `#0b6a88`. Status colours no longer stand in for series 5 and 6.
+5. **Price filter (§4.4):** a labelled "Max price" number box beside the slider. The API takes only a maximum, so there is no minimum to show. The phone panel's button shows the real total (`total` is in the search response).
+6. **Home "View all" (§4.2):** the home grid uses fixed 4/3/2 columns, so the tile can span exactly the empty cells of the last row (`fillSpan`). It takes a full row when the cards fill their rows exactly.
+7. **Admin forms (§5.7):** labels already sit above fields and errors come from the server as toasts. The work is limited to replacing the product form's browser `alert()` with an inline error linked to the field.
+8. **Admin tables (§5.4):** the sticky header and row focus outline already exist. Only right-aligned numbers and empty-state actions are new.
+9. **Admin radii (§5.8):** 6px controls, 10px cards. Dialogs share the card radius rather than a third value.
