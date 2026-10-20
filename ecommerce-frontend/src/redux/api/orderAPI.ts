@@ -4,9 +4,13 @@ import {
   CheckoutResponse,
   ConfirmOrderRequest,
   ConfirmOrderResponse,
+  InvoiceResponse,
   MessageResponse,
   OrderResponse,
   OrdersResponse,
+  QuoteRequest,
+  QuoteResponse,
+  RefundResponse,
 } from "../../types/api-types";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
@@ -29,6 +33,10 @@ export const orderAPI = createApi({
         dispatch(productAPI.util.invalidateTags(["product"]));
       },
     }),
+    /** Prices a cart exactly as checkout will, including coupon scope; works without signing in. */
+    quote: builder.mutation<QuoteResponse, QuoteRequest>({
+      query: (body) => ({ url: "quote", method: "POST", body }),
+    }),
     myOrders: builder.query<OrdersResponse, void>({
       query: () => "my",
       providesTags: ["orders"],
@@ -45,6 +53,14 @@ export const orderAPI = createApi({
       query: (id) => ({ url: id, method: "PUT" }),
       invalidatesTags: ["orders"],
     }),
+    orderInvoice: builder.query<InvoiceResponse, string>({
+      query: (id) => `${id}/invoice`,
+      providesTags: ["orders"],
+    }),
+    refundOrder: builder.mutation<RefundResponse, { id: string; amount?: number; reason: string }>({
+      query: ({ id, ...body }) => ({ url: `${id}/refund`, method: "POST", body }),
+      invalidatesTags: ["orders"],
+    }),
     deleteOrder: builder.mutation<MessageResponse, string>({
       query: (id) => ({ url: id, method: "DELETE" }),
       invalidatesTags: ["orders"],
@@ -55,10 +71,13 @@ export const orderAPI = createApi({
 export const {
   useCheckoutMutation,
   useConfirmOrderMutation,
+  useQuoteMutation,
   useMyOrdersQuery,
   useLazyMyOrdersQuery,
   useAllOrdersQuery,
   useOrderDetailsQuery,
+  useOrderInvoiceQuery,
+  useRefundOrderMutation,
   useProcessOrderMutation,
   useDeleteOrderMutation,
 } = orderAPI;

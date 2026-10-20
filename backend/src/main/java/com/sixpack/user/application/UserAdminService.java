@@ -20,11 +20,13 @@ public class UserAdminService {
     private final UserRepository users;
     private final AccountService accounts;
     private final AuditTrail audit;
+    private final UserAccountAccess access;
 
-    UserAdminService(UserRepository users, AccountService accounts, AuditTrail audit) {
+    UserAdminService(UserRepository users, AccountService accounts, AuditTrail audit, UserAccountAccess access) {
         this.users = users;
         this.accounts = accounts;
         this.audit = audit;
+        this.access = access;
     }
 
     public List<User> list(Role role, Gender gender) {
@@ -52,6 +54,7 @@ public class UserAdminService {
         }
         User before = get(id);
         users.setStatus(id, status);
+        access.evict(id);
         audit.record(AuditEvent.of(AuditAction.USER_STATUS_CHANGED).on("user", id)
                 .changing(Changes.diff(Map.of("status", before.details().status().name()),
                         Map.of("status", status.name()), UserAudit.STATUS)));

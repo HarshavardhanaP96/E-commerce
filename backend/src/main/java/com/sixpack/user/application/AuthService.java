@@ -40,9 +40,11 @@ public class AuthService {
     private final ConsentLedger consents;
     private final MeterRegistry meters;
     private final AuditTrail audit;
+    private final EmailVerificationService verification;
 
     AuthService(UserRepository users, PasswordEncoder encoder, TokenService tokens, FileStorage storage,
-                ConsentLedger consents, MeterRegistry meters, AuditTrail audit) {
+                ConsentLedger consents, MeterRegistry meters, AuditTrail audit,
+                EmailVerificationService verification) {
         this.users = users;
         this.encoder = encoder;
         this.tokens = tokens;
@@ -50,6 +52,7 @@ public class AuthService {
         this.consents = consents;
         this.meters = meters;
         this.audit = audit;
+        this.verification = verification;
     }
 
     public AuthResult register(RegisterCommand cmd) {
@@ -69,6 +72,7 @@ public class AuthService {
         consents.recordRegistration(saved.id(), cmd.marketingOptIn(), cmd.evidence());
         audit.record(AuditEvent.of(AuditAction.USER_REGISTERED).on("user", saved.id())
                 .by(saved.id(), saved.role().name()));
+        verification.sendQuietly(saved);
         return new AuthResult(issue(saved), saved);
     }
 

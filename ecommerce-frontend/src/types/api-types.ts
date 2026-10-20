@@ -1,4 +1,4 @@
-import { Bar, Coupon, Line, Order, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
+import { Bar, Category, Coupon, Invoice, Line, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, Stats, User } from "./types";
 
 export type MessageResponse = { success: boolean; message: string };
 
@@ -20,6 +20,14 @@ export type SearchProductsRequest = {
 
 export type OrdersResponse = { success: boolean; orders: Order[] };
 export type OrderResponse = { success: boolean; order: Order };
+export type InvoiceResponse = { success: boolean; invoice: Invoice };
+export type RefundResponse = MessageResponse & { payment: OrderPayment };
+export type CategoryResponse = MessageResponse & { category: Category };
+export type CategoryListResponse = { success: boolean; categories: Category[] };
+
+export type Quote = { subtotal: number; tax: number; shippingCharges: number; discount: number; total: number };
+export type QuoteRequest = { items: { productId: string; quantity: number }[]; coupon?: string };
+export type QuoteResponse = { success: boolean; quote: Quote };
 
 export type CheckoutRequest = {
   items: { productId: string; quantity: number }[];
@@ -49,7 +57,6 @@ export type ConfirmOrderRequest = {
 export type ConfirmOrderResponse = MessageResponse & { orderId: string };
 
 export type CouponsResponse = { success: boolean; coupons: Coupon[] };
-export type DiscountResponse = { success: boolean; discount: number };
 
 export type StatsResponse = { success: boolean; stats: Stats };
 export type PieResponse = { success: boolean; charts: Pie };

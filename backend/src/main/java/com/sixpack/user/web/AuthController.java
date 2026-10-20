@@ -8,6 +8,7 @@ import com.sixpack.user.application.AccountService;
 import com.sixpack.user.application.AuthService;
 import com.sixpack.user.application.AuthService.AuthResult;
 import com.sixpack.user.application.AuthService.RegisterCommand;
+import com.sixpack.user.application.EmailVerificationService;
 import com.sixpack.user.application.PasswordResetService;
 import com.sixpack.user.domain.Gender;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,6 +62,9 @@ class AuthController {
     record LoginRequest(@NotBlank @Email String email, @NotBlank @Size(max = 72) String password) {
     }
 
+    record VerifyEmailRequest(@NotBlank @Size(max = 128) String token) {
+    }
+
     record ForgotPasswordRequest(@NotBlank @Email String email) {
     }
 
@@ -71,11 +75,14 @@ class AuthController {
     private final AuthService auth;
     private final PasswordResetService passwordReset;
     private final AccountService accounts;
+    private final EmailVerificationService verification;
 
-    AuthController(AuthService auth, PasswordResetService passwordReset, AccountService accounts) {
+    AuthController(AuthService auth, PasswordResetService passwordReset, AccountService accounts,
+                   EmailVerificationService verification) {
         this.auth = auth;
         this.passwordReset = passwordReset;
         this.accounts = accounts;
+        this.verification = verification;
     }
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -108,6 +115,18 @@ class AuthController {
     Map<String, Object> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordReset.reset(request.token(), request.password());
         return ApiResponse.message("Password updated successfully");
+    }
+
+    @PostMapping("/verify-email")
+    Map<String, Object> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        verification.verify(request.token());
+        return ApiResponse.message("Email verified");
+    }
+
+    @PostMapping("/me/verify-email/resend")
+    Map<String, Object> resendVerification(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.message(verification.resend(AuthUser.from(jwt).id())
+                ? "Verification email sent" : "Your email is already verified");
     }
 
     @GetMapping("/me")

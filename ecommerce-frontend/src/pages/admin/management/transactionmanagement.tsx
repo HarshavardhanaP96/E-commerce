@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
-import { LuTrash2 } from "react-icons/lu";
+import { LuFileText, LuTrash2 } from "react-icons/lu";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DetailLayout from "../../../components/admin/DetailLayout";
 import Loader from "../../../components/admin/Loader";
+import PaymentPanel from "../../../components/admin/PaymentPanel";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import { errorMessage } from "../../../redux/api/baseQuery";
 import { useDeleteOrderMutation, useOrderDetailsQuery, useProcessOrderMutation } from "../../../redux/api/orderAPI";
@@ -55,6 +56,9 @@ const TransactionManagement = () => {
               {saving ? "Updating…" : NEXT_ACTION[order.status]}
             </button>
           )}
+          <Link className="btn" to={`/order/${id}/invoice`}>
+            <LuFileText /> Invoice
+          </Link>
           <button className="btn btn--danger" onClick={remove} disabled={deleting}>
             <LuTrash2 /> Delete
           </button>
@@ -121,6 +125,7 @@ const TransactionManagement = () => {
               </ol>
             </>
           )}
+          {order.payment && <PaymentPanel orderId={id} payment={order.payment} />}
           <h4>Amount</h4>
           <dl className="facts">
             <dt>Subtotal</dt><dd>{formatINR(order.subtotal)}</dd>

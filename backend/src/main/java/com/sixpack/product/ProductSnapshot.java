@@ -10,7 +10,8 @@ import java.util.List;
  * @param variantLabel e.g. "M / Black"; null for a product without variants
  */
 public record ProductSnapshot(String id, String name, String photo, double price, int stock, String sku,
-                              Double taxRate, String variantId, String variantLabel, List<Option> options) {
+                              Double taxRate, String variantId, String variantLabel, List<Option> options,
+                              String category) {
 
     public record Option(String name, String value) {
     }
@@ -22,6 +23,6 @@ public record ProductSnapshot(String id, String name, String photo, double price
     /** Shape for a product without variants. */
     public ProductSnapshot(String id, String name, String photo, double price, int stock, String sku,
                            Double taxRate) {
-        this(id, name, photo, price, stock, sku, taxRate, null, null, null);
+        this(id, name, photo, price, stock, sku, taxRate, null, null, null, null);
     }
 }

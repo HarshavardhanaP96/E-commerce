@@ -4,6 +4,7 @@ import com.sixpack.coupon.domain.Coupon;
 import com.sixpack.coupon.domain.CouponRules;
 import com.sixpack.coupon.domain.CouponType;
 import com.sixpack.coupon.domain.CouponRepository;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -55,6 +56,9 @@ class MongoCouponRepository implements CouponRepository {
         doc.usageLimit = r.usageLimit();
         doc.perUserLimit = r.perUserLimit();
         doc.active = r.active();
+        doc.productIds = r.productIds().stream().sorted().toList();
+        doc.categories = r.categories().stream().sorted().toList();
+        doc.firstOrderOnly = r.firstOrderOnly();
         return toDomain(mongo.save(doc));
     }
 
@@ -107,7 +111,9 @@ class MongoCouponRepository implements CouponRepository {
     private static Coupon toDomain(CouponDocument d) {
         CouponRules rules = new CouponRules(d.type == null ? null : CouponType.valueOf(d.type), d.maxDiscount,
                 d.minOrderValue, d.startsAt, d.expiresAt, d.usageLimit, d.perUserLimit,
-                d.active == null || d.active);
+                d.active == null || d.active,
+                d.productIds == null ? null : new HashSet<>(d.productIds),
+                d.categories == null ? null : new HashSet<>(d.categories), Boolean.TRUE.equals(d.firstOrderOnly));
         return new Coupon(d.id, d.coupon, d.amount == null ? 0 : d.amount, rules,
                 d.usedCount == null ? 0 : d.usedCount);
     }

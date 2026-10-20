@@ -11,4 +11,7 @@ public interface ConsentLedger {
 
     /** @return the policy version currently in force for this purpose */
     String currentVersion(Purpose purpose);
+
+    /** The account is gone: keep the user's consent records as proof for the retention period, then delete them. */
+    void startRetentionClock(String userId);
 }

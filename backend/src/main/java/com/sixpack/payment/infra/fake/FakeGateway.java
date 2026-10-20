@@ -1,7 +1,9 @@
 package com.sixpack.payment.infra.fake;
 
+import com.sixpack.payment.PaymentDetails;
 import com.sixpack.payment.PaymentGateway;
 import com.sixpack.payment.ProviderOrder;
+import com.sixpack.payment.RefundResult;
 import java.util.Arrays;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -41,6 +43,16 @@ class FakeGateway implements PaymentGateway {
     @Override
     public ProviderOrder createOrder(long amountPaise, String receipt) {
         return new ProviderOrder("fake_order_" + UUID.randomUUID().toString().replace("-", ""), amountPaise, "INR");
+    }
+
+    @Override
+    public PaymentDetails fetchPayment(String paymentId) {
+        return new PaymentDetails("fake", null);
+    }
+
+    @Override
+    public RefundResult refund(String paymentId, long amountPaise, String idempotencyKey, String reason) {
+        return new RefundResult("fake_rfnd_" + UUID.randomUUID().toString().replace("-", ""), "processed");
     }
 
     @Override

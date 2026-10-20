@@ -22,6 +22,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -52,7 +54,10 @@ class CouponController {
             Instant expiresAt,
             @Min(1) @Max(10_000_000) Integer usageLimit,
             @Min(1) @Max(1000) Integer perUserLimit,
-            Boolean active) {
+            Boolean active,
+            @Size(max = 50) List<@NotBlank @Size(max = 64) String> productIds,
+            @Size(max = 50) List<@NotBlank @Size(max = 80) String> categories,
+            Boolean firstOrderOnly) {
     }
 
     record UpdateCouponRequest(
@@ -63,17 +68,22 @@ class CouponController {
             Instant expiresAt,
             @Min(1) @Max(10_000_000) Integer usageLimit,
             @Min(1) @Max(1000) Integer perUserLimit,
-            Boolean active) {
+            Boolean active,
+            @Size(max = 50) List<@NotBlank @Size(max = 64) String> productIds,
+            @Size(max = 50) List<@NotBlank @Size(max = 80) String> categories,
+            Boolean firstOrderOnly) {
     }
 
     record CouponView(@JsonProperty("_id") String id, String coupon, double amount, String type, Double maxDiscount,
                       Double minOrderValue, Instant startsAt, Instant expiresAt, Integer usageLimit, int usedCount,
-                      Integer perUserLimit, boolean active, String status) {
+                      Integer perUserLimit, boolean active, String status, List<String> productIds,
+                      List<String> categories, boolean firstOrderOnly) {
         static CouponView from(Coupon c) {
             CouponRules r = c.rules();
             return new CouponView(c.id(), c.code(), c.amount(), r.type().name(), r.maxDiscount(), r.minOrderValue(),
                     r.startsAt(), r.expiresAt(), r.usageLimit(), c.usedCount(), r.perUserLimit(), r.active(),
-                    c.status(Instant.now()));
+                    c.status(Instant.now()), r.productIds().stream().sorted().toList(),
+                    r.categories().stream().sorted().toList(), r.firstOrderOnly());
         }
     }
 
@@ -96,14 +106,16 @@ class CouponController {
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, Object> create(@Valid @RequestBody NewCouponRequest r) {
         Coupon c = service.create(new CreateCommand(r.coupon(), r.amount(), r.type(), r.maxDiscount(),
-                r.minOrderValue(), r.startsAt(), r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active()));
+                r.minOrderValue(), r.startsAt(), r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active(),
+                r.productIds(), r.categories(), r.firstOrderOnly()));
         return ApiResponse.of("message", "Coupon " + c.code() + " created successfully", "coupon", CouponView.from(c));
     }
 
     @PutMapping("/coupon/{id}")
     Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateCouponRequest r) {
         Coupon c = service.update(id, new UpdateCommand(r.amount(), r.maxDiscount(), r.minOrderValue(), r.startsAt(),
-                r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active()));
+                r.expiresAt(), r.usageLimit(), r.perUserLimit(), r.active(), r.productIds(), r.categories(),
+                r.firstOrderOnly()));
         return ApiResponse.of("message", "Coupon " + c.code() + " updated successfully", "coupon", CouponView.from(c));
     }
 

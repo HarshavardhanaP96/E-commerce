@@ -4,11 +4,13 @@ import com.sixpack.consent.Purpose;
 import com.sixpack.consent.domain.ConsentRecord;
 import com.sixpack.consent.domain.ConsentRecord.Source;
 import com.sixpack.consent.domain.ConsentRepository;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -40,6 +42,12 @@ class MongoConsentRepository implements ConsentRepository {
     public List<ConsentRecord> findByUser(String userId) {
         return mongo.find(Query.query(Criteria.where("userId").is(userId)).with(NEWEST_FIRST), ConsentDocument.class)
                 .stream().map(MongoConsentRepository::toDomain).toList();
+    }
+
+    @Override
+    public void expireAllAt(String userId, Instant expireAt) {
+        mongo.updateMulti(Query.query(Criteria.where("userId").is(userId)), new Update().set("expireAt", expireAt),
+                ConsentDocument.class);
     }
 
     private static ConsentRecord toDomain(ConsentDocument d) {

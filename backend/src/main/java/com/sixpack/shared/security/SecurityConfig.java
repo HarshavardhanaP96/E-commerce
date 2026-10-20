@@ -28,8 +28,8 @@ class SecurityConfig {
     private static final String ADMIN = "ADMIN";
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props, JsonSecurityHandlers handlers)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props, JsonSecurityHandlers handlers,
+                                           AccountAccess accounts) throws Exception {
         http
                 // Stateless bearer-token API: no cookies, so CSRF protection is not applicable.
                 .csrf(AbstractHttpConfigurer::disable)
@@ -46,7 +46,8 @@ class SecurityConfig {
                         .requestMatchers(GET, "/uploads/**").permitAll()
                         // user
                         .requestMatchers(POST, "/api/v1/user/register", "/api/v1/user/login",
-                                "/api/v1/user/forgot-password", "/api/v1/user/reset-password").permitAll()
+                                "/api/v1/user/forgot-password", "/api/v1/user/reset-password",
+                                "/api/v1/user/verify-email").permitAll()
                         .requestMatchers("/api/v1/user/me", "/api/v1/user/me/**").authenticated()
                         .requestMatchers("/api/v1/user/**").hasRole(ADMIN)
                         // legal & consent
@@ -62,8 +63,10 @@ class SecurityConfig {
                         .requestMatchers(GET, "/api/v1/payment/discount").permitAll()
                         .requestMatchers("/api/v1/payment/coupon/**").hasRole(ADMIN)
                         // orders
+                        .requestMatchers(POST, "/api/v1/order/quote").permitAll()
                         .requestMatchers(GET, "/api/v1/order/all").hasRole(ADMIN)
                         .requestMatchers(PUT, "/api/v1/order/*").hasRole(ADMIN)
+                        .requestMatchers(POST, "/api/v1/order/*/refund").hasRole(ADMIN)
                         .requestMatchers(DELETE, "/api/v1/order/*").hasRole(ADMIN)
                         .requestMatchers("/api/v1/order/**").authenticated()
                         // audit log
@@ -79,7 +82,8 @@ class SecurityConfig {
                         .authenticationEntryPoint(handlers.entryPoint())
                         .accessDeniedHandler(handlers.accessDenied()))
                 .addFilterBefore(new AuthRateLimitFilter(props.authRequestsPerMinute(), handlers),
-                        BearerTokenAuthenticationFilter.class);
+                        BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(new AccountStatusFilter(accounts, handlers), BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 

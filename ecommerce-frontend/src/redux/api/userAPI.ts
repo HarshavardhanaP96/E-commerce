@@ -68,6 +68,17 @@ export const userAPI = createApi({
       query: ({ userId, role }) => ({ url: userId, method: "PUT", body: { role } }),
       invalidatesTags: ["users"],
     }),
+    updateUserStatus: builder.mutation<MessageResponse, { userId: string; status: "ACTIVE" | "SUSPENDED" }>({
+      query: ({ userId, status }) => ({ url: userId, method: "PUT", body: { status } }),
+      invalidatesTags: ["users"],
+    }),
+    verifyEmail: builder.mutation<MessageResponse, { token: string }>({
+      query: (body) => ({ url: "verify-email", method: "POST", body }),
+      invalidatesTags: ["users"],
+    }),
+    resendVerification: builder.mutation<MessageResponse, void>({
+      query: () => ({ url: "me/verify-email/resend", method: "POST" }),
+    }),
     deleteUser: builder.mutation<MessageResponse, string>({
       query: (userId) => ({ url: userId, method: "DELETE" }),
       invalidatesTags: ["users"],
@@ -96,5 +107,8 @@ export const {
   useAllUsersQuery,
   useUserDetailsQuery,
   useUpdateUserRoleMutation,
+  useUpdateUserStatusMutation,
+  useVerifyEmailMutation,
+  useResendVerificationMutation,
   useDeleteUserMutation,
 } = userAPI;

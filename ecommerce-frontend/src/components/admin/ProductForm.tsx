@@ -1,19 +1,25 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { transformImage } from "../../utils/features";
-import { ProductFormValues } from "./productFormData";
+import { useCategoryTreeQuery } from "../../redux/api/categoryAPI";
+import { MAX_GALLERY, ProductFormValues } from "./productFormData";
 
 type Props = {
   values: ProductFormValues;
   onChange: (values: ProductFormValues) => void;
   onSubmit: (e: FormEvent) => void;
   currentPhoto?: string;
+  /** The gallery already saved on the product. */
+  currentImages?: string[];
 };
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Two-column product editor: preview card on the left, fields on the right. Fits without scrolling. */
-const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
+const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages = [] }: Props) => {
   const [preview, setPreview] = useState<string>("");
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const { data: categoryData } = useCategoryTreeQuery();
+  const categories = categoryData?.categories ?? [];
 
   useEffect(() => {
     if (!values.photo) return setPreview("");
@@ -21,6 +27,12 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [values.photo]);
+
+  useEffect(() => {
+    const urls = values.images.map((file) => URL.createObjectURL(file));
+    setGalleryPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [values.images]);
 
   const set =
     (field: keyof ProductFormValues) =>
@@ -34,6 +46,19 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
       return alert("Image must be 5 MB or smaller");
     }
     onChange({ ...values, photo: file });
+  };
+
+  const onGallery = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > MAX_GALLERY) {
+      e.target.value = "";
+      return alert(`You can add up to ${MAX_GALLERY} gallery pictures`);
+    }
+    if (files.some((f) => f.size > MAX_BYTES)) {
+      e.target.value = "";
+      return alert("Each image must be 5 MB or smaller");
+    }
+    onChange({ ...values, images: files });
   };
 
   const image = preview || transformImage(currentPhoto);
@@ -97,9 +122,42 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto }: Props) => {
           <textarea value={values.description} onChange={set("description")} rows={3} maxLength={5000} />
         </label>
         <label className="span-2">
+          Linked category (optional)
+          <select value={values.categoryId} onChange={set("categoryId")}>
+            <option value="">{values.categoryId ? "None" : "Not linked"}</option>
+            {categories.map((c) => (
+              <option key={c._id} value={c._id}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="span-2">
           Photo (JPEG, PNG, WEBP or GIF, max 5 MB)
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPhoto} required={!currentPhoto} />
         </label>
+        <fieldset className="span-2 gallery">
+          <legend>Gallery (up to {MAX_GALLERY} more pictures, max 5 MB each)</legend>
+          <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={onGallery}
+                 aria-label="Gallery pictures" />
+          {galleryPreviews.length > 0 ? (
+            <>
+              <ul className="gallery__thumbs">
+                {galleryPreviews.map((url, i) => (
+                  <li key={url}><img src={url} alt={`New gallery picture ${i + 1}`} /></li>
+                ))}
+              </ul>
+              {currentImages.length > 0 && <small>These replace the {currentImages.length} saved picture(s) when you save.</small>}
+            </>
+          ) : currentImages.length > 0 ? (
+            <ul className="gallery__thumbs">
+              {currentImages.map((url, i) => (
+                <li key={url}><img src={transformImage(url)} alt={`Gallery picture ${i + 1}`} /></li>
+              ))}
+            </ul>
+          ) : (
+            <small>No gallery pictures yet.</small>
+          )}
+          <small>Choosing new pictures replaces the whole gallery.</small>
+        </fieldset>
       </form>
     </div>
   );

@@ -79,6 +79,19 @@ class OrderDocument {
         Double amount;
         String currency;
         Instant paidAt;
+        String method;
+        String failureReason;
+        Long refundedPaise;
+        List<RefundDoc> refunds;
+    }
+
+    static class RefundDoc {
+        String providerRefundId;
+        Double amount;
+        String reason;
+        String status;
+        String actor;
+        Instant at;
     }
 
     static class CustomerDoc {

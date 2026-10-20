@@ -7,6 +7,7 @@ import com.sixpack.order.domain.OrderItem;
 import com.sixpack.order.domain.OrderRepository;
 import com.sixpack.order.domain.OrderStatus;
 import com.sixpack.order.domain.PaymentInfo;
+import com.sixpack.order.domain.Refund;
 import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.order.domain.StatusEntry;
@@ -56,14 +57,21 @@ class MongoOrderRepository implements OrderRepository {
         doc.notes = d.notes();
         doc.orderItems = order.items().stream().map(MongoOrderRepository::toDoc).toList();
         if (order.payment() != null) {
-            doc.payment = new OrderDocument.PaymentDoc();
-            doc.payment.provider = order.payment().provider();
-            doc.payment.orderId = order.payment().orderId();
-            doc.payment.paymentId = order.payment().paymentId();
-            doc.payment.status = order.payment().status();
-            doc.payment.amount = order.payment().amount();
-            doc.payment.currency = order.payment().currency();
-            doc.payment.paidAt = order.payment().paidAt();
+            // Refund state is changed only by the atomic refund operations below, so saving an order that was read
+            // earlier (for example to move it to Shipped) can't wipe out a refund made in between.
+            boolean keepRefundState = doc.payment != null;
+            OrderDocument.PaymentDoc payment = keepRefundState ? doc.payment : new OrderDocument.PaymentDoc();
+            payment.provider = order.payment().provider();
+            payment.orderId = order.payment().orderId();
+            payment.paymentId = order.payment().paymentId();
+            payment.amount = order.payment().amount();
+            payment.currency = order.payment().currency();
+            payment.paidAt = order.payment().paidAt();
+            payment.method = order.payment().method();
+            if (!keepRefundState) {
+                payment.status = order.payment().status();
+            }
+            doc.payment = payment;
         }
         return toDomain(mongo.save(doc));
     }
@@ -96,6 +104,49 @@ class MongoOrderRepository implements OrderRepository {
     public boolean hasOpenOrders(String userId) {
         return mongo.exists(Query.query(Criteria.where("user").is(userId)
                 .and("status").ne(OrderStatus.DELIVERED.wireValue())), OrderDocument.class);
+    }
+
+    @Override
+    public boolean hasAnyOrder(String userId) {
+        return mongo.exists(Query.query(Criteria.where("user").is(userId)), OrderDocument.class);
+    }
+
+    @Override
+    public boolean reserveRefund(String orderId, long amountPaise, long totalPaise) {
+        Criteria fits = new Criteria().orOperator(Criteria.where("payment.refundedPaise").exists(false),
+                Criteria.where("payment.refundedPaise").lte(totalPaise - amountPaise));
+        Query query = Query.query(new Criteria().andOperator(Criteria.where("id").is(orderId),
+                Criteria.where("payment.status").in(PaymentInfo.PAID, PaymentInfo.PARTIALLY_REFUNDED), fits));
+        return mongo.updateFirst(query, new Update().inc("payment.refundedPaise", amountPaise), OrderDocument.class)
+                .getModifiedCount() == 1;
+    }
+
+    @Override
+    public void releaseRefund(String orderId, long amountPaise, String failureReason) {
+        mongo.updateFirst(Query.query(Criteria.where("id").is(orderId)),
+                new Update().inc("payment.refundedPaise", -amountPaise).set("payment.failureReason", failureReason),
+                OrderDocument.class);
+    }
+
+    @Override
+    public void completeRefund(String orderId, Refund refund, long totalPaise) {
+        OrderDocument.RefundDoc doc = new OrderDocument.RefundDoc();
+        doc.providerRefundId = refund.providerRefundId();
+        doc.amount = refund.amount();
+        doc.reason = refund.reason();
+        doc.status = refund.status();
+        doc.actor = refund.actor();
+        doc.at = refund.at();
+        Query byId = Query.query(Criteria.where("id").is(orderId));
+        mongo.updateFirst(byId, new Update().push("payment.refunds", doc).unset("payment.failureReason"),
+                OrderDocument.class);
+        // Read after the push, so the last of several concurrent refunds sees every reservation.
+        OrderDocument after = mongo.findOne(byId, OrderDocument.class);
+        long refunded = after == null || after.payment == null || after.payment.refundedPaise == null ? 0
+                : after.payment.refundedPaise;
+        mongo.updateFirst(byId, new Update().set("payment.status",
+                refunded >= totalPaise ? PaymentInfo.REFUNDED : PaymentInfo.PARTIALLY_REFUNDED),
+                OrderDocument.class);
     }
 
     @Override
@@ -154,7 +205,11 @@ class MongoOrderRepository implements OrderRepository {
         ShippingInfo shipping = toDomain(d.shippingInfo);
         PaymentInfo payment = d.payment == null ? null
                 : new PaymentInfo(d.payment.provider, d.payment.orderId, d.payment.paymentId, d.payment.status,
-                        d.payment.amount, d.payment.currency, d.payment.paidAt);
+                        d.payment.amount, d.payment.currency, d.payment.paidAt, d.payment.method,
+                        d.payment.failureReason, d.payment.refundedPaise == null ? 0 : d.payment.refundedPaise,
+                        d.payment.refunds == null ? null : d.payment.refunds.stream().map(r -> new Refund(
+                                r.providerRefundId, r.amount == null ? 0 : r.amount, r.reason, r.status, r.actor,
+                                r.at)).toList());
         OrderDetails details = new OrderDetails(d.orderNumber, toDomain(d.billingInfo),
                 d.customer == null ? null : new Customer(d.customer.name, d.customer.email, d.customer.phone),
                 d.statusHistory == null ? null : d.statusHistory.stream()

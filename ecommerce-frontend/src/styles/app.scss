@@ -638,4 +638,27 @@ img {
 @import "search";
 @import "legal";
 @import "help";
+@import "invoice";
 @import "admin-styles/admin-ui";
+
+
+.verify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--warning-subtle);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-body-sm);
+
+  .btn {
+    padding: 0.25rem 0.75rem;
+  }
+}
+
+html[data-surface="admin"] .verify-banner {
+  display: none;
+}

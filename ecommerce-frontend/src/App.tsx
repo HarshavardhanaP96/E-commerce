@@ -6,6 +6,7 @@ import Header from "./components/header";
 import BottomNav from "./components/bottomNav";
 import Footer from "./components/footer";
 import ConsentPrompt from "./components/consentPrompt";
+import VerifyEmailBanner from "./components/verifyEmailBanner";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { userExist, userNotExist } from "./redux/reducer/userReducer";
@@ -21,7 +22,9 @@ const Login = lazy(() => import("./pages/login"));
 const ForgotPassword = lazy(() => import("./pages/forgot-password"));
 const Orders = lazy(() => import("./pages/orders"));
 const OrderDetails = lazy(() => import("./pages/order-details"));
+const InvoicePage = lazy(() => import("./pages/invoice"));
 const Legal = lazy(() => import("./pages/legal"));
+const VerifyEmail = lazy(() => import("./pages/verify-email"));
 const Help = lazy(() => import("./pages/help"));
 const AdminHelp = lazy(() => import("./pages/admin/helpcenter"));
 const PrivacySettings = lazy(() => import("./pages/account/privacy"));
@@ -33,6 +36,7 @@ const Customers = lazy(() => import("./pages/admin/customers"));
 const Transaction = lazy(() => import("./pages/admin/transaction"));
 
 const Coupon = lazy(() => import("./pages/admin/apps/coupon"));
+const CategoryAdmin = lazy(() => import("./pages/admin/category"));
 const AuditLog = lazy(() => import("./pages/admin/audit"));
 
 
@@ -96,6 +100,8 @@ const App = () => {
         }}
       />
 
+      {user && user.emailVerified === false && <VerifyEmailBanner key={`verify-${user._id}`} />}
+
       {/* .app-main is a plain block that grows, so the footer sits at the bottom of short pages */}
       <div className="app-main">
       <Suspense fallback={<Loader />}>
@@ -105,6 +111,7 @@ const App = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/legal/:slug" element={<Legal />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           {/* only for not logged in */}
           <Route
@@ -131,6 +138,7 @@ const App = () => {
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/order/:id" element={<OrderDetails />} />
+            <Route path="/order/:id/invoice" element={<InvoicePage />} />
             <Route path="/account/privacy" element={<PrivacySettings />} />
             <Route path="/account/addresses" element={<Addresses />} />
           </Route>
@@ -149,6 +157,7 @@ const App = () => {
             
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/product" element={<Products />} />
+            <Route path="/admin/category" element={<CategoryAdmin />} />
             <Route path="/admin/customer" element={<Customers />} />
             <Route path="/admin/transaction" element={<Transaction />} />
             

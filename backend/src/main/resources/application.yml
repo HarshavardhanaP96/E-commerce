@@ -49,6 +49,14 @@ app:
     privacy-version: ${LEGAL_PRIVACY_VERSION:2026-10-16}
     admin-aup-version: ${LEGAL_ADMIN_AUP_VERSION:2026-10-18}
     ip-hash-salt: ${CONSENT_IP_SALT:}
+  invoice:
+    # Printed on every invoice. seller-state decides CGST+SGST (same state as the buyer) versus IGST.
+    seller-name: ${INVOICE_SELLER_NAME:6Pack}
+    seller-address: ${INVOICE_SELLER_ADDRESS:}
+    seller-gstin: ${INVOICE_SELLER_GSTIN:}
+    seller-state: ${INVOICE_SELLER_STATE:}
+    seller-email: ${INVOICE_SELLER_EMAIL:}
+    seller-phone: ${INVOICE_SELLER_PHONE:}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
     razorpay:

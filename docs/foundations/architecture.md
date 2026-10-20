@@ -87,6 +87,44 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-20: ADR-022 **Coupon scope lives on the coupon; "has this customer ordered?" comes in through a port.**
+  `CouponRules` gains `productIds`, `categories` and `firstOrderOnly` (absent in old documents, meaning "all items,
+  any customer"). `Coupon.evaluate(lines, redemptions, hasPreviousOrder, now)` stays one pure method; the
+  subtotal-only overload remains for old clients and refuses a scoped coupon instead of over-discounting. The cart
+  reaches the coupon module as `CouponLine(productId, category, amount)` (the product's category now travels in
+  `ProductSnapshot`), and the order module implements `coupon.CustomerHistory`, so `coupon` still never depends on
+  `order`. Cart pricing moved into `CheckoutService.price`, shared by checkout and the new open `POST /order/quote`,
+  which is what the cart page calls so a scoped discount is what checkout will charge. Scope matches by product id
+  or by category (alternatives), `minOrderValue` still looks at the whole cart, and a flat scoped coupon is capped at
+  the matching subtotal. Rejected: a coupon-to-product dependency (the cart already has the data) and previewing
+  scoped coupons from the subtotal alone (can't be right). Supersedes the "Tier 2" note in ADR-018. Still active.
+- 2026-10-20: ADR-021 **Payment method, refunds and invoices on the existing order.** The `PaymentGateway` port gains
+  `fetchPayment` and `refund`. Confirm records `payment.method` best-effort (the money is taken, so a provider
+  hiccup must not fail the order). `failureReason` holds why the last *refund* failed, because a failed payment
+  never creates an order and there is nothing else for it to describe. Refunds are admin-initiated, full or
+  partial, through the provider that took the money. The refundable amount is reserved with one conditional update
+  (`payment.refundedPaise`) before the provider is called and released if it fails, so two admins can't refund the
+  same money; the idempotency key is derived from the order, the amount already reserved and the new amount, so a
+  retried timeout can't pay twice. `OrderRepository.save` no longer overwrites payment status, refunds or failure
+  text, so moving an order along can't undo a refund made in between. Refunds don't touch order status, stock or the
+  dashboard's gross revenue. Invoices are derived from the order (no collection, nothing to keep in sync, and an
+  erased account's invoice simply loses the buyer); the SPA prints them and the browser makes the PDF, so there is
+  no PDF library. Tax shown per rate reproduces `PriceCalculator`'s rounding so the invoice adds up; the CGST/SGST
+  versus IGST split compares the buyer's state with `INVOICE_SELLER_STATE` by name, so "KA" and "Karnataka" differ.
+  Invoice numbers reuse order numbers, which are unique but not a gapless series. Rejected: automatic refunds on
+  out-of-stock-after-payment (the customer can still retry, so that is a policy choice), Razorpay webhooks for now
+  (confirmation is still browser-driven), a stored invoice collection, and a PDF library. Supersedes the
+  "deferred" and "premature until invoices exist" notes in ADR-017. Still active.
+- 2026-10-20: ADR-020 **Tokens are checked against the account on every request.** A small filter after the JWT
+  filter asks an `AccountAccess` port (implemented in `user`) whether the token's account is active, suspended or
+  gone. Answers are cached for 15 s per account per instance and cleared at once when this instance suspends,
+  reactivates or erases the account; another replica can therefore serve a suspended account for up to 15 s (the
+  same trade-off as ADR-007). Suspended means 403, deleted means 401, reactivation restores the old token. A role
+  change still takes effect at the next login. Supersedes the suspension note in ADR-016. The same release adds
+  email verification: a single-use, 24 h, hashed-at-rest link (`email_verification_tokens`, modelled on the
+  password-reset one) sent at registration and on request; a mail failure never fails registration; nothing is
+  blocked while an address is unverified. Rejected: a token-version or revocation list (needs a store read per
+  request anyway) and gating checkout on verification (would lock out every existing customer). Still active.
 - 2026-10-18: ADR-019 **Variants embedded in the product document as generic option axes plus a variants array;
   product `price`/`stock` are derived and stored.** Rejected: fixed size/colour fields (dead end for other axes),
   one product per variant (duplicated content, noisy search), a separate variants collection (cross-document
@@ -130,27 +168,24 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   `coupon_redemptions`), so `coupon` never depends on `order`. Deleting an order does not return a use, and edits
   cannot clear a field (pause with `active`, or create a new coupon). Rejected: reserving a use at checkout with an
   expiry (more moving parts than a handful of coupons need) and counting per-customer use from the orders
-  collection (would make `coupon` depend on `order`). Product/category scoping and first-order-only coupons stay in
-  Tier 2. Still active.
+  collection (would make `coupon` depend on `order`). Product/category scoping and first-order-only coupons came
+  later in ADR-022. Still active.
 - 2026-10-17: ADR-017 **Order and payment fields in an additive nested `OrderDetails`; tax per product rate;
   new personal data erased with the account.** Same pattern as ADR-015/016: old orders load with defaults, so no
-  migration. Choices: `PaymentInfo.method` and `failureReason` are deferred, because nothing can fill them without
-  a gateway "fetch payment" call or webhooks (the refund/settlement work); items store the tax **rate**, not an
+  migration. Choices: `PaymentInfo.method` and `failureReason` were deferred here and are done in ADR-021; items store the tax **rate**, not an
   amount, because per-line amounts would disagree with the order total, which rounds to whole rupees per rate
   group (a test proves default-18% carts price exactly as before); no retry on a duplicate order number (about
   one in 887 million per day, and the existing rollback releases stock and re-opens the intent); the buyer's
   contact is snapshotted at confirm and, with the billing address, recipient name/phone and notes, removed by
   `OrderAccountPolicy` on `UserDeletedEvent` while amounts, order number and history stay for tax. Rejected: a
-  per-line tax amount and a separate invoice collection (premature until invoices exist). Still active.
+  per-line tax amount and a separate invoice collection (invoices came in ADR-021 and are derived). Still active.
 - 2026-10-17: ADR-016 **User profile fields in an additive nested `UserDetails`; addresses embedded in the user
   document; targeted `$set` updates.** Same pattern as ADR-015: old documents load with defaults, so there is no
   migration. Addresses are embedded (max 10, always read with the user) and their rules (limit, one default,
   promotion on delete) live in the pure `AddressBook` class. Profile, address and login writes use targeted
   `$set` updates so they can't overwrite a concurrent role or password change. Marketing preferences stay in the
-  consent ledger (ADR-014), not on `User`. Suspension is enforced at login and `/me` only: an already-issued JWT
-  keeps working until it expires (24 h, ADR-006), because checking per request costs a DB read per call.
-  `emailVerified` is stored but nothing sets it yet. Rejected: a separate `addresses` collection and a global
-  suspended-user request filter. Revisit the filter if suspension needs to bite immediately. Still active.
+  consent ledger (ADR-014), not on `User`. *(Superseded in part by ADR-020: suspension now bites on every request,
+  and email verification is built.)* Rejected: a separate `addresses` collection. Still active.
 - 2026-10-17: ADR-015 **Catalogue fields as an additive nested `ProductDetails`; `Category` inside the `product`
   module; no migration.** The new product fields live in a `ProductDetails` record on `Product`, so the old
   constructor and every call site keep compiling, and stored documents without the fields load as

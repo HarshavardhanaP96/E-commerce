@@ -3,6 +3,7 @@ import { IconType } from "react-icons";
 import {
   LuBarChart3,
   LuBookOpen,
+  LuFolderTree,
   LuHistory,
   LuMenu,
   LuPackage,
@@ -16,6 +17,7 @@ import { NavLink, useLocation } from "react-router-dom";
 const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/analytics", text: "Analytics", Icon: LuBarChart3 },
   { url: "/admin/product", text: "Products", Icon: LuPackage },
+  { url: "/admin/category", text: "Categories", Icon: LuFolderTree },
   { url: "/admin/customer", text: "Customers", Icon: LuUsers },
   { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
   { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },

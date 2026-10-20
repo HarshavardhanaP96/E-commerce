@@ -1,322 +1,100 @@
-# Razorpay Integration Guide
+# Razorpay integration
 
-## Overview
-This e-commerce platform uses **Razorpay** as the payment gateway, which is one of the most reliable and widely-used payment solutions in India.
+How payments work in the Spring Boot backend, what you configure, and how to test it. The decision behind the
+two-step flow is ADR-009 in [`foundations/architecture.md`](foundations/architecture.md); the endpoint shapes are
+in [`foundations/contracts.md`](foundations/contracts.md).
 
-## Why Razorpay?
+## Gateways
 
-### Advantages for Indian Market:
-- ✅ **100+ Payment Methods**: UPI, Cards, NetBanking, Wallets, EMI
-- ✅ **Instant Settlements**: Get your money faster
-- ✅ **Lower Transaction Fees**: Competitive pricing for Indian businesses
-- ✅ **INR Support**: Native support for Indian Rupee
-- ✅ **RBI Compliant**: Fully compliant with Indian regulations
-- ✅ **Better Success Rates**: Optimized for Indian payment methods
-- ✅ **UPI Integration**: Seamless UPI payments (PhonePe, Google Pay, Paytm)
-- ✅ **Easy Integration**: Simple API and excellent documentation
+`app.payment.provider` (env `PAYMENT_PROVIDER`) picks exactly one implementation of the `PaymentGateway` port:
 
-## Setup Instructions
+| Value | Where | What it does |
+|---|---|---|
+| `fake` (default) | local, tests | No network. Every order "pays" when the client sends signature `fake`. Refuses to start under the `prod` profile. |
+| `razorpay` | test-env, prod-env | Razorpay REST API over plain HTTP (no SDK), with 5 s connect and 10 s read timeouts. |
 
-### 1. Create Razorpay Account
+The `prod` profile defaults the provider to `razorpay`. The class is `payment/infra/razorpay/RazorpayGateway.java`.
 
-1. Visit [Razorpay Dashboard](https://dashboard.razorpay.com/signup)
-2. Sign up with your business details
-3. Complete KYC verification (required for live mode)
+## Configuration
 
-### 2. Get API Keys
+| Env var | Purpose |
+|---|---|
+| `PAYMENT_PROVIDER` | `fake` or `razorpay` |
+| `RAZORPAY_KEY_ID` | Public key id. The backend sends it to the browser to open Checkout. |
+| `RAZORPAY_KEY_SECRET` | Secret. Used for API calls and signature checks; never sent to the browser. |
+| `RAZORPAY_BASE_URL` | Defaults to `https://api.razorpay.com`. Override only for a mock server. |
 
-#### Test Mode (for development):
-1. Go to [Dashboard → Settings → API Keys](https://dashboard.razorpay.com/app/keys)
-2. Generate **Test Keys**
-3. Copy `Key ID` and `Key Secret`
+With `razorpay` selected the app refuses to start if either key is blank. In Kubernetes the keys live in the
+sealed `backend-secrets` (see [`../k8s/README.md`](../k8s/README.md)); locally put them in `.env`. Use
+`rzp_test_…` keys everywhere except prod.
 
-#### Live Mode (for production):
-1. Complete KYC verification
-2. Activate your account
-3. Generate **Live Keys**
-4. Copy `Key ID` and `Key Secret`
+## Payment flow
 
-### 3. Configure Environment Variables
+The client never sends prices, totals or a user id. The server prices the cart from the catalogue.
 
-Update your `.env` file:
+1. **`POST /api/v1/order/checkout`** with the cart lines and an optional coupon. The server prices the cart,
+   creates a Razorpay order for the total (in paise) and stores a *payment intent* (the priced cart) for 24 h.
+   Response: `{provider, key, providerOrderId, amount, currency, subtotal, tax, shippingCharges, discount, total}`.
+2. **Razorpay Checkout** opens in the browser (`ecommerce-frontend/src/utils/razorpay.ts` loads the script) and
+   returns `razorpay_payment_id` and `razorpay_signature`.
+3. **`POST /api/v1/order/new`** with `{providerOrderId, paymentId, signature, shippingInfo, billingInfo?, notes?}`.
+   The server then:
+   1. verifies the signature, `HMAC_SHA256(keySecret, orderId + "|" + paymentId)`, in constant time;
+   2. consumes the intent exactly once (a repeat gets 409);
+   3. reserves stock, redeems the coupon, and saves the order with `payment.status = PAID`;
+   4. asks Razorpay how the customer paid (`GET /v1/payments/{id}`) and stores `payment.method`
+      (`upi`, `card`, `netbanking`, …). If that lookup fails the order is still placed and `method` stays empty.
 
-```env
-# Test Mode
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=your_test_secret_key
+If stock ran out between payment and confirmation, the intent is released so the customer can retry, a
+`sixpack.checkout.failed{reason="paid_but_unfulfilled"}` metric is counted and an ERROR containing
+`paid_but_unfulfilled` is logged with the payment id. Refund those by hand (below).
 
-# Live Mode (after KYC)
-# RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxx
-# RAZORPAY_KEY_SECRET=your_live_secret_key
+There are **no webhooks**: the order is created from the browser's confirmation call. A customer who pays and
+then closes the tab before step 3 has paid without an order; reconcile those from the Razorpay dashboard. Adding
+the `payment.captured` webhook is the way to close that gap.
+
+## Refunds
+
+Admins refund from the order page (Transactions → an order → Payment) or with the API:
+
+```
+POST /api/v1/order/{id}/refund        (admin)
+{ "amount": 100.00, "reason": "Mug arrived chipped" }     // amount optional: omit it to refund what is left
 ```
 
-## Payment Flow
+- Partial refunds are allowed until the order total is reached. `payment.status` moves
+  `PAID → PARTIALLY_REFUNDED → REFUNDED`, and `payment.refunds[]` keeps each one (amount, reason, provider state, time).
+- Money goes back through the provider that took it. An order paid through another provider than the active one
+  is refused with 409.
+- The amount is set aside atomically before Razorpay is called, so two admins cannot refund the same money. If
+  Razorpay refuses or is unreachable the amount is released, `payment.failureReason` records why (admins only see
+  it), and the admin can retry. The retry sends the same `X-Refund-Idempotency` key, so a request that timed out
+  but went through is not paid twice.
+- `reason` is shown to the customer and is deliberately kept out of the audit log. The audit entry
+  `ORDER_REFUNDED` records only the refunded total.
+- A refund does not change the order status, restock items, or reduce the dashboard's revenue, which is gross.
 
-### Backend Flow:
+## Invoices
 
-1. **Create Order**
-   ```
-   POST /api/v1/payment/create-order
-   Body: { amount: 1000 }
-   Response: { orderId, amount, currency, key }
-   ```
-
-2. **Frontend Integration** (Razorpay Checkout)
-   - Use the order details to open Razorpay checkout
-   - Customer completes payment
-   - Razorpay returns payment details
-
-3. **Verify Payment**
-   ```
-   POST /api/v1/payment/verify
-   Body: {
-     razorpay_order_id,
-     razorpay_payment_id,
-     razorpay_signature
-   }
-   ```
-
-### Security:
-- Payment signature is verified using HMAC SHA256
-- Prevents payment tampering
-- Server-side validation ensures authenticity
-
-## API Endpoints
-
-### Create Razorpay Order
-```http
-POST /api/v1/payment/create-order
-Content-Type: application/json
-
-{
-  "amount": 1000
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "order": {
-    "id": "order_xxxxxxxxxxxxx",
-    "amount": 100000,
-    "currency": "INR",
-    "receipt": "receipt_1234567890"
-  },
-  "key": "rzp_test_xxxxxxxxxxxxx"
-}
-```
-
-### Verify Payment
-```http
-POST /api/v1/payment/verify
-Content-Type: application/json
-
-{
-  "razorpay_order_id": "order_xxxxxxxxxxxxx",
-  "razorpay_payment_id": "pay_xxxxxxxxxxxxx",
-  "razorpay_signature": "signature_string"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Payment verified successfully"
-}
-```
-
-## Frontend Integration
-
-### Install Razorpay SDK
-```bash
-npm install razorpay
-```
-
-### Example React Integration
-
-```javascript
-const handlePayment = async (amount) => {
-  try {
-    // 1. Create order on backend
-    const { data } = await axios.post('/api/v1/payment/create-order', {
-      amount: amount
-    });
-
-    // 2. Configure Razorpay options
-    const options = {
-      key: data.key,
-      amount: data.order.amount,
-      currency: data.order.currency,
-      name: 'Your Store Name',
-      description: 'Purchase Description',
-      order_id: data.order.id,
-      handler: async function (response) {
-        // 3. Verify payment on backend
-        const verifyResponse = await axios.post('/api/v1/payment/verify', {
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature
-        });
-
-        if (verifyResponse.data.success) {
-          alert('Payment Successful!');
-          // Create order in your system
-        }
-      },
-      prefill: {
-        name: 'Customer Name',
-        email: 'customer@example.com',
-        contact: '9999999999'
-      },
-      theme: {
-        color: '#3399cc'
-      }
-    };
-
-    // 4. Open Razorpay checkout
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-  } catch (error) {
-    console.error('Payment failed:', error);
-  }
-};
-```
-
-### Add Razorpay Script to HTML
-```html
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-```
+`GET /api/v1/order/{id}/invoice` (owner or admin) returns the invoice data; the SPA renders it at
+`/order/:id/invoice` and the browser's "Print / Save as PDF" makes the PDF. It is derived from the order each time and
+shows CGST+SGST when the buyer's state equals `INVOICE_SELLER_STATE`, else IGST. Seller details come from
+the `INVOICE_SELLER_*` variables in [`.env.example`](../.env.example). Invoice numbers reuse the order number
+(`ORD-…` becomes `INV-…`); they are unique but not a gapless series, so check with your accountant if GST rules
+need one.
 
 ## Testing
 
-### Test Cards (Test Mode Only)
+- Automated: `RazorpayGatewayTest` runs the gateway against a mock HTTP server; `HmacTest` covers the signature;
+  `PaymentDetailsAndRefundIntegrationTest` covers method, refunds and failure handling with the fake gateway.
+- By hand with Razorpay test keys: set `PAYMENT_PROVIDER=razorpay` and the two keys, place an order with a
+  [Razorpay test card or UPI id](https://razorpay.com/docs/payments/payments/test-card-details/), then refund it.
+  Test-mode refunds complete instantly in the dashboard.
 
-#### Successful Payment:
-- **Card Number**: 4111 1111 1111 1111
-- **CVV**: Any 3 digits
-- **Expiry**: Any future date
+## Going live
 
-#### Failed Payment:
-- **Card Number**: 4111 1111 1111 1234
-- **CVV**: Any 3 digits
-- **Expiry**: Any future date
-
-### Test UPI:
-- **UPI ID**: success@razorpay
-- **Status**: Will show success
-
-### Test Wallets:
-- Use test credentials provided in Razorpay dashboard
-
-## Webhook Integration (Optional)
-
-For production, set up webhooks to handle payment events:
-
-1. Go to Dashboard → Settings → Webhooks
-2. Add webhook URL: `https://yourdomain.com/api/v1/payment/webhook`
-3. Select events: `payment.captured`, `payment.failed`
-4. Implement webhook handler in your backend
-
-## Transaction Fees
-
-### Razorpay Pricing (India):
-- **Domestic Cards**: 2% per transaction
-- **International Cards**: 3% per transaction
-- **UPI**: 0% (free during promotional period)
-- **Net Banking**: 2% per transaction
-- **Wallets**: 2% per transaction
-
-*Note: Fees may vary. Check [Razorpay Pricing](https://razorpay.com/pricing/) for latest rates.*
-
-## Going Live
-
-### Checklist:
-- [ ] Complete KYC verification
-- [ ] Add business bank account
-- [ ] Update to live API keys
-- [ ] Test in live mode with small amount
-- [ ] Set up webhooks
-- [ ] Configure settlement schedule
-- [ ] Enable required payment methods
-
-### Important Notes:
-1. **Never expose** `RAZORPAY_KEY_SECRET` to frontend
-2. **Always verify** payment signature on backend
-3. **Use HTTPS** in production
-4. **Store** payment details securely
-5. **Handle** payment failures gracefully
-
-## Support
-
-- **Documentation**: https://razorpay.com/docs/
-- **API Reference**: https://razorpay.com/docs/api/
-- **Support**: support@razorpay.com
-- **Dashboard**: https://dashboard.razorpay.com/
-
-## Migration from Stripe
-
-If migrating from Stripe:
-
-| Stripe | Razorpay |
-|--------|----------|
-| `stripe.paymentIntents.create()` | `razorpay.orders.create()` |
-| `client_secret` | `order_id` |
-| Payment Intent | Order |
-| Confirm Payment | Verify Signature |
-
-## Troubleshooting
-
-### Common Issues:
-
-1. **"Key ID or Key Secret is incorrect"**
-   - Verify keys in `.env` file
-   - Ensure no extra spaces
-   - Check if using test/live keys correctly
-
-2. **"Payment verification failed"**
-   - Check if signature verification logic is correct
-   - Ensure `RAZORPAY_KEY_SECRET` is correct
-   - Verify the order_id and payment_id match
-
-3. **"Amount mismatch"**
-   - Razorpay expects amount in **paise** (multiply by 100)
-   - Example: ₹100 = 10000 paise
-
-## Example: Complete Payment Flow
-
-```javascript
-// Backend: Create Order
-app.post('/api/v1/payment/create-order', async (req, res) => {
-  const { amount } = req.body;
-  const order = await razorpay.orders.create({
-    amount: amount * 100, // Convert to paise
-    currency: 'INR',
-    receipt: `receipt_${Date.now()}`
-  });
-  res.json({ success: true, order, key: process.env.RAZORPAY_KEY_ID });
-});
-
-// Backend: Verify Payment
-app.post('/api/v1/payment/verify', async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-  
-  const body = razorpay_order_id + "|" + razorpay_payment_id;
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-    .update(body)
-    .digest("hex");
-  
-  if (expectedSignature === razorpay_signature) {
-    // Payment is verified
-    res.json({ success: true, message: "Payment verified" });
-  } else {
-    res.status(400).json({ success: false, message: "Invalid signature" });
-  }
-});
-```
-
----
-
-**Happy Coding! 🚀**
+1. Finish Razorpay KYC and generate live keys.
+2. Re-seal `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` for prod.
+3. Publish the five pages Razorpay requires (Contact, Terms, Privacy, Cancellation & Refund, Shipping). They exist
+   at `/legal/*`; see [`foundations/compliance-consent.md`](foundations/compliance-consent.md).
+4. Place one real low-value order and refund it.
