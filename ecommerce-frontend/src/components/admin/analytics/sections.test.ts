@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alignPrevious, bucketLabel, csvPath, fileNameFrom, heatLevel, tabFrom } from "./sections";
+import { alignPrevious, bucketLabel, csvPath, fileNameFrom, formatHours, heatLevel, tabFrom } from "./sections";
 
 describe("analytics sections", () => {
   it("reads the tab from the URL and falls back to overview", () => {
@@ -41,5 +41,22 @@ describe("alignPrevious", () => {
 
   it("is empty when there is no comparison", () => {
     expect(alignPrevious([point("2026-10-01", 1)], null)).toEqual([]);
+  });
+});
+
+describe("formatHours", () => {
+  it("shows hours under two days and days after", () => {
+    expect(formatHours(null)).toBe("—");
+    expect(formatHours(5)).toBe("5 h");
+    expect(formatHours(30)).toBe("30 h");
+    expect(formatHours(72)).toBe("3 days");
+    expect(formatHours(60)).toBe("2.5 days");
+  });
+});
+
+describe("alignPrevious with a picker", () => {
+  it("can line up orders instead of revenue", () => {
+    const p = (orders: number) => ({ start: "2026-10-01", revenue: 0, orders });
+    expect(alignPrevious([p(1), p(2)], [p(7)], (x) => x.orders)).toEqual([7, 0]);
   });
 });

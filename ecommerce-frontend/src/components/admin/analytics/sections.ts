@@ -41,6 +41,13 @@ export const csvPath = (section: SectionName, params: Record<string, string | nu
 export const fileNameFrom = (disposition: string | null, fallback: string) =>
   disposition?.match(/filename="?([^";]+)"?/)?.[1] ?? fallback;
 
-/** The comparison period's revenue at the same position as each current bucket. */
-export const alignPrevious = (current: SeriesPoint[], previous?: SeriesPoint[] | null): number[] =>
-  previous ? current.map((_, i) => previous[i]?.revenue ?? 0) : [];
+/** The comparison period's value at the same position as each current bucket. */
+export const alignPrevious = (
+  current: SeriesPoint[], previous?: SeriesPoint[] | null, pick: (p: SeriesPoint) => number = (p) => p.revenue,
+): number[] => (previous ? current.map((_, i) => (previous[i] ? pick(previous[i]) : 0)) : []);
+
+export const formatHours = (h?: number | null) => {
+  if (h == null) return "—";
+  if (h < 48) return `${Math.round(h)} h`;
+  return `${(h / 24).toFixed(1).replace(/\.0$/, "")} days`;
+};

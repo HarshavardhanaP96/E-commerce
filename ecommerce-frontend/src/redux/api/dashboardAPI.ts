@@ -1,6 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { BarResponse, LineResponse, PieResponse, StatsResponse, SummaryResponse, VariantSalesResponse } from "../../types/api-types";
-import { OverviewSection, SalesSection, SectionParams, SectionResponse } from "../../types/analytics";
+import { OrdersSection, OverviewSection, SalesSection, SectionParams, SectionResponse } from "../../types/analytics";
 import { DashboardScope, SummaryParams } from "../../types/types";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
@@ -31,6 +31,9 @@ export const dashboardAPI = createApi({
     getSales: builder.query<SectionResponse<SalesSection>, SectionParams>({
       query: (params) => ({ url: "sales", params: clean(params) }),
     }),
+    getOrdersSection: builder.query<SectionResponse<OrdersSection>, SectionParams>({
+      query: (params) => ({ url: "orders", params: clean(params) }),
+    }),
     getVariantSales: builder.query<VariantSalesResponse, string>({
       query: (productId) => `products/${productId}/variants`,
     }),
@@ -46,4 +49,5 @@ export const {
   useGetVariantSalesQuery,
   useGetOverviewQuery,
   useGetSalesQuery,
+  useGetOrdersSectionQuery,
 } = dashboardAPI;

@@ -46,3 +46,21 @@ export type SalesSection = SectionWindow & {
   } | null;
   byPaymentMethod?: { method: string; orders: number; revenue: number; share: number }[] | null;
 };
+
+type Leg = { medianHours?: number | null; p90Hours?: number | null; count: number };
+
+export type OrdersSection = SectionWindow & {
+  series: SeriesPoint[];
+  previousSeries?: SeriesPoint[] | null;
+  byStatus: Record<string, number>;
+  fulfilment: {
+    placedToShipped: Leg; shippedToDelivered: Leg; placedToDelivered: Leg; withoutHistory: number;
+    deliveryTrend: { start: string; medianHours?: number | null }[];
+  };
+  stuck: { id: string; orderNumber?: string | null; placedAt: string; ageDays: number; total: number }[];
+  stuckCount: number;
+  stuckAfterDays: number;
+  size: { averageItems: number; bands: Record<string, number>; topCoupons: { code: string; orders: number; discount: number }[] };
+  refunds?: { orders: number; amount: number; rate: number } | null;
+  truncated: boolean;
+};

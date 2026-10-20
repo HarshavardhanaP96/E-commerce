@@ -70,3 +70,14 @@
     text-align: right;
   }
 }
+
+// Orders tab: the fulfilment card is wide so its four columns fit, and dense flow lets the narrow cards fill the gap
+// it leaves. Table cards keep the fixed card height and scroll when a list is long.
+.orders-grid {
+  grid-auto-flow: row dense;
+}
+
+.orders-table {
+  overflow-y: auto;
+  @include custom-scrollbar();
+}
