@@ -1,63 +1,66 @@
-# CI/CD and DevOps Documentation
+# CI/CD
 
-This document explains the full DevOps cycle implemented for the Ecommerce project.
+The pipeline is one GitHub Actions workflow, [`.github/workflows/main.yml`](../../.github/workflows/main.yml).
+This page explains what it does and how to operate it. One-time cluster setup lives in
+[`k8s/README.md`](../../k8s/README.md); the observability stack in
+[`infra/observability/README.md`](../../infra/observability/README.md).
 
-## 1. Architecture Overview
+## What runs
 
-The CI/CD pipeline is built using **GitHub Actions**. It automates the following steps:
-- **Testing**: Every commit triggers backend unit tests.
-- **Dockerization**: Successfully tested code is built into Docker images.
-- **Registry**: Images are pushed to **Docker Hub**.
-- **Deployment**: 
-  - Commits to feature branches are deployed to the `test-env` namespace on Kubernetes.
-  - Commits/Merges to the `main` branch are deployed to the `prod-env` namespace.
+| Job | Runs on | What it does |
+|---|---|---|
+| `backend` | every push and PR | `mvn -B verify` in `backend/` with Java 21: unit tests, Testcontainers integration tests (MongoDB 7), and the Spring Modulith boundary check. Uploads the Surefire reports if it fails. |
+| `frontend` | every push and PR | `npm ci`, `npm run lint`, `npm run build`, then `npm audit --omit=dev --audit-level=high` in `ecommerce-frontend/` (Node 20). |
+| `manifests` | every push and PR | Renders the `test` and `prod` kustomize overlays, the observability kustomization and all Helm charts, validates them with kubeconform (CRDs included) and checks the alert rules with `promtool`. |
+| `images` | pushes only, after the three jobs above pass | Builds both Docker images, scans them with Trivy (fails on fixable CRITICAL findings), then pushes `:<commit sha>`, and `:latest` from `main`. |
+| `deploy` | pushes only, after `images` | Points the overlay at this commit's images, applies it with `kubectl`, waits for the rollouts, and rolls back if that fails. |
 
-## 2. Prerequisites
+Concurrency: a newer push to the same ref cancels an older CI run, but deploys to one environment are queued,
+never cancelled halfway.
 
-To make this pipeline work, you need the following:
-1. **GitHub Repository**: Where your code resides.
-2. **Docker Hub Account**: To store your container images.
-3. **Kubernetes Cluster**: Hosted on EC2 (or any provider).
-4. **GitHub Secrets**: You must configure the following secrets in your repository settings:
-   - `DOCKERHUB_USERNAME`: Your Docker Hub username.
-   - `DOCKERHUB_TOKEN`: Your Docker Hub access token.
-   - `KUBE_CONFIG`: The base64 encoded content of your `~/.kube/config` file (or the raw YAML).
+## Which branch goes where
 
-## 3. Kubernetes Setup
+| Push to | Environment | Namespace | Kustomize overlay |
+|---|---|---|---|
+| `main` | `prod` | `prod-env` | `k8s/overlays/prod` |
+| any other branch | `test` | `test-env` | `k8s/overlays/test` |
 
-Before running the pipeline, ensure the namespaces exist in your cluster:
+Pull requests run the checks but never build images or deploy. Use GitHub's **Environments** settings to require a
+reviewer before the `prod` deploy and to keep prod-only secrets out of `test`.
+
+## Repository secrets
+
+| Secret | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | Docker Hub account that owns `sixpack-backend` and `sixpack-frontend` |
+| `DOCKERHUB_TOKEN` | A Docker Hub access token with write access to those repositories |
+| `KUBE_CONFIG` | The raw kubeconfig YAML for the cluster (the workflow writes it as-is, so don't base64 it) |
+
+Application secrets (`JWT_SECRET`, `MONGO_URI`, Razorpay keys, `ADMIN_*`, `CONSENT_IP_SALT`) are **not** GitHub
+secrets. They are committed as Sealed Secrets and deployed with the overlay; see `k8s/README.md`.
+
+## Roll back
+
+A failed rollout is undone automatically. To undo a bad release that passed readiness:
 
 ```bash
-kubectl create namespace test-env
-kubectl create namespace prod-env
+kubectl -n prod-env rollout undo deploy/backend
+kubectl -n prod-env rollout undo deploy/frontend
 ```
 
-You also need to create secrets for the backend (MongoDB URI, Stripe Key, etc.) in both namespaces:
+Check [`foundations/test-rollout.md`](../foundations/test-rollout.md) first: some releases add data that an
+older image can't read (the admin agreement rows are the current example).
+
+## Run the same checks locally
 
 ```bash
-kubectl create secret generic backend-secrets \
-  --from-literal=MONGO_URI='your_mongodb_uri' \
-  --from-literal=STRIPE_KEY='your_stripe_key' \
-  -n test-env
-
-# Repeat for prod-env
+cd backend && mvn verify                                   # needs Docker
+cd ecommerce-frontend && npm ci && npm run lint && npm run build
+kubectl kustomize k8s/overlays/prod > /dev/null            # does the overlay render?
 ```
 
-## 4. ArgoCD (GitOps) - Optional
+## Dependency updates
 
-If you want to use ArgoCD for continuous delivery:
-1. Install ArgoCD in your cluster.
-2. Connect your GitHub repository to ArgoCD.
-3. Create two Applications in ArgoCD:
-   - **ecommerce-test**: Points to `k8s/test` directory.
-   - **ecommerce-prod**: Points to `k8s/prod` directory.
-
-ArgoCD will automatically sync the state of the cluster with the manifests in these folders.
-
-## 5. Directory Structure
-
-- `.github/workflows/main.yml`: The CI/CD pipeline definition.
-- `ecommerce-backend/Dockerfile`: Docker configuration for the API.
-- `ecommerce-frontend/Dockerfile`: Docker configuration for the Frontend.
-- `k8s/`: Contains all Kubernetes manifests for Test and Prod environments.
-- `docs/`: Deployment and DevOps documentation.
+[`.github/dependabot.yml`](../../.github/dependabot.yml) opens PRs weekly for Maven (Spring packages grouped) and npm,
+and monthly for the Docker base images and GitHub Actions. They go through the same checks; merge them like any
+other change.

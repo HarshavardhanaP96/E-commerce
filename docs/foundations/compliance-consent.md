@@ -164,9 +164,9 @@ is no banner yet. Full request and response shapes are in `contracts.md`.
 | Phone, locale, saved addresses, last-login time | Same as the account profile. They are stored on the user record, erased with it (`DELETE /user/me`), included in the data export, and never used for marketing. | Deleted with the account |
 | Account profile | While the account is active. 🟢 Delete after 3 years of inactivity, with a 48 h warning email (mirrors DPDP Rules for large platforms). | Delete or anonymise |
 | Orders, payment ids | ~8 years (tax / accounting) | Anonymise the user link |
-| Consent records | Account lifetime + 3 years (proof) | Delete |
+| Consent records | Account lifetime + 3 years (proof). On erasure each row gets `expireAt = now + 3 years` and a TTL index deletes it (`ConsentIntegrationTest` checks this) | Deleted automatically |
 | Server and access logs | **At least 1 year** (DPDP Rules), then delete | Loki retention config |
-| `payment_intents`, `password_reset_tokens` | Already TTL'd (24 h / 15 min) | Already handled |
+| `payment_intents`, `password_reset_tokens`, `email_verification_tokens` | Already TTL'd (24 h / 15 min / 24 h) | Already handled |
 | Audit log (`audit_log`) | 365 days, then deleted by a TTL index. The period is fixed in `AuditDocument` (`@Indexed(expireAfter = "365d")`); changing it needs a code change plus dropping the existing `at` index (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place. Holds actor ids, record ids, the names of changed fields, non-personal values (prices, statuses, roles), a salted hash of the IP and the browser user-agent; personal values (name, email, phone, address) are never stored. | Deleted automatically |
 | Attempted-login email hash (`subjectHash`) | Same as the audit log. It is a salted hash, so it is pseudonymous. It can't be reversed without the salt, but that holds only when `CONSENT_IP_SALT` is set. The salt defaults to empty, in which case the hash is plain SHA-256 and the backend logs a startup warning; set it in every real environment. | Deleted automatically |
 

@@ -5,20 +5,23 @@
 - [ ] FR2: Forgot password is two steps. A request emails a single-use token that expires after 15 minutes. Reset takes token + new password.
 - [ ] FR3: Product catalogue: latest 5, distinct categories, search (name, max price, category, sort, page), and details.
 - [ ] FR4: Admin product CRUD with an image upload (jpeg, png, webp or gif; max 5 MB).
-- [ ] FR4a: Products carry optional catalogue fields (slug, sku, description, brand, mrp, tax rate, HSN, status, tags, gallery images, category link). Older products without them keep working. Draft and archived products are hidden from the storefront and can't be bought.
+- [ ] FR4a: Products carry optional catalogue fields (slug, sku, description, brand, mrp, tax rate, HSN, status, tags, gallery images (up to 5, uploaded from the product page), category link). Older products without them keep working. Draft and archived products are hidden from the storefront and can't be bought.
 - [ ] FR4c: A product can have variants along up to 3 option axes (size, colour, material, capacity, pack size, any custom axis), up to 100 per product. Each variant has its own SKU, price, optional MRP, stock and status. Product `price` and `stock` are derived from them. Admin edits of the variant structure never overwrite stock that changed in the meantime. Products without variants behave as before. *Phase 1 (admin API) is built behind `app.products.variants-enabled`; checkout, orders, storefront and the admin editor follow in `docs/superpowers/plans/2026-10-18-product-variants.md`.*
-- [ ] FR4b: Admin category CRUD with parent/child nesting. A category with sub-categories or products can't be deleted, and a parent can't create a cycle.
+- [ ] FR4b: Admin category CRUD, with a Categories screen in the admin sidebar (create, edit, image, parent, delete) and a category link on the product page, with parent/child nesting. A category with sub-categories or products can't be deleted, and a parent can't create a cycle.
 - [ ] FR5: Checkout. The server prices the cart from the database, applies the coupon, and adds tax at each product's rate (18% by default) and shipping (₹200 below ₹1000). It then creates a Razorpay order. Confirming checkout verifies the signature, decrements stock atomically, and creates the order.
 - [ ] FR6: Customers see only their own orders. Admins see all orders, can move an order through Processing → Shipped → Delivered, and can delete orders.
 - [ ] FR6a: Orders carry an order number (`ORD-YYYYMMDD-XXXXXX`), the recipient's name and phone, an optional billing address, delivery notes, and a status history that records who moved the order and when.
-- [ ] FR7: Admin coupon management: flat or percent, optional cap, minimum order, validity window, total and per-customer limits, pause/resume, and a status and usage count per coupon. Customers see why a code was refused.
+- [ ] FR7: Admin coupon management: flat or percent, optional cap, minimum order, validity window, total and per-customer limits, pause/resume, and a status and usage count per coupon. A coupon can be limited to chosen products or categories (it then discounts only those lines) and to a customer's first order. Customers see why a code was refused, and the cart shows the discount checkout will charge.
 - [ ] FR8: Admin customer list, details, role change, and delete. An admin cannot delete themselves.
-- [ ] FR8a: Customers can edit name, phone and locale. Admins can suspend and reactivate accounts (never their own). A suspended user can't log in or load `/me`.
+- [ ] FR8a: Customers can edit name, phone and locale. Admins can suspend and reactivate accounts (never their own), from the customer page. A suspended user can't log in, and the token they already hold stops working at once on every endpoint (403); a deleted account's token gets 401.
 - [ ] FR8b: Customers keep up to 10 saved addresses with one default. Checkout pre-selects the default and lets them pick another. The data export includes the addresses.
 - [ ] FR9: Admin dashboard: stats, pie, bar and line charts, optionally scoped by productId, category or userId.
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
 - [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.
+- [ ] FR14: Admins can refund an order, in full or in parts, to the original payment method through the gateway. The customer sees each refund and its reason. Two refunds can't pay out the same money, and a failed refund can be retried safely. Orders record how they were paid.
+- [ ] FR15: Customers and admins can open a printable invoice for an order, with the seller's details, the tax split by rate (CGST+SGST in the seller's state, IGST elsewhere), and any refunds.
+- [ ] FR16: Registration emails a single-use verification link (valid 24 h); following it marks the email verified. Customers can ask for a new link from a banner. Nothing is blocked while an email is unverified.
 - [ ] FR13: Data changes (products, categories, coupons, orders, users) and security events (logins, password resets, consent changes) are recorded in an append-only audit log that admins can search, without storing personal values.
 
 ## Non-functional requirements
@@ -30,5 +33,5 @@
 
 ## Open questions / edge cases
 - Concurrent checkouts on the last unit: handled by a conditional decrement (`stock >= qty`). The loser gets 409, and earlier decrements in the same order are rolled back.
-- A payment that was captured but whose order failed (e.g. out of stock after payment) is logged at ERROR with the payment id so it can be refunded by hand. Automated refunds come later.
+- A payment that was captured but whose order failed (e.g. out of stock after payment) is logged at ERROR with the payment id so an admin can refund it from the order page or the Razorpay dashboard (if the order was never created there is no order page, so use the dashboard). Refunds are never automatic.
 - Product deletion keeps existing orders intact, because orders snapshot name, photo and price.
