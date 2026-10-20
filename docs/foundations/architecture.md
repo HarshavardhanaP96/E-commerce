@@ -51,10 +51,15 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
 ### Observability plan
 - **Metrics:** Micrometer → `/actuator/prometheus`. HTTP server metrics, JVM, Mongo driver pool, Caffeine
   cache, and business counters (`sixpack.orders.placed`, `sixpack.checkout.failed{reason}`,
-  `sixpack.auth.login{result}`).
+  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`). Every one of these, and
+  `http.server.requests`, carries a `tenant` tag: the store's slug, `unknown` for a host that matched no store,
+  or `none` on platform and operational paths. The Grafana dashboard has a store picker and the payment and
+  audit alerts name the store.
 - **Traces:** Micrometer Tracing + OpenTelemetry bridge, OTLP HTTP export to `OTEL_EXPORTER_OTLP_ENDPOINT`.
   Sampling is 100% in local and test and 10% in prod (`MANAGEMENT_TRACING_SAMPLING_PROBABILITY`).
-- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` in MDC. In k8s an
+- **Logs:** Spring Boot structured logging (ECS JSON) to stdout, with `traceId`/`spanId` and `tenant` in MDC
+  (`TenantContext` sets `tenant` whenever a store is bound, so background work run with `runAs` is labelled
+  too). The request span gets the same `tenant` attribute from the HTTP observation. In k8s an
   OTel collector DaemonSet (`otel-logs`) ships them to Loki. Grafana links trace ids in logs to Tempo.
 - **Health:** liveness and readiness groups (readiness includes Mongo), used by k8s probes.
 - **Local stack:** `docker compose --profile observability up` adds Prometheus, Grafana (Prometheus

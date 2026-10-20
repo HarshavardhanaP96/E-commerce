@@ -50,6 +50,8 @@ class TenantResolutionFilter extends OncePerRequestFilter {
             return;
         }
         Optional<Tenant> tenant = registry.resolve(request.getServerName());
+        request.setAttribute(TenantObservationConvention.ATTRIBUTE,
+                tenant.map(Tenant::slug).orElse(TenantObservationConvention.UNKNOWN));
         if (tenant.isEmpty()) {
             reject(response, HttpServletResponse.SC_NOT_FOUND, "Store not found");
             return;

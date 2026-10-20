@@ -11,6 +11,10 @@ OTLP traces, and JSON (ECS) logs on stdout. What collects them depends on where 
 | Dashboards | Grafana, provisioned from `grafana/provisioning/` | Same dashboard JSON, loaded by Grafana's sidecar. Has a namespace picker |
 | Alerts | — | `k8s/alerts.yaml` + the chart's built-in Kubernetes rules → Alertmanager → Slack (optional) |
 
+Every request metric, business counter, request span and log line carries a `tenant` label with the store's
+slug (`unknown` when the host matched no store, `none` on platform and operational paths). Use the dashboard's
+Store picker, or `{tenant="acme"}` in PromQL and `| json | tenant="acme"` in Loki.
+
 ## Files
 
 - `prometheus.yml`, `grafana/`: the local stack. `grafana/provisioning/dashboards/sixpack-overview.json` is
@@ -56,9 +60,10 @@ SSO in front of it rather than a port-forward.
 | SixpackReadinessFlapping | a backend pod's readiness changes more than 4 times in 15m |
 | SixpackHigh5xxRate | more than 2% of requests return 5xx for 5m |
 | SixpackHighLatency | p95 above 500ms for 10m |
-| SixpackPaidButUnfulfilled | a payment was captured but no order was created (any occurrence) |
-| SixpackBadPaymentSignatures | more than 5 invalid Razorpay signatures in 15m |
+| SixpackPaidButUnfulfilled | a payment was captured but no order was created (any occurrence), per store |
+| SixpackBadPaymentSignatures | more than 5 invalid Razorpay signatures in 15m for one store |
 | SixpackBackendMemoryNearLimit | container above 90% of its memory limit for 10m |
+| SixpackAuditWriteFailing | any audit log write failed in 10m, per store |
 
 ## Sizing and limits
 

@@ -9,6 +9,7 @@ import com.sixpack.audit.domain.AuditRepository;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.security.EvidenceHasher;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Locale;
@@ -46,12 +47,14 @@ class AuditService implements AuditTrail {
     public void record(AuditEvent event) {
         try {
             entries.append(toEntry(event));
-            meters.counter("sixpack.audit.write", "result", "success").increment();
+            meters.counter("sixpack.audit.write", Tags.of("result", "success").and(TenantContext.metricTag()))
+                    .increment();
         } catch (RuntimeException e) {
             // Auditing must never fail the action it describes. The metric (and its alert) is what makes a gap visible.
             log.error("Audit write failed for action={} entity={}/{}", event.action(), event.entityType(),
                     event.entityId(), e);
-            meters.counter("sixpack.audit.write", "result", "failure").increment();
+            meters.counter("sixpack.audit.write", Tags.of("result", "failure").and(TenantContext.metricTag()))
+                    .increment();
         }
     }
 

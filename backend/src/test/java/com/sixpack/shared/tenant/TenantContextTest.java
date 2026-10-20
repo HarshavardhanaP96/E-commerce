@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
 class TenantContextTest {
 
@@ -69,5 +70,28 @@ class TenantContextTest {
         TenantProperties custom = new TenantProperties("main", "Main Store", List.of(" Shop.Example.COM ", "", "x.test"));
         assertThat(custom.defaultSlug()).isEqualTo("main");
         assertThat(custom.defaultDomains()).containsExactly("shop.example.com", "x.test");
+    }
+
+    @Test
+    void theTenantSlugIsOnEveryLogLineWhileBound() {
+        assertThat(MDC.get(TenantContext.MDC_KEY)).isNull();
+        try (var outer = TenantContext.open(A)) {
+            assertThat(MDC.get("tenant")).isEqualTo("a");
+            try (var inner = TenantContext.open(B)) {
+                assertThat(MDC.get("tenant")).isEqualTo("b");
+            }
+            assertThat(MDC.get("tenant")).isEqualTo("a");
+            try (var none = TenantContext.open(null)) {
+                assertThat(MDC.get("tenant")).isNull();
+            }
+            assertThat(MDC.get("tenant")).isEqualTo("a");
+        }
+        assertThat(MDC.get("tenant")).isNull();
+    }
+
+    @Test
+    void metricTagNamesTheBoundTenantOrNone() {
+        assertThat(TenantContext.metricTag()).isEqualTo(io.micrometer.core.instrument.Tag.of("tenant", "none"));
+        TenantContext.runAs(A, () -> assertThat(TenantContext.metricTag().getValue()).isEqualTo("a"));
     }
 }

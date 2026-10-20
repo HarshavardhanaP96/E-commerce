@@ -25,7 +25,7 @@ class AuditFailureIsolationIntegrationTest extends IntegrationTest {
     void anAuditWriteFailureDoesNotFailAProductUpdate() throws Exception {
         String admin = adminToken();
         String id = createProduct(admin, "Lamp", 400, 3, "home");
-        double before = meters.counter("sixpack.audit.write", "result", "failure").count();
+        double before = meters.counter("sixpack.audit.write", "result", "failure", "tenant", "default").count();
         doThrow(new RuntimeException("db down")).when(repository).append(any());
 
         mvc.perform(multipart(HttpMethod.PUT, "/api/v1/product/" + id).param("price", "450")
@@ -35,6 +35,6 @@ class AuditFailureIsolationIntegrationTest extends IntegrationTest {
         double price = body(mvc.perform(get("/api/v1/product/" + id)).andExpect(status().isOk()).andReturn())
                 .get("product").get("price").asDouble();
         assertThat(price).isEqualTo(450.0);
-        assertThat(meters.counter("sixpack.audit.write", "result", "failure").count()).isEqualTo(before + 1);
+        assertThat(meters.counter("sixpack.audit.write", "result", "failure", "tenant", "default").count()).isEqualTo(before + 1);
     }
 }

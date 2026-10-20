@@ -58,19 +58,19 @@ spec:
 
         - alert: SixpackPaidButUnfulfilled
           # A customer was charged but no order was created. Needs a manual refund or order fix.
-          expr: sum by (namespace) (increase(sixpack_checkout_failed_total{job="backend-service", reason="paid_but_unfulfilled"}[10m])) > 0
+          expr: sum by (namespace, tenant) (increase(sixpack_checkout_failed_total{job="backend-service", reason="paid_but_unfulfilled"}[10m])) > 0
           labels:
             severity: '{{ if eq $labels.namespace "prod-env" }}critical{{ else }}warning{{ end }}'
           annotations:
-            summary: "Payment captured without an order in {{ $labels.namespace }}"
+            summary: "Payment captured without an order for store {{ $labels.tenant }} in {{ $labels.namespace }}"
             runbook: "Search logs for 'paid_but_unfulfilled' (Grafana → Explore → Loki) to get providerOrderId/paymentId."
 
         - alert: SixpackBadPaymentSignatures
-          expr: sum by (namespace) (increase(sixpack_checkout_failed_total{job="backend-service", reason="bad_signature"}[15m])) > 5
+          expr: sum by (namespace, tenant) (increase(sixpack_checkout_failed_total{job="backend-service", reason="bad_signature"}[15m])) > 5
           labels:
             severity: warning
           annotations:
-            summary: "{{ $value }} checkout attempts with an invalid Razorpay signature in 15m ({{ $labels.namespace }})"
+            summary: "{{ $value }} checkout attempts with an invalid Razorpay signature in 15m for store {{ $labels.tenant }} ({{ $labels.namespace }})"
 
         - alert: SixpackBackendMemoryNearLimit
           expr: |
@@ -87,9 +87,9 @@ spec:
         - alert: SixpackAuditWriteFailing
           # Audit entries are written best-effort (a failed write never fails the user's request), so a failure means
           # an admin action or login went unrecorded. Check MongoDB health and the audit_log collection.
-          expr: sum by (namespace) (increase(sixpack_audit_write_total{job="backend-service", result="failure"}[10m])) > 0
+          expr: sum by (namespace, tenant) (increase(sixpack_audit_write_total{job="backend-service", result="failure"}[10m])) > 0
           labels:
             severity: '{{ if eq $labels.namespace "prod-env" }}critical{{ else }}warning{{ end }}'
           annotations:
-            summary: "{{ $value }} audit log writes failed in 10m ({{ $labels.namespace }}); those events were not recorded"
+            summary: "{{ $value }} audit log writes failed in 10m for store {{ $labels.tenant }} ({{ $labels.namespace }}); those events were not recorded"
             runbook: "Search logs for 'Audit write failed' (Grafana → Explore → Loki), then check MongoDB availability and disk."

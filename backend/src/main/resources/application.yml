@@ -104,6 +104,9 @@ springdoc:
     enabled: ${SPRINGDOC_ENABLED:true}
 
 logging:
+  pattern:
+    # Plain-text console only (prod uses ECS JSON, which includes every MDC key).
+    correlation: "[%X{traceId:-},%X{spanId:-},%X{tenant:-}] "
   level:
     root: INFO
     com.sixpack: INFO

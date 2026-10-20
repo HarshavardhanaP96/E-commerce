@@ -20,4 +20,10 @@ class TenantWebConfig {
         registration.addUrlPatterns("/*");
         return registration;
     }
+
+    /** Picked up by Spring Boot's web MVC observation filter in place of the default convention. */
+    @Bean
+    TenantObservationConvention tenantObservationConvention() {
+        return new TenantObservationConvention();
+    }
 }
