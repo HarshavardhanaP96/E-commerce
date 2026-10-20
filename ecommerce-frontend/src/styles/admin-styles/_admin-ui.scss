@@ -1012,35 +1012,68 @@
 }
 
 
-// ---------- product gallery ----------
-.gallery {
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  padding: $spacing-md;
+// ---------- product pictures (main photo + gallery, in the preview card) ----------
+.pictures {
+  width: 100%;
+  margin-top: $spacing-md;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border;
   display: grid;
+  justify-items: center;
   gap: $spacing-sm;
-
-  legend {
-    @include text(label);
-    padding-inline: 0.25rem;
-  }
+  text-align: center;
 
   &__thumbs {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: $spacing-sm;
 
+    li {
+      position: relative;
+    }
+
     img {
-      width: 64px;
-      height: 64px;
+      display: block;
+      width: 56px;
+      height: 56px;
       object-fit: cover;
       border-radius: $radius-sm;
       border: 1px solid $color-border;
     }
+
+    .is-main img {
+      border: 2px solid $color-accent-primary;
+    }
+
+    span {
+      position: absolute;
+      left: 50%;
+      bottom: -0.5rem;
+      transform: translateX(-50%);
+      padding: 0 0.375rem;
+      border-radius: $radius-sm;
+      background: $color-accent-primary;
+      color: #fff;
+      @include text(caption);
+    }
+  }
+
+  &__upload {
+    position: relative; // anchors the sr-only input so the "required" bubble points at the button
+    margin-top: $spacing-sm;
+    cursor: pointer;
+
+    &:focus-within {
+      outline: 2px solid $color-accent-primary;
+      outline-offset: 2px;
+    }
   }
 
   small {
+    max-width: 32ch;
+    @include text(body-sm);
     color: $color-text-muted;
   }
 }

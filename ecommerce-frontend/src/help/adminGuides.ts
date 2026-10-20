@@ -105,7 +105,7 @@ export const GUIDES: Guide[] = [
         "Go to Products and click Add product.",
         "Enter the Name (up to 120 characters) and a Category (up to 50 characters, for example laptop or camera).",
         "Enter the Price in ₹ and the Stock (a whole number, 0 or more).",
-        "Choose a photo: JPEG, PNG, WEBP or GIF, no larger than 5 MB.",
+        "Use Upload pictures under the preview: JPEG, PNG, WEBP or GIF, no larger than 5 MB each. Pick up to 6 at once; the first is the main photo and the rest become the gallery.",
         "Click Save. The preview on the left updates as you type.",
       ] },
       { type: "tip", text: "Reuse the same category spelling for similar products. Categories drive the store’s category filter and the analytics breakdown, so “Laptop” and “laptops” would count as two." },
@@ -120,8 +120,8 @@ export const GUIDES: Guide[] = [
     body: [
       { type: "steps", items: [
         "Open the product from the Products list.",
-        "Change any field. Leave the photo alone to keep the current one, or choose a new file to replace it.",
-        "Optionally pick a Linked category, or choose up to 5 Gallery pictures (5 MB each). New gallery pictures replace the whole gallery, so choose all of them together.",
+        "Change any field. Leave the pictures alone to keep them, or use Replace pictures under the preview.",
+        "Picking one picture replaces only the main photo and keeps the gallery. Picking several replaces the main photo and the whole gallery, so choose all of them together.",
         "Click Save.",
       ] },
       { type: "tip", text: "To stop selling something without deleting it, set its stock to 0. The store shows it as sold out." },
@@ -139,7 +139,7 @@ export const GUIDES: Guide[] = [
       { type: "steps", title: "Set up variants", items: [
         "Open the product and choose the Variants tab.",
         "Click Size, Colour or Add option, then type the values separated by commas (S, M, L). Press Enter to add them.",
-        "For a colour option, pick each swatch colour. Upload the product's images first (Details tab, Gallery images), then use the image button next to a colour to choose which images show when it is picked.",
+        "For a colour option, pick each swatch colour. Upload the product's images first (Details tab, Upload pictures), then use the image button next to a colour to choose which images show when it is picked.",
         "Fill in the table that appears: price, optional MRP and stock for every combination. Leave SKU as auto to have one made for you.",
         "Click Save variants.",
       ] },

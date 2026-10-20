@@ -57,3 +57,15 @@ export const toFormData = (v: ProductFormValues) => {
   v.images.forEach((file) => fd.append("images", file));
   return fd;
 };
+
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** One upload for all pictures: the first becomes the main photo, the rest the gallery. */
+export const splitPictures = (
+  files: File[],
+): { photo: File | undefined; images: File[] } | { error: string } => {
+  if (files.length > MAX_GALLERY + 1) return { error: `You can add up to ${MAX_GALLERY + 1} pictures` };
+  if (files.some((f) => f.size > MAX_IMAGE_BYTES)) return { error: "Each image must be 5 MB or smaller" };
+  const [photo, ...images] = files;
+  return { photo, images };
+};

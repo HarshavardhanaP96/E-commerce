@@ -1,7 +1,8 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { transformImage } from "../../utils/features";
 import { useCategoryTreeQuery } from "../../redux/api/categoryAPI";
-import { MAX_GALLERY, ProductFormValues } from "./productFormData";
+import { LuImagePlus } from "react-icons/lu";
+import { MAX_GALLERY, ProductFormValues, splitPictures } from "./productFormData";
 
 type Props = {
   values: ProductFormValues;
@@ -14,9 +15,7 @@ type Props = {
   derived?: boolean;
 };
 
-const MAX_BYTES = 5 * 1024 * 1024;
-
-/** Two-column product editor: preview card on the left, fields on the right. Fits without scrolling. */
+/** Two-column product editor: preview and pictures on the left, fields on the right. */
 const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages = [], derived }: Props) => {
   const [preview, setPreview] = useState<string>("");
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
@@ -41,29 +40,30 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
     (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     onChange({ ...values, [field]: e.target.value });
 
-  const onPhoto = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.size > MAX_BYTES) {
+  const onPictures = (e: ChangeEvent<HTMLInputElement>) => {
+    const result = splitPictures(Array.from(e.target.files ?? []));
+    if ("error" in result) {
       e.target.value = "";
-      return alert("Image must be 5 MB or smaller");
+      return alert(result.error);
     }
-    onChange({ ...values, photo: file });
-  };
-
-  const onGallery = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length > MAX_GALLERY) {
-      e.target.value = "";
-      return alert(`You can add up to ${MAX_GALLERY} gallery pictures`);
-    }
-    if (files.some((f) => f.size > MAX_BYTES)) {
-      e.target.value = "";
-      return alert("Each image must be 5 MB or smaller");
-    }
-    onChange({ ...values, images: files });
+    onChange({ ...values, ...result });
   };
 
   const image = preview || transformImage(currentPhoto);
+  const pending = !!values.photo;
+  // New picks replace the gallery only when they include gallery pictures; the server keeps it otherwise.
+  const galleryShown = galleryPreviews.length > 0 ? galleryPreviews : currentImages.map((url) => transformImage(url));
+  const thumbs = [
+    ...(image ? [{ src: image, main: true }] : []),
+    ...galleryShown.map((src) => ({ src, main: false })),
+  ];
+  const hint = !pending
+    ? `JPEG, PNG, WEBP or GIF, max 5 MB each. Pick up to ${MAX_GALLERY + 1}: the first is the main photo, the rest the gallery.`
+    : galleryPreviews.length > 0
+      ? "Not saved yet. Replaces the main photo, the gallery and any images set on colours."
+      : currentImages.length > 0
+        ? "Not saved yet. Replaces the main photo; the gallery stays."
+        : "Not saved yet.";
 
   return (
     <div className="detail-grid">
@@ -76,6 +76,32 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
             {Number(values.stock) > 0 ? `${values.stock} in stock` : "Out of stock"}
           </span>
         )}
+
+        <div className="pictures">
+          {thumbs.length > 1 && (
+            <ul className="pictures__thumbs">
+              {thumbs.map((t, i) => (
+                <li key={`${i}-${t.src}`} className={t.main ? "is-main" : undefined}>
+                  <img src={t.src} alt={t.main ? "Main photo" : `Gallery picture ${i}`} />
+                  {t.main && <span>Main</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <label className="btn pictures__upload">
+            <LuImagePlus /> {image ? "Replace pictures" : "Upload pictures"}
+            <input
+              className="sr-only"
+              form="product-form"
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={onPictures}
+              required={!currentPhoto}
+            />
+          </label>
+          <small>{hint}</small>
+        </div>
       </section>
 
       <form id="product-form" className="card form-grid" onSubmit={onSubmit}>
@@ -145,15 +171,11 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
             <option value="ARCHIVED">Archived (hidden)</option>
           </select>
         </label>
-        <label className="span-2">
-          Tags (comma separated)
-          <input value={values.tags} onChange={set("tags")} placeholder="e.g. summer, sale" />
+        <label>
+          Country of origin
+          <input value={values.countryOfOrigin} onChange={set("countryOfOrigin")} maxLength={56} placeholder="e.g. India" />
         </label>
-        <label className="span-2">
-          Description
-          <textarea value={values.description} onChange={set("description")} rows={3} maxLength={5000} />
-        </label>
-        <label className="span-2">
+        <label>
           Linked category (optional)
           <select value={values.categoryId} onChange={set("categoryId")}>
             <option value="">{values.categoryId ? "None" : "Not linked"}</option>
@@ -162,38 +184,14 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
             ))}
           </select>
         </label>
-        <label className="span-2">
-          Country of origin
-          <input value={values.countryOfOrigin} onChange={set("countryOfOrigin")} maxLength={56} placeholder="e.g. India" />
+        <label>
+          Tags (comma separated)
+          <input value={values.tags} onChange={set("tags")} placeholder="e.g. summer, sale" />
         </label>
         <label className="span-2">
-          Photo (JPEG, PNG, WEBP or GIF, max 5 MB)
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPhoto} required={!currentPhoto} />
+          Description
+          <textarea value={values.description} onChange={set("description")} rows={3} maxLength={5000} />
         </label>
-        <fieldset className="span-2 gallery">
-          <legend>Gallery (up to {MAX_GALLERY} more pictures, max 5 MB each)</legend>
-          <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={onGallery}
-                 aria-label="Gallery pictures" />
-          {galleryPreviews.length > 0 ? (
-            <>
-              <ul className="gallery__thumbs">
-                {galleryPreviews.map((url, i) => (
-                  <li key={url}><img src={url} alt={`New gallery picture ${i + 1}`} /></li>
-                ))}
-              </ul>
-              {currentImages.length > 0 && <small>These replace the {currentImages.length} saved picture(s) when you save.</small>}
-            </>
-          ) : currentImages.length > 0 ? (
-            <ul className="gallery__thumbs">
-              {currentImages.map((url, i) => (
-                <li key={url}><img src={transformImage(url)} alt={`Gallery picture ${i + 1}`} /></li>
-              ))}
-            </ul>
-          ) : (
-            <small>No gallery pictures yet.</small>
-          )}
-          <small>Choosing new pictures replaces the whole gallery and any images set on colours.</small>
-        </fieldset>
       </form>
     </div>
   );
