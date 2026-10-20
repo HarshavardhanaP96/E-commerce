@@ -222,7 +222,7 @@ public class CheckoutService {
     /** How the customer paid. The money is already taken, so a provider hiccup must not fail the order. */
     private String paymentMethod(String paymentId) {
         try {
-            return gateway.fetchPayment(paymentId).method();
+            return gateways.current().fetchPayment(paymentId).method();
         } catch (RuntimeException e) {
             log.warn("Could not look up the payment method for {}: {}", paymentId, e.getMessage());
             return null;

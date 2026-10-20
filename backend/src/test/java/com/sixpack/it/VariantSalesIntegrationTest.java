@@ -37,6 +37,7 @@ class VariantSalesIntegrationTest extends IntegrationTest {
         order(t0.plusSeconds(60), line(tee, "v-m", "M / Blk", "TEE-M", 500, 2), line(mug, null, null, "MUG", 99, 5));
         order(t0.plusSeconds(120), line(tee, "v-m", "M / Black", "TEE-M", 550, 1),     // label renamed later
                 line(tee, "v-s", "S / Black", "TEE-S", 500, 1));
+        backfillLegacy();
         String admin = adminToken();
 
         JsonNode sales = body(mvc.perform(get("/api/v1/dashboard/products/" + tee.toHexString() + "/variants")

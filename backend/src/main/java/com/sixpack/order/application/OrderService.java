@@ -12,6 +12,7 @@ import com.sixpack.order.domain.Refund;
 import com.sixpack.order.domain.OrderRepository;
 import com.sixpack.order.domain.OrderStatus;
 import com.sixpack.payment.PaymentGateway;
+import com.sixpack.payment.PaymentGateways;
 import com.sixpack.payment.RefundResult;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.security.AuthUser;
@@ -26,16 +27,16 @@ public class OrderService {
     private final OrderRepository orders;
     private final ApplicationEventPublisher events;
     private final AuditTrail audit;
-    private final PaymentGateway gateway;
+    private final PaymentGateways gateways;
     private final InvoiceProperties invoiceProps;
 
     OrderService(OrderRepository orders, ApplicationEventPublisher events, AuditTrail audit,
-                 PaymentGateway gateway, InvoiceProperties invoiceProps) {
+                 PaymentGateways gateways, InvoiceProperties invoiceProps) {
         this.invoiceProps = invoiceProps;
         this.orders = orders;
         this.events = events;
         this.audit = audit;
-        this.gateway = gateway;
+        this.gateways = gateways;
     }
 
     public List<Order> mine(String userId) {
@@ -84,6 +85,8 @@ public class OrderService {
         if (payment == null || payment.paymentId() == null || payment.status() == null) {
             throw ApiException.conflict("This order has no online payment to refund");
         }
+        // The store's own gateway, so a refund can never be paid out of another tenant's (or the platform's) account.
+        PaymentGateway gateway = gateways.current();
         if (!gateway.provider().equals(payment.provider())) {
             throw ApiException.conflict("This order was paid through " + payment.provider()
                     + ", so it has to be refunded there");

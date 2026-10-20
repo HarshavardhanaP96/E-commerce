@@ -32,7 +32,8 @@ public class LegacyIndexCleanup implements ApplicationRunner {
             "orders", List.of("orderNumber_1"),
             "payment_intents", List.of("providerOrderId_1"),
             "users", List.of("email_1"),
-            "password_reset_tokens", List.of("tokenHash_1"));
+            "password_reset_tokens", List.of("tokenHash_1"),
+            "email_verification_tokens", List.of("tokenHash_1"));
 
     private final MongoTemplate mongo;
 

@@ -16,4 +16,9 @@ class IdentityBackfill {
     BackfillTarget passwordResetTokensBackfill() {
         return () -> "password_reset_tokens";
     }
+
+    @Bean
+    BackfillTarget emailVerificationTokensBackfill() {
+        return () -> "email_verification_tokens";
+    }
 }

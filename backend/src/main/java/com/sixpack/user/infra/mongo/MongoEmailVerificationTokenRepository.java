@@ -1,9 +1,9 @@
 package com.sixpack.user.infra.mongo;
 
+import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.user.domain.EmailVerificationToken;
 import com.sixpack.user.domain.EmailVerificationTokenRepository;
 import java.util.Optional;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
@@ -11,9 +11,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 class MongoEmailVerificationTokenRepository implements EmailVerificationTokenRepository {
 
-    private final MongoTemplate mongo;
+    private final TenantMongo mongo;
 
-    MongoEmailVerificationTokenRepository(MongoTemplate mongo) {
+    MongoEmailVerificationTokenRepository(TenantMongo mongo) {
         this.mongo = mongo;
     }
 
@@ -28,9 +28,8 @@ class MongoEmailVerificationTokenRepository implements EmailVerificationTokenRep
 
     @Override
     public Optional<EmailVerificationToken> consumeByHash(String tokenHash) {
-        EmailVerificationTokenDocument doc = mongo.findAndRemove(
-                Query.query(Criteria.where("tokenHash").is(tokenHash)), EmailVerificationTokenDocument.class);
-        return Optional.ofNullable(doc)
+        return mongo.findAndRemove(Query.query(Criteria.where("tokenHash").is(tokenHash)),
+                        EmailVerificationTokenDocument.class)
                 .map(d -> new EmailVerificationToken(d.id, d.userId, d.tokenHash, d.expiresAt));
     }
 

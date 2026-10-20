@@ -1,5 +1,6 @@
 package com.sixpack.shared.security;
 
+import com.sixpack.shared.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +26,9 @@ class AccountStatusFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth instanceof JwtAuthenticationToken jwt) {
+        // Store accounts live inside a tenant. Tenant-less paths (platform administration) have no store account to
+        // look up, and their own authorization rules already refuse a store token.
+        if (auth instanceof JwtAuthenticationToken jwt && TenantContext.current().isPresent()) {
             switch (accounts.stateOf(jwt.getToken().getSubject())) {
                 case SUSPENDED -> {
                     SecurityContextHolder.clearContext();

@@ -65,6 +65,7 @@ class ProductStockAndSizeGuideIntegrationTest extends IntegrationTest {
         ObjectId id = new ObjectId();
         mongo.getCollection("products").insertOne(new Document("_id", id).append("name", "Old")
                 .append("photo", "uploads/o.png").append("price", 10.0).append("stock", 2).append("category", "misc"));
+        backfillLegacy();
 
         mvc.perform(get("/api/v1/product/" + id.toHexString())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.product.sizeChart").doesNotExist())

@@ -141,7 +141,7 @@ class MongoOrderRepository implements OrderRepository {
         mongo.updateFirst(byId, new Update().push("payment.refunds", doc).unset("payment.failureReason"),
                 OrderDocument.class);
         // Read after the push, so the last of several concurrent refunds sees every reservation.
-        OrderDocument after = mongo.findOne(byId, OrderDocument.class);
+        OrderDocument after = mongo.findOne(byId, OrderDocument.class).orElse(null);
         long refunded = after == null || after.payment == null || after.payment.refundedPaise == null ? 0
                 : after.payment.refundedPaise;
         mongo.updateFirst(byId, new Update().set("payment.status",
