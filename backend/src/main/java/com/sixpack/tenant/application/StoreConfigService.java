@@ -41,7 +41,8 @@ class StoreConfigService implements StoreConfig {
         return new Effective(or(c.shippingFee(), d.shippingFee()), or(c.freeShippingAbove(), d.freeShippingAbove()),
                 or(c.defaultTaxRate(), d.defaultTaxRate()), or(c.maxCouponAmount(), d.maxCouponAmount()),
                 or(c.minimumAge(), d.minimumAge()), or(cat.pageSize(), d.pageSize()),
-                or(cat.lowStockThreshold(), d.lowStockThreshold()), or(own.regional().timeZone(), d.timeZone()));
+                or(cat.lowStockThreshold(), d.lowStockThreshold()), or(own.regional().timeZone(), d.timeZone()),
+                or(c.stuckOrderDays(), d.stuckOrderDays()));
     }
 
     @Override

@@ -8,7 +8,7 @@ type Maybe<T> = T | null;
 export type StoreSettings = {
   commerce: {
     shippingFee: Maybe<number>; freeShippingAbove: Maybe<number>; defaultTaxRate: Maybe<number>;
-    maxCouponAmount: Maybe<number>; minimumAge: Maybe<number>;
+    maxCouponAmount: Maybe<number>; minimumAge: Maybe<number>; stuckOrderDays: Maybe<number>;
   };
   catalog: { pageSize: Maybe<number>; lowStockThreshold: Maybe<number> };
   invoice: { gstin: Maybe<string>; state: Maybe<string> };
@@ -19,7 +19,7 @@ export type StoreSettings = {
 /** The value in force for each rule: the store's own, else the platform default. */
 export type EffectiveStoreSettings = {
   shippingFee: number; freeShippingAbove: number; defaultTaxRate: number; maxCouponAmount: number;
-  minimumAge: number; pageSize: number; lowStockThreshold: number; timeZone: string;
+  minimumAge: number; pageSize: number; lowStockThreshold: number; timeZone: string; stuckOrderDays: number;
 };
 
 export type StoreSettingsResponse = {

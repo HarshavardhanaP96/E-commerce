@@ -88,10 +88,11 @@ const StoreSettings = () => {
             </section>
 
             <section className="card form-grid">
-              <h4 className="span-2">Coupons and sign-up</h4>
+              <h4 className="span-2">Coupons, sign-up and orders</h4>
               {number("maxCouponAmount", `Largest flat coupon (${sym})`, `Default: ${dflt?.maxCouponAmount}`, { min: 1, max: 10_000_000 })}
               {number("minimumAge", "Minimum shopper age", `Default: ${dflt?.minimumAge}`, { min: 18, max: 100 })}
               <p className="span-2 store-settings__hint">The minimum age can be raised, never set below 18.</p>
+              {number("stuckOrderDays", "Flag orders still processing after (days)", `Default: ${dflt?.stuckOrderDays}`, { min: 1, max: 60 })}
             </section>
 
             <section className="card form-grid">

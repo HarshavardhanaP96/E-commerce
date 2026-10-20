@@ -151,6 +151,23 @@ class StoreSettingsIntegrationTest extends TenantIntegrationTest {
     }
 
     @Test
+    void stuckOrderDaysFollowsTheStoreWithAPlatformDefaultOfThree() throws Exception {
+        getSettings(acme, adminA).andExpect(jsonPath("$.effective.stuckOrderDays").value(3))
+                .andExpect(jsonPath("$.defaults.stuckOrderDays").value(3));
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("stuckOrderDays", 7))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.commerce.stuckOrderDays").value(7))
+                .andExpect(jsonPath("$.effective.stuckOrderDays").value(7));
+        getSettings(globex, adminB).andExpect(jsonPath("$.effective.stuckOrderDays").value(3));
+    }
+
+    @Test
+    void stuckOrderDaysMustBeBetweenOneAndSixty() throws Exception {
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("stuckOrderDays", 0))).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("commerce.stuckOrderDays: must be between 1 and 60"));
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("stuckOrderDays", 61))).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void aChangeIsRecordedInTheStoresOwnAuditLog() throws Exception {
         saveSettings(acme, adminA, Map.of("commerce", Map.of("shippingFee", 49))).andExpect(status().isOk());
         List<Document> entries = mongo.getCollection("audit_log")

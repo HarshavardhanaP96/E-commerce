@@ -39,9 +39,9 @@ public class StoreSettingsService {
 
     private static final Pattern GSTIN = Pattern.compile("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$");
     private static final List<String> FIELDS = List.of("commerce.shippingFee", "commerce.freeShippingAbove",
-            "commerce.defaultTaxRate", "commerce.maxCouponAmount", "commerce.minimumAge", "catalog.pageSize",
-            "catalog.lowStockThreshold", "invoice.gstin", "invoice.state", "regional.timeZone", "storefront.logoUrl",
-            "storefront.legalName", "storefront.address", "storefront.email", "storefront.phone",
+            "commerce.defaultTaxRate", "commerce.maxCouponAmount", "commerce.minimumAge", "commerce.stuckOrderDays",
+            "catalog.pageSize", "catalog.lowStockThreshold", "invoice.gstin", "invoice.state", "regional.timeZone",
+            "storefront.logoUrl", "storefront.legalName", "storefront.address", "storefront.email", "storefront.phone",
             "storefront.grievanceOfficer", "storefront.grievanceEmail");
     private static final FieldPolicy POLICY = Changes.policy(FIELDS, List.of());
 
@@ -90,6 +90,7 @@ public class StoreSettingsService {
         range("commerce.defaultTaxRate", c.defaultTaxRate(), 0, 100);
         range("commerce.maxCouponAmount", c.maxCouponAmount(), 1, 10_000_000);
         range("commerce.minimumAge", c.minimumAge(), StoreDefaults.MINIMUM_AGE_FLOOR, 100);
+        range("commerce.stuckOrderDays", c.stuckOrderDays(), 1, 60);
         return c;
     }
 
@@ -132,6 +133,7 @@ public class StoreSettingsService {
         v.put("commerce.defaultTaxRate", s.commerce().defaultTaxRate());
         v.put("commerce.maxCouponAmount", s.commerce().maxCouponAmount());
         v.put("commerce.minimumAge", s.commerce().minimumAge());
+        v.put("commerce.stuckOrderDays", s.commerce().stuckOrderDays());
         v.put("catalog.pageSize", s.catalog().pageSize());
         v.put("catalog.lowStockThreshold", s.catalog().lowStockThreshold());
         v.put("invoice.gstin", s.invoice().gstin());

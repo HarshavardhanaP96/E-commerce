@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("app.store.defaults")
 public record StoreDefaults(Double shippingFee, Double freeShippingAbove, Double defaultTaxRate,
                             Double maxCouponAmount, Integer minimumAge, Integer pageSize, Integer lowStockThreshold,
-                            String timeZone) {
+                            String timeZone, Integer stuckOrderDays) {
 
     /** The legal floor: no store may sign up shoppers younger than this. */
     static final int MINIMUM_AGE_FLOOR = 18;
@@ -24,5 +24,6 @@ public record StoreDefaults(Double shippingFee, Double freeShippingAbove, Double
         pageSize = pageSize == null || pageSize <= 0 || pageSize > 100 ? 10 : pageSize;
         lowStockThreshold = lowStockThreshold == null || lowStockThreshold < 0 ? 5 : lowStockThreshold;
         timeZone = timeZone == null || !ZoneId.getAvailableZoneIds().contains(timeZone) ? "Asia/Kolkata" : timeZone;
+        stuckOrderDays = stuckOrderDays == null || stuckOrderDays < 1 || stuckOrderDays > 60 ? 3 : stuckOrderDays;
     }
 }

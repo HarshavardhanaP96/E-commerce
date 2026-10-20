@@ -51,6 +51,8 @@ app:
       max-coupon-amount: ${STORE_MAX_COUPON_AMOUNT:100000}
       # Never below 18: a store can ask for older shoppers, not younger.
       minimum-age: ${STORE_MINIMUM_AGE:18}
+      # An order still Processing after this many days is flagged as stuck on Analytics → Orders.
+      stuck-order-days: ${STORE_STUCK_ORDER_DAYS:3}
       page-size: ${PRODUCT_PER_PAGE:10}
       low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
       # Days start and end in this zone on the store's dashboard, orders and invoices.

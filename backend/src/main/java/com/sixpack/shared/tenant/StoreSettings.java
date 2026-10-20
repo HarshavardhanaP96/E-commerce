@@ -22,10 +22,11 @@ public record StoreSettings(Commerce commerce, Catalog catalog, Invoice invoice,
      * @param defaultTaxRate    GST percent for products that do not set their own
      * @param maxCouponAmount   largest flat discount a coupon may give
      * @param minimumAge        youngest age a shopper may sign up at; never below the platform's legal floor
+     * @param stuckOrderDays    an order still Processing after this many days is flagged on Analytics → Orders
      */
     public record Commerce(Double shippingFee, Double freeShippingAbove, Double defaultTaxRate, Double maxCouponAmount,
-                           Integer minimumAge) {
-        public static final Commerce NONE = new Commerce(null, null, null, null, null);
+                           Integer minimumAge, Integer stuckOrderDays) {
+        public static final Commerce NONE = new Commerce(null, null, null, null, null, null);
     }
 
     /**
