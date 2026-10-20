@@ -131,14 +131,14 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           severity: CRITICAL
