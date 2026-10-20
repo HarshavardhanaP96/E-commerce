@@ -52,6 +52,32 @@ export type CouponsResponse = { success: boolean; coupons: Coupon[] };
 export type DiscountResponse = { success: boolean; discount: number };
 
 export type StatsResponse = { success: boolean; stats: Stats };
+
+/** refunds, discount and tax are absent when the view is narrowed to a product or category. */
+export type SummaryKpis = {
+  revenue: number;
+  orders: number;
+  averageOrderValue: number;
+  units: number;
+  refunds?: number | null;
+  discount?: number | null;
+  tax?: number | null;
+};
+export type SummaryChange = { revenue: number; orders: number; averageOrderValue: number; units: number };
+export type Summary = {
+  from: string;
+  to: string;
+  timezone: string;
+  granularity: "day" | "week" | "month";
+  basis: "gross" | "net";
+  compareFrom?: string | null;
+  compareTo?: string | null;
+  current: SummaryKpis;
+  previous?: SummaryKpis | null;
+  changePercent?: SummaryChange | null;
+  series: { start: string; revenue: number; orders: number }[];
+};
+export type SummaryResponse = { success: boolean; summary: Summary };
 export type PieResponse = { success: boolean; charts: Pie };
 export type BarResponse = { success: boolean; charts: Bar };
 export type LineResponse = { success: boolean; charts: Line };

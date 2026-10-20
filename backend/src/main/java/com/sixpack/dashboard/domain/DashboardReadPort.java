@@ -3,6 +3,7 @@ package com.sixpack.dashboard.domain;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -42,4 +43,13 @@ public interface DashboardReadPort {
     List<LocalDate> userBirthDates(Scope scope);
 
     List<LatestTransaction> latestOrders(Scope scope, int limit);
+
+    /**
+     * Orders placed in [from, to), by local day in {@code zone}. Narrowed to a product or category, only the
+     * matching items count (see {@link DayTotals}).
+     */
+    Map<LocalDate, DayTotals> dailyOrders(Scope scope, Instant from, Instant to, ZoneId zone);
+
+    /** Refunds issued in [from, to) on orders in scope, by local day in {@code zone}; failed refunds are left out. */
+    Map<LocalDate, Double> dailyRefunds(Scope scope, Instant from, Instant to, ZoneId zone);
 }

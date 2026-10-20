@@ -172,6 +172,21 @@ gets 503 `Payments are not configured for this store` at checkout. Theme tokens 
 
 Month arrays run oldest to newest and end with the current month. Buckets account for the year.
 
+- `GET /summary?from=&to=&compare=&granularity=&basis=` (plus the scope filters) → `{success, summary:{from, to, timezone, granularity, basis, compareFrom?, compareTo?, current:{revenue, orders, averageOrderValue, units, refunds?, discount?, tax?}, previous?:{...same}, changePercent?:{revenue, orders, averageOrderValue, units}, series:[{start, revenue, orders}]}}`
+  - `from`/`to`: inclusive `YYYY-MM-DD` days in the shop's time zone (`app.analytics.timezone`, default `Asia/Kolkata`);
+    default the last 30 days ending today; at most 731 days. `compare`: `previous` (default; the same number of days
+    ending the day before `from`), `year` (the same days a year earlier) or `none`. `granularity`: `day`, `week`
+    (Monday start) or `month`; default by length (≤ 31 days daily, ≤ 92 weekly, else monthly); at most 400 points.
+    `basis`: `net` (default) or `gross`. A bad value or range is a 400.
+  - **Metric definitions.** An order counts on the local day it was placed. **Gross revenue** = the sum of order
+    `total`s. **Refunds** = `payment.refunds[].amount` not in status `failed`, counted on the local day each refund
+    was issued (so a refund can fall in a later period than its order). **Net revenue** = gross revenue − refunds.
+    **Average order value** = revenue ÷ orders (0 with no orders). **Units** = the sum of item quantities.
+    **Discount** and **tax** = the sum of the order fields. Change % is rounded; growth from zero is 100.
+  - With `productId` or `category`, only the matching items count: revenue = their price × quantity, units = their
+    quantities, orders = the orders containing them. `refunds`, `discount` and `tax` are then absent, since they
+    belong to the whole order. The series takes refunds off the bucket they were issued in (net basis only).
+
 ### Ops
 - `GET /actuator/health/liveness`, `/actuator/health/readiness`, `/actuator/prometheus`, `/actuator/info`
 - `GET /api-docs` (springdoc OpenAPI JSON), `/swagger-ui.html`. Both are disabled in prod (`SPRINGDOC_ENABLED=false`).
