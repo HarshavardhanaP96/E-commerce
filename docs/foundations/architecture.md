@@ -101,8 +101,9 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   indexes, and `TenantBackfill` gives existing documents to the default tenant. Users are per tenant (the same email is a
   separate account in each store), so reset tokens, consents, the audit log and the dashboard follow. Caches are keyed by
   tenant in one `CacheManager` decorator that fails closed; uploads go to `uploads/<tenantId>/`; rate limits include the
-  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details) sit on the `Tenant`
-  and fall back to `app.*` properties, so the default tenant keeps running on today's environment; payment secrets are
+  tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details, feature switches) sit on
+  the `Tenant` and fall back to `app.*` properties (feature switches to `app.features.defaults`, read through
+  `TenantFeatures`; `variants` is the first), so the default tenant keeps running on today's environment; payment secrets are
   never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
   gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
   and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an

@@ -16,6 +16,8 @@ export type PlatformTenant = {
   payment?: Record<string, string | null>;
   mail?: Record<string, string | null>;
   storefront?: Record<string, string | null>;
+  /** The store's own feature switches; a missing key follows the platform default. */
+  features?: Record<string, boolean>;
   createdAt?: string;
 };
 

@@ -42,6 +42,10 @@ app:
   products:
     page-size: ${PRODUCT_PER_PAGE:10}
     variants-enabled: ${PRODUCT_VARIANTS_ENABLED:false}
+  features:
+    # Platform default for each per-store feature switch (a platform admin can override it per store).
+    defaults:
+      variants: ${app.products.variants-enabled}
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).

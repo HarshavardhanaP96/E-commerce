@@ -1,6 +1,7 @@
 package com.sixpack.tenant.application;
 
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
@@ -44,13 +45,17 @@ public class TenantAdminService {
 
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
-                                MailSettings mail, StorefrontSettings storefront, AdminCommand admin) {
+                                MailSettings mail, StorefrontSettings storefront, Map<String, Boolean> features,
+                                AdminCommand admin) {
     }
 
-    /** Null means "keep"; a nested settings object, when given, replaces the previous one. */
+    /**
+     * Null means "keep"; a nested settings object, when given, replaces the previous one. {@code features}
+     * replaces the store's feature switches; an empty map returns every feature to the platform default.
+     */
     public record UpdateCommand(String name, List<String> domains, Map<String, String> theme, String locale,
                                 String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                                StorefrontSettings storefront) {
+                                StorefrontSettings storefront, Map<String, Boolean> features) {
     }
 
     private final TenantRepository tenants;
@@ -89,12 +94,14 @@ public class TenantAdminService {
         PaymentSettings payment = validPayment(c.payment());
         MailSettings mail = validMail(c.mail());
         StorefrontSettings storefront = validStorefront(c.storefront());
+        Map<String, Boolean> features = validFeatures(c.features());
         if (c.admin() != null) {
             requireAdmin(c.admin());
         }
 
         Tenant created = tenants.save(new Tenant(null, slug, name, TenantStatus.ACTIVE, domains, theme,
-                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront));
+                blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront,
+                features));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -122,10 +129,28 @@ public class TenantAdminService {
                 u.legal() != null ? validLegal(u.legal()) : current.legal(),
                 u.payment() != null ? validPayment(u.payment()) : current.payment(),
                 u.mail() != null ? validMail(u.mail()) : current.mail(),
-                u.storefront() != null ? validStorefront(u.storefront()) : current.storefront()));
+                u.storefront() != null ? validStorefront(u.storefront()) : current.storefront(),
+                u.features() != null ? validFeatures(u.features()) : current.features()));
         registry.refresh();
         log.info("Tenant '{}' updated", updated.slug());
         return updated;
+    }
+
+    /** Known feature keys only, so a typo is an error instead of a switch that silently does nothing. */
+    private static Map<String, Boolean> validFeatures(Map<String, Boolean> features) {
+        if (features == null) {
+            return Map.of();
+        }
+        Map<String, Boolean> valid = new java.util.TreeMap<>();
+        features.forEach((key, on) -> {
+            if (Feature.fromKey(key).isEmpty()) {
+                throw ApiException.badRequest("features: unknown feature '" + key + "'");
+            }
+            if (on != null) {
+                valid.put(key, on);
+            }
+        });
+        return valid;
     }
 
     public Tenant suspend(String id) {
@@ -142,7 +167,7 @@ public class TenantAdminService {
 
     private Tenant setStatus(Tenant t, TenantStatus status) {
         Tenant saved = tenants.save(new Tenant(t.id(), t.slug(), t.name(), status, t.domains(), t.theme(), t.locale(),
-                t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail(), t.storefront()));
+                t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features()));
         registry.refresh();
         log.info("Tenant '{}' is now {}", saved.slug(), status);
         return saved;

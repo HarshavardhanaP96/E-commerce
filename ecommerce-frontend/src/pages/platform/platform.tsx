@@ -22,6 +22,7 @@ const editable = (t: PlatformTenant) => ({
   payment: t.payment,
   mail: t.mail,
   storefront: t.storefront,
+  features: t.features,
 });
 
 const Login = ({ onDone }: { onDone: () => void }) => {
@@ -172,7 +173,8 @@ const Tenants = ({ onSignOut }: { onSignOut: () => void }) => {
           <h2>Edit {editing.name}</h2>
           <p>
             Theme tokens, legal versions, the payment account reference (the secret lives in the server environment, never
-            here), the storefront details and the email link base. Unlisted fields stay as they are.
+            here), the storefront details, the email link base and feature switches (for example <code>"features": {"{"}"variants": true{"}"}</code>;
+            an empty <code>{"{}"}</code> returns every feature to the platform default). Unlisted fields stay as they are.
           </p>
           <textarea className="platform__json" rows={18} value={json} onChange={(e) => setJson(e.target.value)} spellCheck={false} />
           <div>

@@ -18,6 +18,8 @@ export type TenantConfig = {
   locale?: string;
   currency?: string;
   storefront?: StorefrontConfig;
+  /** Effective feature switches for this store (its own setting, else the platform default). */
+  features?: Record<string, boolean>;
 };
 
 /** The store this browser tab is showing. Set once, before the app renders. */

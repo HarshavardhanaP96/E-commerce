@@ -26,6 +26,7 @@ class TenantDocument {
     PaymentDoc payment;
     MailDoc mail;
     StorefrontDoc storefront;
+    Map<String, Boolean> features;
 
     static class LegalDoc {
         String termsVersion;

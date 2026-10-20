@@ -30,6 +30,8 @@ import java.util.Objects;
 import java.util.Optional;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
+import com.sixpack.shared.tenant.Feature;
+import com.sixpack.shared.tenant.TenantFeatures;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
 import java.util.Map;
@@ -76,15 +78,18 @@ public class ProductService {
     private final ProductProperties props;
     private final CategoryRepository categories;
     private final AuditTrail audit;
+    private final TenantFeatures features;
 
     ProductService(ProductRepository products, FileStorage storage, ApplicationEventPublisher events,
-                   ProductProperties props, CategoryRepository categories, AuditTrail audit) {
+                   ProductProperties props, CategoryRepository categories, AuditTrail audit,
+                   TenantFeatures features) {
         this.products = products;
         this.storage = storage;
         this.events = events;
         this.props = props;
         this.categories = categories;
         this.audit = audit;
+        this.features = features;
     }
 
     @Cacheable(PRODUCTS_LATEST)
@@ -184,7 +189,7 @@ public class ProductService {
      */
     @CacheEvict(cacheNames = {PRODUCTS_LATEST, PRODUCTS_CATEGORIES, PRODUCTS_ADMIN, PRODUCTS_BY_ID}, allEntries = true)
     public Product replaceVariants(String id, VariantsCommand cmd) {
-        if (!props.variantsEnabled()) {
+        if (!features.enabled(Feature.VARIANTS)) {
             throw ApiException.forbidden("Product variants are not enabled yet");
         }
         AtomicReference<Product> before = new AtomicReference<>();

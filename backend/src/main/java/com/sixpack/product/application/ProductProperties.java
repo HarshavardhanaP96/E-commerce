@@ -3,8 +3,8 @@ package com.sixpack.product.application;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * @param variantsEnabled gate for creating product variants. Stays off until checkout, orders and the storefront
- *                        understand variants (docs/superpowers/plans/2026-10-18-product-variants.md).
+ * @param variantsEnabled platform default for the {@code variants} feature (see {@code app.features.defaults}).
+ *                        A store can override it; the gate itself reads {@link com.sixpack.shared.tenant.TenantFeatures}.
  */
 @ConfigurationProperties("app.products")
 public record ProductProperties(int pageSize, boolean variantsEnabled) {

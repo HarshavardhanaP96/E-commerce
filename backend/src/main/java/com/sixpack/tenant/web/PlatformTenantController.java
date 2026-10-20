@@ -40,22 +40,22 @@ class PlatformTenantController {
                          @Size(max = 20) List<String> domains, Map<String, String> theme,
                          @Size(max = 16) String locale, @Size(max = 8) String currency, LegalSettings legal,
                          PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                         @Valid AdminRequest admin) {
+                         Map<String, Boolean> features, @Valid AdminRequest admin) {
     }
 
     record UpdateRequest(@Size(max = 80) String name, @Size(max = 20) List<String> domains,
                          Map<String, String> theme, @Size(max = 16) String locale, @Size(max = 8) String currency,
                          LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                         StorefrontSettings storefront) {
+                         StorefrontSettings storefront, Map<String, Boolean> features) {
     }
 
     record TenantView(@JsonProperty("id") String id, String slug, String name, String status, List<String> domains,
                       Map<String, String> theme, String locale, String currency, LegalSettings legal,
                       PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                      Instant createdAt) {
+                      Map<String, Boolean> features, Instant createdAt) {
         static TenantView from(Tenant t) {
             return new TenantView(t.id(), t.slug(), t.name(), t.status().name(), t.domains(), t.theme(), t.locale(),
-                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.createdAt());
+                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.createdAt());
         }
     }
 
@@ -81,14 +81,14 @@ class PlatformTenantController {
         AdminCommand admin = r.admin() == null ? null
                 : new AdminCommand(r.admin().name(), r.admin().email(), r.admin().password());
         Tenant created = service.create(new CreateCommand(r.slug(), r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), admin));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), admin));
         return ApiResponse.of("message", "Tenant " + created.slug() + " created", "tenant", TenantView.from(created));
     }
 
     @PutMapping("/{id}")
     Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateRequest r) {
         Tenant updated = service.update(id, new UpdateCommand(r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront()));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features()));
         return ApiResponse.of("message", "Tenant updated", "tenant", TenantView.from(updated));
     }
 
