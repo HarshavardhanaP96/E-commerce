@@ -15,6 +15,26 @@
 - Frontend: `tsc` + ESLint in CI. E2E with Playwright against `docker compose` is TBD; add it when the UI
   stabilises after this migration.
 
+## Before the first deploy of everything built since the migration
+Run these once, in this order. The first two have never been done for this work.
+1. **Click through it in a browser** (`docker compose up --build`), as a customer and as an admin: register and log in; the
+   address book and the saved-address picker at checkout; checkout with recipient name, phone, billing address and notes;
+   the order page with its number and timeline; coupon create, pause and apply in the cart (percent coupon with a minimum);
+   the product, category and variant admin screens; the audit log page; the admin agreement dialog; the privacy page data
+   export. Then open `/platform`, create a second tenant on another hostname, and check its theme, name, logo and
+   legal pages differ from the first store.
+2. **Let CI run**: push, then watch the pipeline (a branch named `fix/ci-trivy-action-tag` exists for a CI change; check whether it has been merged first). There is no
+   end-to-end browser test yet; this is the only automated check of the frontend beyond `build` and `lint`.
+3. **Merge order**: the audit, admin-agreement and variants-backend work already on `main` came from other branches that
+   still receive commits (`feat/multi-tenancy` is misnamed and holds audit work; `feat/product-variants` holds the storefront
+   work). Merge those once, then this branch, and expect small conflicts in the shared test base class and the docs.
+4. **History**: the first consent/auth commit (`feat/consent-auth-wip`) was committed unreviewed in one piece and later
+   split into four commits on the `main-split` branch. Decide whether to adopt that branch before pushing, because it
+   rewrites local history.
+5. **Environment**: the secrets and variables listed in the multi-tenancy rollout below, `LEGAL_*` versions, `CONSENT_IP_SALT`
+   (the audit log's hashed email evidence is only as strong as this salt), and product tax rates checked (any non-18% rate
+   changes quotes).
+
 ## Multi-tenancy rollout (run before the first deploy that contains it)
 1. Back up the database. Restore the backup into a scratch database and start the new build against it (`MONGO_DB=<scratch>`).
 2. At startup it creates the `default` tenant, assigns every existing document to it (`TenantBackfill`) and drops the old

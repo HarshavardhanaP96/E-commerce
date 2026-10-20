@@ -34,3 +34,33 @@
 - Concurrent checkouts on the last unit: handled by a conditional decrement (`stock >= qty`). The loser gets 409, and earlier decrements in the same order are rolled back.
 - A payment that was captured but whose order failed (e.g. out of stock after payment) is logged at ERROR with the payment id so it can be refunded by hand. Automated refunds come later.
 - Product deletion keeps existing orders intact, because orders snapshot name, photo and price.
+
+## Decisions needed (applied by default, not yet confirmed by the owner)
+These were left open in `docs/superpowers/specs/2026-10-18-multitenancy-design.md` §6 and built on the recommended
+default. Each is cheaper to change before a second real tenant exists.
+- **Customers per tenant (Q1):** separate accounts per store; the same email is a different person in each. The
+  alternative is one login across stores with a membership per tenant.
+- **Legal text (Q4):** policy versions and business details are per tenant, but the policy text is shared and
+  rebuilt with the store's name and details. Fully custom text per tenant is not built.
+- **Payments (Q5):** each tenant brings its own Razorpay account. A platform-collects-for-merchants model (Razorpay
+  Route, settlements) is a much larger piece of work.
+- **Scale and onboarding (Q7):** a handful of tenants created by a platform administrator. Self-serve signup, billing
+  and domain verification are not built.
+- **Existing data (Q14):** today's data becomes the `default` tenant. Confirm there is no data that should be split
+  or archived instead.
+- **Still open:** cross-tenant platform reporting (Q8); dedicated databases for regulated tenants (Q9); a procedure for
+  tenant offboarding, i.e. export then delete (Q13); whether the platform administrator must accept the admin agreement
+  (Q16); whether the platform may see every tenant's audit log (Q17); sender address per tenant when a mail provider
+  arrives (Q11); wildcard or custom-domain support (Q12).
+
+## Known limits (accepted for now)
+- **Suspension is not instant:** a suspended user is refused at login and `/me`, but a token already issued keeps
+  working until it expires (24 h). Enforcing it per request costs a database read per call.
+- **Coupons can be over-used** by the number of checkouts open at the same moment, and deleting an order does not
+  return a use (ADR-018).
+- **Product variants are off** (`app.products.variants-enabled=false`) until the storefront and admin editor exist.
+- **`emailVerified` is stored but nothing sets it**; there is no verification flow.
+- **Platform administrator actions** are logged but not written to the tenant-scoped audit log.
+- **The tenant is chosen from the request host**, so the ingress must overwrite any client-supplied
+  `X-Forwarded-Host`, and a second tenant needs `TENANT_DEFAULT_DOMAINS` set first.
+- **Payment method and failure reason** are not recorded; a captured payment whose order failed is still refunded by hand.
