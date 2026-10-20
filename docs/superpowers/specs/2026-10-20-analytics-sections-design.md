@@ -248,7 +248,7 @@ TDD per section, red first:
 - D4 Trends live inside each tab; no Trends tab.
 - D5 State: normalise at read time and switch Indian checkout to a dropdown (user choice).
 - D6 Stuck-order days is a store setting; analysis constants (30-day cover window, minimum 3) are not.
-- D7 To record as **ADR-024** in `docs/foundations/architecture.md` when the first section lands; endpoint contracts
+- D7 To record as **ADR-025** (step 2 took ADR-024) in `docs/foundations/architecture.md` when the first section lands; endpoint contracts
   go into `docs/foundations/contracts.md` section by section.
 
 ## 9. Build order
@@ -256,6 +256,6 @@ TDD per section, red first:
 1. Shared: `SectionParams`, envelope, `CsvWriter`, tab shell + URL tab state.
 2. Overview → 3. Sales → 4. Orders (+ `stuckOrderDays` setting) → 5. Stock → 6. Customers → 7. Demand →
 8. Location (+ `IndianStates`) → 9. Checkout state dropdown + invoice same-state fix (own commit) →
-10. Help article, contracts, ADR-024.
+10. Help article, contracts, ADR-025.
 
 Each step ends green (backend `mvn verify`, frontend tests and build) and is committed on its own.
