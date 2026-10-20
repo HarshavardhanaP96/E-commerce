@@ -1,10 +1,12 @@
 package com.sixpack.dashboard.web;
 
+import com.sixpack.dashboard.application.OverviewService;
 import com.sixpack.dashboard.application.StoreTime;
 import com.sixpack.dashboard.domain.Section;
 import com.sixpack.dashboard.domain.SectionQuery;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.web.ApiResponse;
+import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 import org.springframework.http.ContentDisposition;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,9 +27,16 @@ class AnalyticsController {
     private static final MediaType CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
 
     private final StoreTime time;
+    private final OverviewService overview;
 
-    AnalyticsController(StoreTime time) {
+    AnalyticsController(StoreTime time, OverviewService overview) {
         this.time = time;
+        this.overview = overview;
+    }
+
+    @GetMapping("/overview")
+    ResponseEntity<?> overview(@Valid SectionRequest req) {
+        return respond("overview", req, overview::section);
     }
 
     private ResponseEntity<?> respond(String name, SectionRequest req, Function<SectionQuery, ? extends Section> load) {
