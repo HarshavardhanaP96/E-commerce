@@ -138,6 +138,6 @@ class AuditTrailIntegrationTest extends IntegrationTest {
     @Test
     void theRepositoryCanOnlyAppendAndSearch() {
         assertThat(Arrays.stream(AuditRepository.class.getDeclaredMethods()).map(Method::getName))
-                .containsExactlyInAnyOrder("append", "search");
+                .containsExactlyInAnyOrder("append", "search", "searchAllTenants");
     }
 }

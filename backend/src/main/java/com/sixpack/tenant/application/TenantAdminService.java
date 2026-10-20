@@ -1,5 +1,9 @@
 package com.sixpack.tenant.application;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
+import com.sixpack.audit.Changes;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.LegalSettings;
@@ -62,13 +66,22 @@ public class TenantAdminService {
     private final TenantRegistry registry;
     private final TenantProperties props;
     private final AdminProvisioning provisioning;
+    private final AuditTrail audit;
 
     TenantAdminService(TenantRepository tenants, TenantRegistry registry, TenantProperties props,
-                       AdminProvisioning provisioning) {
+                       AdminProvisioning provisioning, AuditTrail audit) {
         this.tenants = tenants;
         this.registry = registry;
         this.props = props;
         this.provisioning = provisioning;
+        this.audit = audit;
+    }
+
+    /** Platform actions go into the affected store's own log, so the store's admins can see them too. */
+    private void record(AuditAction action, Tenant before, Tenant after) {
+        Map<String, Object> was = before == null ? Map.of() : TenantAudit.view(before);
+        TenantContext.runAs(new TenantRef(after.id(), after.slug()), () -> audit.record(AuditEvent.of(action)
+                .on("tenant", after.id()).changing(Changes.diff(was, TenantAudit.view(after), TenantAudit.POLICY))));
     }
 
     public List<Tenant> list() {
@@ -113,6 +126,7 @@ public class TenantAdminService {
             }
         }
         registry.refresh();
+        record(AuditAction.TENANT_CREATED, null, created);
         log.info("Tenant '{}' created with domains {}", created.slug(), created.domains());
         return created;
     }
@@ -132,6 +146,7 @@ public class TenantAdminService {
                 u.storefront() != null ? validStorefront(u.storefront()) : current.storefront(),
                 u.features() != null ? validFeatures(u.features()) : current.features()));
         registry.refresh();
+        record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());
         return updated;
     }
@@ -169,6 +184,7 @@ public class TenantAdminService {
         Tenant saved = tenants.save(new Tenant(t.id(), t.slug(), t.name(), status, t.domains(), t.theme(), t.locale(),
                 t.currency(), t.createdAt(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features()));
         registry.refresh();
+        record(AuditAction.TENANT_STATUS_CHANGED, t, saved);
         log.info("Tenant '{}' is now {}", saved.slug(), status);
         return saved;
     }

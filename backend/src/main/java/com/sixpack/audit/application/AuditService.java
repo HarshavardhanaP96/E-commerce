@@ -29,6 +29,7 @@ class AuditService implements AuditTrail {
 
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
     private static final int MAX_USER_AGENT = 256;
+    private static final String PLATFORM_ADMIN = "PLATFORM_ADMIN";
 
     private record Actor(String id, String role) {
     }
@@ -77,7 +78,9 @@ class AuditService implements AuditTrail {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             AuthUser user = AuthUser.from(jwt);
-            return new Actor(user.id(), user.admin() ? "ADMIN" : "USER");
+            String role = PLATFORM_ADMIN.equals(jwt.getClaimAsString("role")) ? PLATFORM_ADMIN
+                    : user.admin() ? "ADMIN" : "USER";
+            return new Actor(user.id(), role);
         }
         return new Actor(null, inRequest ? "ANONYMOUS" : "SYSTEM");
     }

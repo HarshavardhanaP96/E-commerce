@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { server } from "../config";
+import type { AuditEntry } from "./auditAPI";
 
 export const PLATFORM_TOKEN_KEY = "platformToken";
 
@@ -28,6 +29,10 @@ export type NewTenantInput = {
   admin?: { name: string; email: string; password: string };
 };
 
+export type PlatformAuditEntry = AuditEntry & { tenantId: string | null };
+export type PlatformAuditFilters = { tenantId?: string; action?: string; page: number };
+type PlatformAuditResponse = { success: boolean; entries: PlatformAuditEntry[]; totalPage: number };
+
 type TenantsResponse = { success: boolean; tenants: PlatformTenant[] };
 type TenantResponse = { success: boolean; message: string; tenant: PlatformTenant };
 
@@ -45,7 +50,7 @@ export const platformAPI = createApi({
       return headers;
     },
   }),
-  tagTypes: ["tenants"],
+  tagTypes: ["tenants", "audit"],
   endpoints: (builder) => ({
     platformLogin: builder.mutation<{ success: boolean; message: string; token: string }, { email: string; password: string }>({
       query: (body) => ({ url: "login", method: "POST", body }),
@@ -53,15 +58,23 @@ export const platformAPI = createApi({
     tenants: builder.query<TenantsResponse, void>({ query: () => "tenants", providesTags: ["tenants"] }),
     createTenant: builder.mutation<TenantResponse, NewTenantInput>({
       query: (body) => ({ url: "tenants", method: "POST", body }),
-      invalidatesTags: ["tenants"],
+      invalidatesTags: ["tenants", "audit"],
     }),
     updateTenant: builder.mutation<TenantResponse, { id: string; body: Record<string, unknown> }>({
       query: ({ id, body }) => ({ url: `tenants/${id}`, method: "PUT", body }),
-      invalidatesTags: ["tenants"],
+      invalidatesTags: ["tenants", "audit"],
     }),
     setTenantStatus: builder.mutation<TenantResponse, { id: string; action: "suspend" | "activate" }>({
       query: ({ id, action }) => ({ url: `tenants/${id}/${action}`, method: "POST" }),
-      invalidatesTags: ["tenants"],
+      invalidatesTags: ["tenants", "audit"],
+    }),
+    /** Every store's audit log, read-only. */
+    platformAudit: builder.query<PlatformAuditResponse, PlatformAuditFilters>({
+      query: (filters) => ({
+        url: "audit",
+        params: Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== "" && v !== undefined)),
+      }),
+      providesTags: ["audit"],
     }),
   }),
 });
@@ -72,4 +85,5 @@ export const {
   useCreateTenantMutation,
   useUpdateTenantMutation,
   useSetTenantStatusMutation,
+  usePlatformAuditQuery,
 } = platformAPI;

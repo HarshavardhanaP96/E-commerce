@@ -152,6 +152,7 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 | `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, features?, admin?:{name,email,password}}` | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
 | `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `features` maps a switch (`variants`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
 | `POST /platform/tenants/{id}/suspend` / `/activate` | 🏛 | — | `{success, message, tenant}`. The default tenant cannot be suspended |
+| `GET /platform/audit` | 🏛 | query: same filters as `GET /admin/audit`, plus `tenantId?` | `{success, entries:[{…entry, tenantId}], totalPage}`. Read-only, across every store's log |
 
 🏛 = `PLATFORM_ADMIN`. Platform tokens are refused on every store endpoint (even public ones), and store tokens (admin or
 customer) are refused on `/platform/**`.

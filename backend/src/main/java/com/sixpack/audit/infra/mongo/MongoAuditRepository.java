@@ -9,6 +9,7 @@ import com.sixpack.audit.domain.AuditQuery;
 import com.sixpack.audit.domain.AuditRepository;
 import com.sixpack.shared.PageResult;
 import java.util.List;
+import java.util.function.BiFunction;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -33,6 +34,19 @@ class MongoAuditRepository implements AuditRepository {
 
     @Override
     public PageResult<AuditEntry> search(AuditQuery q) {
+        return page(filters(q), q, mongo::count, mongo::find);
+    }
+
+    @Override
+    public PageResult<AuditEntry> searchAllTenants(AuditQuery q, String tenantId) {
+        Query query = filters(q);
+        if (tenantId != null) {
+            query.addCriteria(Criteria.where(TenantMongo.FIELD).is(tenantId));
+        }
+        return page(query, q, mongo::countAcrossTenants, mongo::findAcrossTenants);
+    }
+
+    private static Query filters(AuditQuery q) {
         Query query = new Query();
         if (q.entityType() != null) {
             query.addCriteria(Criteria.where("entityType").is(q.entityType()));
@@ -59,16 +73,21 @@ class MongoAuditRepository implements AuditRepository {
             }
             query.addCriteria(range);
         }
-        long total = mongo.count(query, AuditDocument.class);
+        return query;
+    }
+
+    private static PageResult<AuditEntry> page(Query query, AuditQuery q,
+                                               BiFunction<Query, Class<AuditDocument>, Long> count,
+                                               BiFunction<Query, Class<AuditDocument>, List<AuditDocument>> find) {
+        long total = count.apply(query, AuditDocument.class);
         long skip = (long) (q.page() - 1) * q.size();
         if (skip > Integer.MAX_VALUE) {
             // Spring Data narrows skip to an int for the driver; anything this far out is past the end anyway.
             return new PageResult<>(List.of(), total);
         }
         query.with(NEWEST_FIRST).skip(skip).limit(q.size());
-        List<AuditEntry> items = mongo.find(query, AuditDocument.class).stream()
-                .map(MongoAuditRepository::toDomain).toList();
-        return new PageResult<>(items, total);
+        return new PageResult<>(find.apply(query, AuditDocument.class).stream()
+                .map(MongoAuditRepository::toDomain).toList(), total);
     }
 
     private static AuditDocument toDocument(AuditEntry e) {

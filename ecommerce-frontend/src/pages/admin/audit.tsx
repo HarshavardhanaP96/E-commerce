@@ -3,19 +3,11 @@ import { CellProps, Column } from "react-table";
 import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import { errorMessage } from "../../redux/api/baseQuery";
-import { AUDIT_ACTIONS, AuditChange, AuditEntry, useAuditLogQuery } from "../../redux/api/auditAPI";
+import { AUDIT_ACTIONS, AuditEntry, summariseChanges, useAuditLogQuery } from "../../redux/api/auditAPI";
 
-const ENTITY_TYPES = ["product", "category", "coupon", "order", "user", "address"];
+const ENTITY_TYPES = ["product", "category", "coupon", "order", "user", "address", "tenant"];
 
 type Row = AuditEntry & { actor: string; entity: string; summary: string };
-
-const show = (value: unknown) =>
-  value === null || value === undefined ? "—" : Array.isArray(value) ? value.join(", ") : String(value);
-
-const summarise = (changes: AuditChange[]) =>
-  changes
-    .map((c) => (c.redacted ? `${c.field} changed` : `${c.field}: ${show(c.before)} → ${show(c.after)}`))
-    .join("; ");
 
 // Widths are tuned so the Changes column is visible at a 1280px viewport; the Record cell shows the type and
 // id in full in its tooltip (DataTable puts the cell value in the title; for When that is the exact ISO time) and is clipped with an ellipsis.
@@ -74,7 +66,7 @@ const AuditLog = () => {
         ...e,
         actor: e.actorId ? `${e.actorRole} ${e.actorId.slice(-6)}` : e.actorRole,
         entity: e.entityType ? `${e.entityType} ${e.entityId ?? ""}`.trim() : "—",
-        summary: summarise(e.changes),
+        summary: summariseChanges(e.changes),
       })),
     [currentData]
   );
