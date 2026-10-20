@@ -5,6 +5,7 @@ import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
+import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.tenant.application.TenantAdminService;
 import com.sixpack.tenant.application.TenantAdminService.AdminCommand;
@@ -44,22 +45,23 @@ class PlatformTenantController {
                          @Size(max = 20) List<String> domains, Map<String, String> theme,
                          @Size(max = 16) String locale, @Size(max = 8) String currency, LegalSettings legal,
                          PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                         Map<String, Boolean> features, @Valid AdminRequest admin) {
+                         Map<String, Boolean> features, TenantLimits limits, @Valid AdminRequest admin) {
     }
 
     record UpdateRequest(@Size(max = 80) String name, @Size(max = 20) List<String> domains,
                          Map<String, String> theme, @Size(max = 16) String locale, @Size(max = 8) String currency,
                          LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                         StorefrontSettings storefront, Map<String, Boolean> features) {
+                         StorefrontSettings storefront, Map<String, Boolean> features, TenantLimits limits) {
     }
 
     record TenantView(@JsonProperty("id") String id, String slug, String name, String status, List<String> domains,
                       Map<String, String> theme, String locale, String currency, LegalSettings legal,
                       PaymentSettings payment, MailSettings mail, StorefrontSettings storefront,
-                      Map<String, Boolean> features, Instant deletionDueAt, Instant createdAt) {
+                      Map<String, Boolean> features, TenantLimits limits, Instant deletionDueAt,
+                      Instant createdAt) {
         static TenantView from(Tenant t) {
             return new TenantView(t.id(), t.slug(), t.name(), t.status().name(), t.domains(), t.theme(), t.locale(),
-                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.deletionDueAt(),
+                    t.currency(), t.legal(), t.payment(), t.mail(), t.storefront(), t.features(), t.limits(), t.deletionDueAt(),
                     t.createdAt());
         }
     }
@@ -88,14 +90,14 @@ class PlatformTenantController {
         AdminCommand admin = r.admin() == null ? null
                 : new AdminCommand(r.admin().name(), r.admin().email(), r.admin().password());
         Tenant created = service.create(new CreateCommand(r.slug(), r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), admin));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits(), admin));
         return ApiResponse.of("message", "Tenant " + created.slug() + " created", "tenant", TenantView.from(created));
     }
 
     @PutMapping("/{id}")
     Map<String, Object> update(@PathVariable String id, @Valid @RequestBody UpdateRequest r) {
         Tenant updated = service.update(id, new UpdateCommand(r.name(), r.domains(), r.theme(), r.locale(),
-                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features()));
+                r.currency(), r.legal(), r.payment(), r.mail(), r.storefront(), r.features(), r.limits()));
         return ApiResponse.of("message", "Tenant updated", "tenant", TenantView.from(updated));
     }
 

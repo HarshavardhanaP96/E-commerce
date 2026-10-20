@@ -51,7 +51,7 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
 ### Observability plan
 - **Metrics:** Micrometer → `/actuator/prometheus`. HTTP server metrics, JVM, Mongo driver pool, Caffeine
   cache, and business counters (`sixpack.orders.placed`, `sixpack.checkout.failed{reason}`,
-  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`). Every one of these, and
+  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`, `sixpack.ratelimit.rejected`). Every one of these, and
   `http.server.requests`, carries a `tenant` tag: the store's slug, `unknown` for a host that matched no store,
   or `none` on platform and operational paths. The Grafana dashboard has a store picker and the payment and
   audit alerts name the store.
@@ -103,7 +103,10 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   tenant in one `CacheManager` decorator that fails closed; uploads go to `uploads/<tenantId>/`; rate limits include the
   tenant. Per-tenant settings (legal versions, payment account, email link base, storefront details, feature switches) sit on
   the `Tenant` and fall back to `app.*` properties (feature switches to `app.features.defaults`, read through
-  `TenantFeatures`; `variants` is the first), so the default tenant keeps running on today's environment; payment secrets are
+  `TenantFeatures`; `variants` is the first). Per-store limits (`TenantQuotas`, defaults `app.tenant.limits.*`):
+  product count (checked on create), upload bytes (`LocalFileStorage` measures a store's folder once, then
+  counts writes and deletes), and requests per minute (`TenantRateLimitFilter`, a fixed window right after tenant
+  resolution, 429 with `Retry-After`). All three are per backend instance, like the login limiter, so the default tenant keeps running on today's environment; payment secrets are
   never stored in Mongo (`TENANT_SECRET_<REF>` in the environment) and only the default tenant may use the platform's
   gateway. Platform administrators are a separate global collection with their own login and a token that has no tenant
   and is refused by every store (and the reverse), so no platform credential can read store data. Exempt paths run with an

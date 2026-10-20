@@ -2,6 +2,7 @@ package com.sixpack.storage.infra.local;
 
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantQuotas;
 import com.sixpack.storage.FileStorage;
 import com.sixpack.storage.ImageType;
 import java.io.IOException;
@@ -12,7 +13,10 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +29,12 @@ class LocalFileStorage implements FileStorage {
     private static final Logger log = LoggerFactory.getLogger(LocalFileStorage.class);
 
     private final Path root;
+    private final TenantQuotas quotas;
+    /** Bytes each tenant has stored, measured from disk once, then kept up to date by this instance. */
+    private final Map<String, AtomicLong> usage = new ConcurrentHashMap<>();
 
-    LocalFileStorage(StorageProperties props) {
+    LocalFileStorage(StorageProperties props, TenantQuotas quotas) {
+        this.quotas = quotas;
         this.root = Path.of(props.localDir()).toAbsolutePath().normalize();
     }
 
@@ -40,6 +48,7 @@ class LocalFileStorage implements FileStorage {
         }
         ImageType type = ImageType.detect(content)
                 .orElseThrow(() -> ApiException.badRequest("photo: only JPEG, PNG, GIF or WEBP images are allowed"));
+        reserve(content.length);
         LocalDate today = LocalDate.now();
         String tenantFolder = TenantContext.current().map(t -> t.id() + "/").orElse("");
         String relative = "%s%d/%02d/%02d/%s.%s".formatted(tenantFolder, today.getYear(), today.getMonthValue(),
@@ -49,6 +58,7 @@ class LocalFileStorage implements FileStorage {
             Files.createDirectories(target.getParent());
             Files.write(target, content);
         } catch (IOException e) {
+            release(content.length);
             throw new UncheckedIOException("Could not store upload", e);
         }
         return PUBLIC_PREFIX + relative;
@@ -70,7 +80,11 @@ class LocalFileStorage implements FileStorage {
             return;
         }
         try {
-            Files.deleteIfExists(target);
+            long size = Files.exists(target) ? Files.size(target) : 0;
+            boolean ownFile = TenantContext.current().map(t -> target.startsWith(root.resolve(t.id()))).orElse(false);
+            if (Files.deleteIfExists(target) && ownFile) {
+                release(size);
+            }
         } catch (IOException e) {
             log.warn("Could not delete {}", path, e);
         }
@@ -119,6 +133,7 @@ class LocalFileStorage implements FileStorage {
     @Override
     public void deleteTenantFiles() {
         Path dir = tenantDir();
+        usage.remove(TenantContext.require().id());
         if (!Files.isDirectory(dir)) {
             return;
         }
@@ -128,6 +143,39 @@ class LocalFileStorage implements FileStorage {
             }
         } catch (IOException e) {
             throw new UncheckedIOException("Could not delete uploads of tenant", e);
+        }
+    }
+
+    /** Counts {@code bytes} against the tenant's upload limit, or refuses them. No tenant (legacy paths): no limit. */
+    private void reserve(long bytes) {
+        if (TenantContext.current().isEmpty()) {
+            return;
+        }
+        AtomicLong used = usage.computeIfAbsent(TenantContext.require().id(), id -> new AtomicLong(sizeOf(tenantDir())));
+        if (used.addAndGet(bytes) > quotas.maxUploadBytes()) {
+            used.addAndGet(-bytes);
+            throw ApiException.forbidden("This store has used its upload storage");
+        }
+    }
+
+    private void release(long bytes) {
+        TenantContext.current().map(t -> usage.get(t.id())).ifPresent(used -> used.addAndGet(-bytes));
+    }
+
+    private static long sizeOf(Path dir) {
+        if (!Files.isDirectory(dir)) {
+            return 0;
+        }
+        try (Stream<Path> files = Files.walk(dir)) {
+            return files.filter(Files::isRegularFile).mapToLong(f -> {
+                try {
+                    return Files.size(f);
+                } catch (IOException e) {
+                    return 0;
+                }
+            }).sum();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not measure uploads", e);
         }
     }
 

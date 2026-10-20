@@ -66,6 +66,11 @@ app:
     # Offboarding: how long a closed store can be restored before its data is purged, and how often to check.
     deletion-grace: ${TENANT_DELETION_GRACE:30d}
     purge-interval: ${TENANT_PURGE_INTERVAL:1h}
+    # Platform default limits per store; a platform admin can set a store's own (PUT /platform/tenants/{id}).
+    limits:
+      products: ${TENANT_MAX_PRODUCTS:5000}
+      uploads: ${TENANT_MAX_UPLOADS:2GB}
+      requests-per-minute: ${TENANT_REQUESTS_PER_MINUTE:600}
   payment:
     provider: ${PAYMENT_PROVIDER:fake}
     razorpay:

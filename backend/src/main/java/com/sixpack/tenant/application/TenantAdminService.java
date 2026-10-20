@@ -11,6 +11,7 @@ import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantContext;
+import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.shared.tenant.TenantProperties;
 import com.sixpack.shared.tenant.TenantRef;
 import com.sixpack.tenant.domain.Tenant;
@@ -52,7 +53,7 @@ public class TenantAdminService {
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
                                 MailSettings mail, StorefrontSettings storefront, Map<String, Boolean> features,
-                                AdminCommand admin) {
+                                TenantLimits limits, AdminCommand admin) {
     }
 
     /**
@@ -61,7 +62,8 @@ public class TenantAdminService {
      */
     public record UpdateCommand(String name, List<String> domains, Map<String, String> theme, String locale,
                                 String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                                StorefrontSettings storefront, Map<String, Boolean> features) {
+                                StorefrontSettings storefront, Map<String, Boolean> features,
+                                TenantLimits limits) {
     }
 
     private final TenantRepository tenants;
@@ -118,13 +120,14 @@ public class TenantAdminService {
         MailSettings mail = validMail(c.mail());
         StorefrontSettings storefront = validStorefront(c.storefront());
         Map<String, Boolean> features = validFeatures(c.features());
+        TenantLimits limits = validLimits(c.limits());
         if (c.admin() != null) {
             requireAdmin(c.admin());
         }
 
         Tenant created = tenants.save(new Tenant(null, slug, name, TenantStatus.ACTIVE, domains, theme,
                 blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront,
-                features));
+                features, null, limits));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -158,11 +161,25 @@ public class TenantAdminService {
                 u.mail() != null ? validMail(u.mail()) : current.mail(),
                 u.storefront() != null ? validStorefront(u.storefront()) : current.storefront(),
                 u.features() != null ? validFeatures(u.features()) : current.features(),
-                current.deletionDueAt()));
+                current.deletionDueAt(),
+                u.limits() != null ? validLimits(u.limits()) : current.limits()));
         registry.refresh();
         record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());
         return updated;
+    }
+
+    /** Null fields fall back to the platform default; set ones must be positive. */
+    private static TenantLimits validLimits(TenantLimits limits) {
+        if (limits == null) {
+            return TenantLimits.NONE;
+        }
+        if ((limits.products() != null && limits.products() <= 0)
+                || (limits.uploadBytes() != null && limits.uploadBytes() <= 0)
+                || (limits.requestsPerMinute() != null && limits.requestsPerMinute() <= 0)) {
+            throw ApiException.badRequest("limits: values must be positive");
+        }
+        return limits;
     }
 
     /** Known feature keys only, so a typo is an error instead of a switch that silently does nothing. */

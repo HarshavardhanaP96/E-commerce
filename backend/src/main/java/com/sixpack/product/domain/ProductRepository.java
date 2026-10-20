@@ -11,6 +11,9 @@ public interface ProductRepository {
 
     Optional<Product> findById(String id);
 
+    /** Products the current store holds (for its product limit). */
+    long count();
+
     List<Product> findAllById(Collection<String> ids);
 
     /** Public (ACTIVE) products only. */

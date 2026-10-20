@@ -4,6 +4,7 @@ import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
+import com.sixpack.shared.tenant.TenantLimits;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,8 @@ import java.util.Map;
 public record Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
                      Map<String, String> theme, String locale, String currency, Instant createdAt,
                      LegalSettings legal, PaymentSettings payment, MailSettings mail,
-                     StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt) {
+                     StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt,
+                     TenantLimits limits) {
 
     public Tenant {
         status = status == null ? TenantStatus.ACTIVE : status;
@@ -27,6 +29,16 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
         mail = mail == null ? MailSettings.NONE : mail;
         storefront = storefront == null ? StorefrontSettings.NONE : storefront;
         features = features == null ? Map.of() : Map.copyOf(features);
+        limits = limits == null ? TenantLimits.NONE : limits;
+    }
+
+    /** With the platform's default limits. */
+    public Tenant(String id, String slug, String name, TenantStatus status, List<String> domains,
+                  Map<String, String> theme, String locale, String currency, Instant createdAt,
+                  LegalSettings legal, PaymentSettings payment, MailSettings mail,
+                  StorefrontSettings storefront, Map<String, Boolean> features, Instant deletionDueAt) {
+        this(id, slug, name, status, domains, theme, locale, currency, createdAt, legal, payment, mail, storefront,
+                features, deletionDueAt, null);
     }
 
     /** Not scheduled for deletion. */
@@ -41,7 +53,7 @@ public record Tenant(String id, String slug, String name, TenantStatus status, L
     /** The same store in another status; {@code deletionDueAt} is only kept while scheduled for deletion. */
     public Tenant withStatus(TenantStatus newStatus, Instant newDeletionDueAt) {
         return new Tenant(id, slug, name, newStatus, newStatus == TenantStatus.DELETED ? List.of() : domains, theme,
-                locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt);
+                locale, currency, createdAt, legal, payment, mail, storefront, features, newDeletionDueAt, limits);
     }
 
     /** Without feature switches. */

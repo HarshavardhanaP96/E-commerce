@@ -4,6 +4,7 @@ import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
+import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.tenant.domain.Tenant;
 import com.sixpack.tenant.domain.TenantRepository;
 import com.sixpack.tenant.domain.TenantStatus;
@@ -78,6 +79,10 @@ class MongoTenantRepository implements TenantRepository {
         doc.storefront.grievanceEmail = sf.grievanceEmail();
         doc.features = t.features();
         doc.deletionDueAt = t.deletionDueAt();
+        doc.limits = new TenantDocument.LimitsDoc();
+        doc.limits.products = t.limits().products();
+        doc.limits.uploadBytes = t.limits().uploadBytes();
+        doc.limits.requestsPerMinute = t.limits().requestsPerMinute();
         return toDomain(mongo.save(doc));
     }
 
@@ -100,6 +105,8 @@ class MongoTenantRepository implements TenantRepository {
                 d.storefront == null ? null : new StorefrontSettings(d.storefront.logoUrl, d.storefront.legalName,
                         d.storefront.address, d.storefront.email, d.storefront.phone, d.storefront.grievanceOfficer,
                         d.storefront.grievanceEmail),
-                d.features, d.deletionDueAt);
+                d.features, d.deletionDueAt,
+                d.limits == null ? null : new TenantLimits(d.limits.products, d.limits.uploadBytes,
+                        d.limits.requestsPerMinute));
     }
 }

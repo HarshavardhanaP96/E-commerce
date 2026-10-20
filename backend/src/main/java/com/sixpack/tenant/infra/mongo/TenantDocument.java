@@ -28,6 +28,13 @@ class TenantDocument {
     StorefrontDoc storefront;
     Map<String, Boolean> features;
     Instant deletionDueAt;
+    LimitsDoc limits;
+
+    static class LimitsDoc {
+        Integer products;
+        Long uploadBytes;
+        Integer requestsPerMinute;
+    }
 
     static class LegalDoc {
         String termsVersion;

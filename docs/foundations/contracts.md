@@ -150,7 +150,7 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 | `POST /platform/login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token}`. Platform credentials only; the token has role `PLATFORM_ADMIN` and no tenant |
 | `GET /platform/tenants`, `GET /platform/tenants/{id}` | 🏛 | — | `{success, tenants}` / `{success, tenant}` |
 | `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, features?, admin?:{name,email,password}}` | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
-| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `features` maps a switch (`variants`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
+| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `limits: {products?, uploadBytes?, requestsPerMinute?}` sets the store's own limits (null or omitted field = platform default `TENANT_MAX_PRODUCTS` 5000, `TENANT_MAX_UPLOADS` 2GB, `TENANT_REQUESTS_PER_MINUTE` 600; non-positive is 400). `features` maps a switch (`variants`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
 | `POST /platform/tenants/{id}/suspend` / `/activate` | 🏛 | — | `{success, message, tenant}`. The default tenant cannot be suspended |
 | `GET /platform/tenants/{id}/export` | 🏛 | — | `application/zip` download `<slug>-export.zip`: `manifest.json` (tenant, `exportedAt`, `counts` per collection, `omitted`), `<collection>.json` (Mongo relaxed Extended JSON array) for every tenant collection except `password_reset_tokens` and `payment_intents`, `users` without `password`, and every uploaded file under its public path (`uploads/<tenantId>/…`). Audited as `TENANT_EXPORTED` |
 | `POST /platform/tenants/{id}/offboard` | 🏛 | — | `{success, message, tenant}` with `status: SCHEDULED_FOR_DELETION` and `deletionDueAt` (now + `TENANT_DELETION_GRACE`). The storefront answers 403 from then on. 400 for the default tenant, 409 if already scheduled or deleted |
@@ -179,7 +179,8 @@ Month arrays run oldest to newest and end with the current month. Buckets accoun
 
 ## Error handling conventions
 Every error is `{"success": false, "message": "<human readable>"}` with the right status:
-400 validation or a bad id, 401 not authenticated or a bad token, 403 not an admin or not the owner,
+400 validation or a bad id, 401 not authenticated or a bad token, 403 not an admin or not the owner, or a store
+limit reached ("This store has reached its limit of N products", "This store has used its upload storage"),
 404 not found, 409 conflict (duplicate email or coupon, out of stock), 413 upload too large,
-429 rate limited, 502 payment provider failure, 500 unexpected. A 500 never leaks a stack trace or internal
+429 rate limited (login limiter per IP, or the store's requests per minute, with `Retry-After`), 502 payment provider failure, 500 unexpected. A 500 never leaks a stack trace or internal
 detail; it's logged with the traceId. Validation messages name the field.

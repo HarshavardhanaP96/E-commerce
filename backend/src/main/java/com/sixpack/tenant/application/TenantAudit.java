@@ -26,7 +26,7 @@ final class TenantAudit {
                 "theme", "legal.termsVersion", "legal.privacyVersion", "legal.adminAupVersion", "payment.provider",
                 "payment.keyId", "payment.secretRef", "mail.baseUrl", "storefront.logoUrl", "storefront.legalName",
                 "storefront.address", "storefront.email", "storefront.phone", "storefront.grievanceOfficer",
-                "storefront.grievanceEmail"));
+                "storefront.grievanceEmail", "limits.products", "limits.uploadBytes", "limits.requestsPerMinute"));
         for (Feature f : Feature.values()) {
             fields.add("features." + f.key());
         }
@@ -57,6 +57,9 @@ final class TenantAudit {
         v.put("storefront.phone", t.storefront().phone());
         v.put("storefront.grievanceOfficer", t.storefront().grievanceOfficer());
         v.put("storefront.grievanceEmail", t.storefront().grievanceEmail());
+        v.put("limits.products", t.limits().products());
+        v.put("limits.uploadBytes", t.limits().uploadBytes());
+        v.put("limits.requestsPerMinute", t.limits().requestsPerMinute());
         t.features().forEach((key, on) -> v.put("features." + key, on));
         return v;
     }

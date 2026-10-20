@@ -21,6 +21,8 @@ export type PlatformTenant = {
   storefront?: Record<string, string | null>;
   /** The store's own feature switches; a missing key follows the platform default. */
   features?: Record<string, boolean>;
+  /** The store's own limits; null follows the platform default. */
+  limits?: { products?: number | null; uploadBytes?: number | null; requestsPerMinute?: number | null };
   createdAt?: string;
 };
 

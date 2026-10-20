@@ -32,6 +32,7 @@ import com.sixpack.shared.ApiException;
 import com.sixpack.shared.PageResult;
 import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.TenantFeatures;
+import com.sixpack.shared.tenant.TenantQuotas;
 import com.sixpack.storage.FileStorage;
 import java.util.List;
 import java.util.Map;
@@ -79,10 +80,12 @@ public class ProductService {
     private final CategoryRepository categories;
     private final AuditTrail audit;
     private final TenantFeatures features;
+    private final TenantQuotas quotas;
 
     ProductService(ProductRepository products, FileStorage storage, ApplicationEventPublisher events,
                    ProductProperties props, CategoryRepository categories, AuditTrail audit,
-                   TenantFeatures features) {
+                   TenantFeatures features, TenantQuotas quotas) {
+        this.quotas = quotas;
         this.products = products;
         this.storage = storage;
         this.events = events;
@@ -122,6 +125,10 @@ public class ProductService {
     public Product create(ProductCommand cmd) {
         if (cmd.photo() == null) {
             throw ApiException.badRequest("photo: is required");
+        }
+        int max = quotas.maxProducts();
+        if (products.count() >= max) {
+            throw ApiException.forbidden("This store has reached its limit of " + max + " products");
         }
         String photo = storage.storeImage(cmd.photo());
         List<String> gallery = storeAll(cmd.details().images());
