@@ -1,5 +1,6 @@
 package com.sixpack.dashboard.web;
 
+import com.sixpack.dashboard.application.OrdersService;
 import com.sixpack.dashboard.application.OverviewService;
 import com.sixpack.dashboard.application.SalesService;
 import com.sixpack.dashboard.application.StoreTime;
@@ -30,11 +31,13 @@ class AnalyticsController {
     private final StoreTime time;
     private final OverviewService overview;
     private final SalesService sales;
+    private final OrdersService ordersSection;
 
-    AnalyticsController(StoreTime time, OverviewService overview, SalesService sales) {
+    AnalyticsController(StoreTime time, OverviewService overview, SalesService sales, OrdersService ordersSection) {
         this.time = time;
         this.overview = overview;
         this.sales = sales;
+        this.ordersSection = ordersSection;
     }
 
     @GetMapping("/overview")
@@ -45,6 +48,11 @@ class AnalyticsController {
     @GetMapping("/sales")
     ResponseEntity<?> sales(@Valid SectionRequest req) {
         return respond("sales", req, sales::section);
+    }
+
+    @GetMapping("/orders")
+    ResponseEntity<?> orders(@Valid SectionRequest req) {
+        return respond("orders", req, ordersSection::section);
     }
 
     private ResponseEntity<?> respond(String name, SectionRequest req, Function<SectionQuery, ? extends Section> load) {
