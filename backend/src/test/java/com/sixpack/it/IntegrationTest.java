@@ -76,6 +76,9 @@ public abstract class IntegrationTest {
     @Autowired
     private com.sixpack.tenant.application.TenantBackfill tenantBackfill;
 
+    @Autowired
+    protected org.springframework.cache.CacheManager cacheManager;
+
     private com.sixpack.shared.tenant.TenantContext.Scope defaultTenantScope;
 
     /** Direct repository calls in tests run as the default tenant, like a request on localhost would. */
@@ -99,9 +102,12 @@ public abstract class IntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",
-                "password_reset_tokens", "email_verification_tokens", "consents", "categories", "coupon_redemptions", "audit_log"}) {
+                "password_reset_tokens", "email_verification_tokens", "consents", "categories", "coupon_redemptions", "audit_log",
+                "daily_sales", "daily_sales_state"}) {
             mongo.getCollection(c).deleteMany(new org.bson.Document());
         }
+        // TenantCache.clear() clears the whole delegate, so no tenant context is needed here
+        cacheManager.getCacheNames().forEach(name -> cacheManager.getCache(name).clear());
     }
 
     protected String register(String email) throws Exception {

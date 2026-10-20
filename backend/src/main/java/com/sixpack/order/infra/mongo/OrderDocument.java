@@ -7,6 +7,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -14,8 +15,13 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 
 /** Mirrors the legacy `orders` schema; {@code payment} and {@code termsVersion} are new and optional. */
 @Document("orders")
-@CompoundIndex(name = "tenant_order_number", def = "{'tenantId': 1, 'orderNumber': 1}", unique = true,
-        partialFilter = "{'orderNumber': {$type: 'string'}}")
+@CompoundIndexes({
+        @CompoundIndex(name = "tenant_order_number", def = "{'tenantId': 1, 'orderNumber': 1}", unique = true,
+                partialFilter = "{'orderNumber': {$type: 'string'}}"),
+        @CompoundIndex(name = "tenant_created", def = "{'tenantId': 1, 'createdAt': 1}"),
+        @CompoundIndex(name = "tenant_status_created", def = "{'tenantId': 1, 'status': 1, 'createdAt': 1}"),
+        @CompoundIndex(name = "tenant_user_created", def = "{'tenantId': 1, 'user': 1, 'createdAt': 1}")
+})
 class OrderDocument extends TenantDocument {
 
     @Id
