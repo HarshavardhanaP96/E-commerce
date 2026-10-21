@@ -93,6 +93,11 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-21: ADR-026 **A store's theme recolours its storefront only.** `applyTenantConfig` writes the
+  theme into one `<style id="tenant-theme">` scoped to `[data-surface="store"]` instead of `<html>` inline
+  style, which overrode the admin tokens too. `data-surface` is set in `main.tsx` before the first render.
+  A store accent without its own `--accent-strong`/`--accent-text` gets darker shades that reach 4.5:1
+  (`utils/contrast.ts`). Token contrast is enforced by `styles/tokens.test.ts`. Still active.
 - 2026-10-20: ADR-025 **Dashboard sections read live; exports are audited.** Products, customers, coupons,
   payments and tax (`/dashboard/{section}`) are drill-downs, so they aggregate `orders` (and `products`) live for
   the range instead of widening the daily summary; cached per store, zone and range like the summary, cleared on
