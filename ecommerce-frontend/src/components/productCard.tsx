@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { LuArrowRight, LuPlus } from "react-icons/lu";
 import { CartItem, Product } from "../types/types";
 import { formatMoney, transformImage } from "../utils/features";
-import { hasVariants, priceRange, swatches } from "../utils/variants";
+import { cardPricing, hasVariants, swatches } from "../utils/variants";
 
 type ProductsProps = {
   product: Product;
@@ -15,13 +15,14 @@ const ProductCard = ({ product, handler }: ProductsProps) => {
   const { _id: productId, photo, name, price, stock, taxRate } = product;
   const soldOut = stock < 1;
   const withVariants = hasVariants(product);
-  const range = priceRange(product);
+  const pricing = cardPricing(product);
   const colours = swatches(product);
   const to = `/product/${productId}`;
 
   return (
     <article className="product-card">
       <Link to={to} className="product-card__media" aria-label={`View ${name}`}>
+        <img className="product-card__backdrop" src={transformImage(photo)} alt="" aria-hidden loading="lazy" />
         <img src={transformImage(photo)} alt={name} loading="lazy" />
         {soldOut ? (
           <span className="product-card__tag product-card__tag--muted">Sold out</span>
@@ -36,8 +37,14 @@ const ProductCard = ({ product, handler }: ProductsProps) => {
             <Link to={to}>{name}</Link>
           </h3>
           <p className="product-card__price">
-            {withVariants && range.min !== range.max && <small>From </small>}
-            {formatMoney(withVariants ? range.min : price)}
+            {pricing.from && <small>From </small>}
+            {formatMoney(pricing.price)}
+            {pricing.mrp && (
+              <span className="product-card__was">
+                <s aria-label={`MRP ${formatMoney(pricing.mrp)}`}>{formatMoney(pricing.mrp)}</s>
+                <span className="product-card__off">{pricing.off}% off</span>
+              </span>
+            )}
           </p>
           {colours.length > 0 && (
             <ul className="swatches swatches--small" aria-label="Available colours">
