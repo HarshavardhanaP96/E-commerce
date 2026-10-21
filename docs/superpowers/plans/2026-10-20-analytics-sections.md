@@ -7204,3 +7204,48 @@ Implement Task 12 with these changes:
 5. `docs/CHALLENGES_AND_LIMITATIONS.md`: add any new limits this work introduced (e.g. cached order rows on very large stores, refund rate vs amount time bases).
 6. Spec status line: implemented per this plan and Amendment 1.
 7. Browser pass over all nine tabs at 1280px and 390px as Task 12 describes.
+
+---
+
+## Amendment 2 (2026-10-21): Audience — sales by gender and age band
+
+User decision (relayed by the "Analytics visibility" session): *"gender age charts are not necessary. but can provide sales filter by these category that would tell the target audience"* — chose **breakdown + filter**, added to this plan. Decision D2 stands: no gender/age pie charts.
+
+**Execution order after Amendment 1:** 14, 9, 15, 16, **19, 20, 21**, 17, 18. Task 18 also documents this amendment (contracts, ADR-026 privacy threshold, help lines).
+
+**Shared rules (all three tasks):**
+- Gender segments: `female`, `male`, `unknown` (gender is optional at sign-up; null or an erased account is unknown).
+- Age bands: `18-24`, `25-34`, `35-44`, `45-54`, `55+`, `unknown` (sign-up enforces 18+). Age is taken **at the period's end date in the store's zone** — one rule for the breakdown and the filter; a birthday inside the period can move a buyer up one band. State this in the contract and the UI note.
+- **Privacy threshold:** any cell or filtered result with fewer than **5** distinct buyers in the period is `small: true` with its figures null ("fewer than 5 buyers"); CSV leaves those cells blank; no per-person rows anywhere. 5 is a fixed analysis constant (like trending's 3), not a store setting.
+- No `$lookup` from orders to users (`orders.user` is a string, `users._id` an ObjectId — it would defeat the index). Breakdown: aggregate orders grouped by `user` (orders, revenue), then load those users' `gender` and `dob` with one `$in` query and bin them in Java. Filter: resolve matching user ids from `users` (gender, plus dob bounds for the band at the period end), then add `user $in ids` to the order match. All through `TenantMongo`.
+
+### Task 19: `AudienceBands` and the Audience table on the Customers tab
+
+**Files:** `dashboard/domain/AudienceBands.java` (+ `AudienceBandsTest`), `Sections.java` (`Customers` gains `Audience audience`), `SectionsReadPort` + `MongoSectionsReadAdapter` (buyers by user, users' gender/dob by id), `SectionsService.customers`, `SectionCsv` (table `audience`), `DashboardSectionsIntegrationTest`, `AnalyticsSections.tsx` (Customers), `types/sections.ts`, `utils/sections.ts` (`ExportTable`).
+
+**Requirements:**
+1. `AudienceBands` (pure): `gender(String raw) → female|male|unknown`; `band(LocalDate dob, LocalDate asOf) → 18-24 … 55+|unknown`; `table(List<Buyer> buyers, LocalDate asOf)` → rows = gender (+ total row), columns = band (+ total column), each cell `{buyers, orders, revenue, share}` where share = revenue share of the period; cells/totals with < 5 buyers → `small: true`, figures null; constant `MIN_BUYERS = 5`. `Buyer(userId, gender, dob, orders, revenue)`.
+2. `Sections.Customers` gains `audience` (`Audience(asOf, List<String> bands, List<AudienceRow> rows)` — shape your choice, documented in the record's Javadoc).
+3. CSV table `audience`: one line per gender × band (+ totals), columns `gender, age_band, buyers, orders, revenue, share_percent`; small cells' numbers blank. Audited like the other exports (it goes through `/export/{table}`).
+4. UI: an "Audience" card on Customers — a gender × band grid; small cells show "fewer than 5 buyers"; note stating the age rule. CSV button as on the other cards.
+5. TDD: band edges (birthday exactly on the period end; 24→25 boundary; under-18/future dob → unknown), unknown gender/dob, 4 vs 5 buyers threshold, totals, tenant isolation, CSV blanks for small cells.
+
+### Task 20: `gender` and `ageBand` filters on Sales and Products
+
+**Files:** `SectionRequest`/`SectionQuery` or a small `Audience` filter value (your choice, one place parses and validates), `SalesService`/`SalesReads` path, `SectionsService.products` + its controller params + cache keys, a shared user-id resolver in `dashboard.infra.mongo`, `analytics.tsx` (two selects shown only on Sales and Products, kept in the URL), `types/*`, tests.
+
+**Requirements:**
+1. Query params `gender` (`female|male|unknown`) and `ageBand` (`18-24|25-34|35-44|45-54|55+|unknown`) on `/sales` and `/products` (and their CSV exports). Invalid values → 400 in the `/summary` message style (`gender: unknown value`).
+2. Resolve matching user ids (age at the period end in the store zone) and add `user $in ids` to every order match those sections run. Segment-filtered requests never read `daily_sales` (they go live). The comparison period on Sales uses the same segment, with ages taken at the comparison period's end.
+3. Privacy: if the filtered period has fewer than 5 distinct buyers, the response says so (`small: true`) and returns no figures/rows; the UI shows "fewer than 5 buyers in this group".
+4. Cache keys include the segment.
+5. TDD: a filter that excludes other segments (numbers change as expected), the small-result case, invalid values → 400, tenant isolation, Products top sellers filtered.
+
+### Task 21: Privacy Policy and compliance note for the new purpose
+
+**Files:** `ecommerce-frontend/src/legal/policies.ts`, `docs/foundations/compliance-consent.md`, any legal-version constant/config the repo uses.
+
+**Requirements:**
+1. The Privacy Policy currently says DOB is used only to confirm 18+ and gender only for anonymous store statistics. Change it to say DOB is also used for **anonymous age-band statistics** (with the 5-buyer minimum stated plainly), and gender for anonymous statistics including sales by audience.
+2. Record the new processing purpose in `compliance-consent.md`.
+3. Find the repo's rule for material policy changes (version bump → re-consent). **Do not bump the version on your own:** report what the rule says and what a bump would trigger; the controller asks the user. Commit the text change; leave the version change for the user's decision.
