@@ -7130,3 +7130,77 @@ git commit -m "docs(analytics): section contracts, ADR-025 and the help article
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
+
+---
+
+## Amendment 1 (2026-10-21): build on `dev`'s step 3
+
+While Tasks 1–5 ran, another session merged its own step 3 into `dev` (`a8b2287`, ADR-025): tabs **Products, Customers, Coupons, Payments, Tax** via `DashboardSectionsController` / `SectionsService` / `SectionsReadPort` / `MongoSectionsReadAdapter`, date-range only (no compare/category/basis), every table downloadable from the audited `GET /dashboard/export/{table}` (`SectionCsv`, `AuditAction.ANALYTICS_EXPORTED`), frontend `components/admin/AnalyticsSections.tsx`, `utils/sections.ts` (`SECTION_TABS`, `downloadCsv`), `types/sections.ts`. The user chose: **keep `dev`'s five tabs and add only what they lack.**
+
+**Status of the original tasks:** 1–5 done (Overview, Sales, Orders, stuck-order setting). **Dropped:** 6 (Stock — `dev` Products has low stock with days left), 7 (Customers — `dev` has it). **Replaced:** 8 → Task 16 (only trending + bought-together, added to `dev`'s Products), 10 → Task 15, 11 → Task 17, 12 → Task 18. **Kept as written:** 9.
+
+**Execution order:** 13, 14, 9, 15, 16, 17, 18.
+
+**Final tab bar:** Overview · Sales · Orders · Products · Customers · Coupons · Payments · Tax · Location. Compare / basis / category filters show only on Overview, Sales, Orders and Location (the `dev` tabs ignore them).
+
+**This work's ADR is ADR-026** (`dev`'s step 3 took ADR-025). It supersedes the "ADR-025" text in Task 12.
+
+### Task 13: Merge `dev` and make one Analytics page
+
+**Files:** merge commit; `ecommerce-frontend/src/pages/admin/analytics.tsx`, `src/redux/api/dashboardAPI.ts`, `src/components/admin/analytics/sections.ts` (+ test), `src/utils/sections.ts` (+ test), anything else the merge conflicts on.
+
+**Requirements:**
+1. `git merge dev` into `feat/analytics` (a merge commit, no rebase). Message: `merge: dev (step 3 sections) into feat/analytics`.
+2. `dashboardAPI.ts`: keep every endpoint from both sides.
+3. One tab list, owned by `components/admin/analytics/sections.ts` `TABS` (it keeps `tabFrom`): `overview, sales, orders, products, customers, coupons, payments, tax` (Location is added in Task 15). Remove `SECTION_TABS`/`SectionTab` from `utils/sections.ts` if nothing else uses them; keep its export helpers. Update both test files so they still pass and `tabFrom("products")` returns `"products"`.
+4. `analytics.tsx`: the toolbar (date range always; compare, basis, category only when the tab is overview/sales/orders); one `<nav className="tabs">` rendered from `TABS`; body renders `OverviewTab` / `SalesTab` / `OrdersTab` with `SectionParams`, and `dev`'s `AnalyticsSection` component with `range` for the five `dev` tabs. `dev`'s legacy inline overview (inventory by category, gender ratio, order fulfilment, stock availability, revenue distribution, age, 12-month lines, latest transactions) is removed — gender/age by decision D2, the rest superseded by the tabs. Keep the low-stock card that `OverviewTab` already has. Keep `dev`'s "range in the store's time zone" note above the `dev` tabs.
+5. Backend: resolve any conflicts keeping both sides; `AnalyticsController` and `DashboardSectionsController` both map `/api/v1/dashboard` — confirm no duplicate route.
+6. Verify: `mvn -q verify`, `npm test && npm run lint && npm run build`, and a browser check that every tab loads (headless is fine, with a seeded or mocked API).
+
+### Task 14: Remove duplicates and audit this work's exports
+
+**Files:** `SalesSection`, `SalesReads`, `MongoSalesReads`, `SalesService` (+ their tests), `OrdersSection` (+ tests), `AnalyticsController`, `SalesTab.tsx`, `OrdersTab.tsx`, `types/analytics.ts`, `_analytics.scss`.
+
+**Requirements:**
+1. Sales: remove `byCategory` and `byPaymentMethod` (and `CategoryRow`, `MethodRow`, `ProductRevenue`, `MethodTotals`, `byProduct`, `categories`, `byPaymentMethod` reads) — `dev`'s Products and Payments show them. Sales keeps: trend with comparison series, `breakdown`. The tab keeps the trend chart and the "Where the money went" table; delete their cards and any styles only they used. Update unit and IT tests (drop the removed assertions, keep the rest).
+2. Orders: remove `topCoupons` from `Size` (and its UI table) — `dev`'s Coupons tab shows it. Keep size bands and average items.
+3. Exports: when `respond` serves CSV, record `AuditEvent.of(AuditAction.ANALYTICS_EXPORTED).on("report", <section name>)` through `AuditTrail`, exactly as `DashboardSectionsController.export` does — ADR-025 says every export is audited. Add one IT assertion (via the existing `auditEntries(...)` helper in `IntegrationTest`) that an Overview CSV download writes that audit entry.
+4. TDD for the audit assertion (red first). Run `mvn -q verify` and the frontend checks.
+
+### Task 9: `IndianStates` — unchanged, as written above.
+
+### Task 15: Location tab (Task 10, adapted)
+
+Implement Task 10 as written, with these changes:
+1. `LocationReads.topProducts` returns its own `record RegionProduct(String productId, String name, long units, double revenue)` (declared in `LocationReads`) instead of `DemandReads.LineSales` (Task 8 is dropped). `LocationService` maps it to `LocationSection.TopProduct`.
+2. The route is added to `AnalyticsController`; its CSV goes through `respond`, so it is audited (Task 14).
+3. Add `location` (label "Location") to `TABS`, last; it uses the compare/category filters.
+4. `dev`'s Customers "places" table (`SectionsService.customers` → `read.places`): group rows by state normalised with `IndianStates` (state label = official name; unrecognised raw text kept as typed), so the two tabs agree. Adjust `DashboardSectionsIntegrationTest` expectations only where normalisation changes them, and add one case where "KA" and "Karnataka" merge into one place.
+
+### Task 16: Trending and bought-together on the Products tab (from Task 8)
+
+**Files:** `dashboard/domain/Trending.java` (new), `Sections.java` (`Products` gains two fields), `SectionsReadPort` + `MongoSectionsReadAdapter` (pairs query), `SectionsService.products`, `SectionCsv` (two tables), `DashboardSectionsIntegrationTest`, a new `TrendingTest`, `AnalyticsSections.tsx` (Products), `types/sections.ts`, `utils/sections.ts` (`ExportTable`).
+
+**Requirements:**
+1. `Trending` (pure, unit-tested): rising/falling products by change in units against the previous period of the same length (`Period.previous()`); minimum 3 units in either period; no previous sales → `isNew: true`, change null; ranked by unit delta; `limit` rows each. Port Task 8's `Trending` but over `Sections.ProductSales` (productId, name, units). Row: `productId, name, units, previousUnits, change, isNew`.
+2. Bought together: pairs of distinct products in the same order, ≥ 3 shared orders, top 10, orders with more than 20 distinct products skipped — port Task 8's pairs pipeline (with the `$ifNull` guard) into `MongoSectionsReadAdapter`, through `TenantMongo` like the rest of that adapter. Names from the latest order item name, or the product; "Removed product" when unknown.
+3. `Sections.Products` gains `Trending trending` and `List<Pair> boughtTogether` (`Pair(productA, nameA, productB, nameB, orders)`); `SectionCsv` gains tables `trending` and `bought-together`; `ExportTable` gains both.
+4. UI: two cards on the Products tab (Rising / Falling as one card with two lists, and "Often bought together"), each with the existing CSV button.
+5. TDD: unit tests for `Trending` (min 3, new items, ordering, empty), IT asserting trending and pairs on seeded data and both CSV tables.
+
+### Task 17: State dropdown at checkout, state-aware invoices and GST report (Task 11, adapted)
+
+Implement Task 11 as written, plus:
+1. `SectionsService.sameState` (the Tax report) uses the same normalised comparison as `Invoice.sameState` — put one shared helper in `IndianStates` (`static boolean same(String a, String b)`: same state when both normalise; else trimmed case-insensitive text match; false for null/blank) and call it from both; `InvoiceSameStateTest` tests the helper's behaviour through `Invoice` or directly.
+2. `docs/CHALLENGES_AND_LIMITATIONS.md` P3: mark it fixed for Indian addresses (states are picked from a list and stored by official name; old free-text values are normalised when compared) and keep what remains open (no state code stored on addresses).
+
+### Task 18: Docs and browser pass (Task 12, adapted)
+
+Implement Task 12 with these changes:
+1. Contracts: document only `/overview`, `/sales` (trend + breakdown), `/orders` (no `topCoupons`), `/location`, `GET /api/v1/reference/indian-states`, the `?format=csv` audited exports, `commerce.stuckOrderDays`; update `dev`'s Products entry with `trending` and `boughtTogether` and its export table list.
+2. ADR-026 (not 025): "Analytics adds Overview, Sales, Orders and Location tabs beside step 3's sections" — one endpoint and read port per added tab, CSV via `?format=csv` audited like ADR-025's exports, Indian states normalised with `IndianStates`, stuck orders as a store setting; rejected: duplicating step 3's tabs.
+3. Help article: merge into `dev`'s Analytics article (it already describes Products…Tax); add Overview, Sales, Orders, Location lines and the Products additions; don't duplicate.
+4. `.env.example`: add `STORE_STUCK_ORDER_DAYS=3` next to `STORE_MINIMUM_AGE`.
+5. `docs/CHALLENGES_AND_LIMITATIONS.md`: add any new limits this work introduced (e.g. cached order rows on very large stores, refund rate vs amount time bases).
+6. Spec status line: implemented per this plan and Amendment 1.
+7. Browser pass over all nine tabs at 1280px and 390px as Task 12 describes.

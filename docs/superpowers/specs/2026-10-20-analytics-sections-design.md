@@ -1,6 +1,6 @@
 # Analytics sections — design
 
-Status: **approved in conversation 2026-10-20, awaiting review of this written spec.** Branch: `feat/analytics`
+Status: **Amended 2026-10-21 (plan Amendment 1: builds on dev's step-3 tabs; Stock and Customers dropped; ADR-026).** Previously: **approved in conversation 2026-10-20, awaiting review of this written spec.** Branch: `feat/analytics`
 (fast-forwarded to `dev` at `5e8541a`). This is step 3 of the analytics plan ("more shop sections + CSV"), widened with
 Location and in-tab trends. Steps 2 (daily summary table) and 4–6 are unchanged and out of scope here.
 
