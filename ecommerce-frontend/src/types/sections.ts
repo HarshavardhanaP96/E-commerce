@@ -5,6 +5,13 @@ export type ProductsSection = {
   stock: { productId: string; name: string; variantId: string | null; label: string | null; stock: number;
     threshold: number; unitsSold: number; daysLeft: number | null }[];
   idle: { productId: string; name: string; stock: number }[];
+  /** Against the same number of days before the range; `change` is null when `isNew`. */
+  trending: { rising: TrendRow[]; falling: TrendRow[] };
+  boughtTogether: { productA: string; nameA: string; productB: string; nameB: string; orders: number }[];
+};
+
+export type TrendRow = {
+  productId: string; name: string; units: number; previousUnits: number; change: number | null; isNew: boolean;
 };
 
 export type CustomersSection = {

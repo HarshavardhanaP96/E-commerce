@@ -3,8 +3,15 @@ import { server } from "../redux/config";
 import type { DateRange } from "./dateRange";
 
 /** The tables that download as CSV (GET /dashboard/export/{table}). */
-export type ExportTable = "top-products" | "categories" | "stock" | "idle-products" | "top-customers" | "places"
-  | "coupons" | "payment-methods" | "refunds" | "tax";
+export type ExportTable = "top-products" | "categories" | "stock" | "idle-products" | "trending" | "bought-together"
+  | "top-customers" | "places" | "coupons" | "payment-methods" | "refunds" | "tax";
+
+/** The name the server gives a product that is no longer in the catalogue. */
+export const REMOVED_PRODUCT = "Removed product";
+
+/** A rising or falling product's change in units: "New" when nothing sold before, else a signed percent. */
+export const trendChange = ({ change, isNew }: { change: number | null; isNew: boolean }) =>
+  isNew || change === null ? "New" : `${change > 0 ? "+" : ""}${change}%`;
 
 export const exportPath = (table: ExportTable, range: DateRange) =>
   `/api/v1/dashboard/export/${table}?${new URLSearchParams({ from: range.from, to: range.to })}`;

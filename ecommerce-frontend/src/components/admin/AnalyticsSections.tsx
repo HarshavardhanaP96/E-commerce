@@ -12,7 +12,8 @@ import {
 import { bucketLabel, DateRange } from "../../utils/dateRange";
 import { formatMoney } from "../../utils/features";
 import type { RangeSectionName } from "../../types/analytics";
-import { daysLeftLabel, downloadCsv, ExportTable } from "../../utils/sections";
+import type { TrendRow } from "../../types/sections";
+import { daysLeftLabel, downloadCsv, ExportTable, REMOVED_PRODUCT, trendChange } from "../../utils/sections";
 import { BarChart, DoughnutChart } from "./Charts";
 import { chartColors as c } from "./chartTheme";
 
@@ -61,6 +62,33 @@ const Status = ({ loading, error }: { loading: boolean; error: boolean }) =>
   loading ? <p className="section-card__empty">Loading…</p>
     : error ? <p className="data-table__empty">Could not load this section. Please retry.</p> : null;
 
+/** Rising or falling products; a removed product has no page to open. */
+const TrendList = ({ title, rows, empty, up }: { title: string; rows: TrendRow[]; empty: string; up: boolean }) => {
+  const navigate = useNavigate();
+  return (
+    <div>
+      <h5>{title}</h5>
+      {rows.length === 0 ? <Empty>{empty}</Empty> : (
+        <table className="mini-table">
+          <thead><tr><th>Product</th><th>Units</th><th>Before</th><th>Change</th></tr></thead>
+          <tbody>
+            {rows.map((r) => {
+              const open = r.name !== REMOVED_PRODUCT;
+              return (
+                <tr key={r.productId} className={open ? "clickable" : undefined}
+                    onClick={open ? () => navigate(`/admin/product/${r.productId}`) : undefined}>
+                  <td>{r.name}</td><td>{r.units}</td><td>{r.previousUnits}</td>
+                  <td className={up ? "green" : "red"}>{trendChange(r)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
 const Products = ({ range }: { range: DateRange }) => {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useGetProductsSectionQuery(range);
@@ -104,6 +132,28 @@ const Products = ({ range }: { range: DateRange }) => {
                 <tr key={r.productId} className="clickable" onClick={() => navigate(`/admin/product/${r.productId}`)}>
                   <td>{r.name}</td><td>{r.stock}</td>
                 </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+      <Card title="Rising and falling" table="trending" range={range} wide>
+        <div className="section-card__split">
+          <TrendList title="Rising" rows={p.trending.rising} up empty="No product sold more than before." />
+          <TrendList title="Falling" rows={p.trending.falling} up={false} empty="No product sold less than before." />
+        </div>
+        <p className="section-card__note">
+          Units sold against the same number of days just before this range. Products need 3 or more units in one
+          of the two.
+        </p>
+      </Card>
+      <Card title="Often bought together" table="bought-together" range={range}>
+        {p.boughtTogether.length === 0 ? <Empty>No two products were ordered together 3 or more times.</Empty> : (
+          <table className="mini-table">
+            <thead><tr><th>Products</th><th>Orders</th></tr></thead>
+            <tbody>
+              {p.boughtTogether.map((r) => (
+                <tr key={`${r.productA}+${r.productB}`}><td>{r.nameA} + {r.nameB}</td><td>{r.orders}</td></tr>
               ))}
             </tbody>
           </table>
