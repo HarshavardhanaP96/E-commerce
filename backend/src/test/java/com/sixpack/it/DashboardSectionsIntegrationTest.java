@@ -104,6 +104,27 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void placesGroupSpellingsOfAStateUnderItsOfficialName() throws Exception {
+        order(tenant, "u3", "Meera", "meera@shop.test", "2026-11-03T06:00:00Z", 500, 0, 0, null, "upi",
+                "KA", "Bengaluru", null, List.of(item(TEE, "Tee", 500, 1, 18.0)));
+        order(tenant, "u3", "Meera", "meera@shop.test", "2026-11-04T06:00:00Z", 300, 0, 0, null, "upi",
+                " karnataka", "bengaluru ", null, List.of(item(MUG, "Mug", 300, 1, 12.0)));
+        order(tenant, "u3", "Meera", "meera@shop.test", "2026-11-05T06:00:00Z", 100, 0, 0, null, "upi",
+                "Bangalore", "Bengaluru", null, List.of(item(MUG, "Mug", 100, 1, 12.0)));
+
+        mvc.perform(get("/api/v1/dashboard/customers").header("Authorization", bearer(admin))
+                        .param("from", "2026-11-01").param("to", "2026-11-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customers.places.length()").value(2))
+                .andExpect(jsonPath("$.customers.places[0].state").value("Karnataka"))
+                .andExpect(jsonPath("$.customers.places[0].city").value("Bengaluru"))
+                .andExpect(jsonPath("$.customers.places[0].orders").value(2))
+                .andExpect(jsonPath("$.customers.places[0].revenue").value(800.0))
+                // a state the list does not know stays as the shopper typed it
+                .andExpect(jsonPath("$.customers.places[1].state").value("Bangalore"));
+    }
+
+    @Test
     void couponsShowsUsesDiscountCostAndRevenue() throws Exception {
         section("coupons").andExpect(status().isOk())
                 .andExpect(jsonPath("$.coupons.ordersWithCoupon").value(2))

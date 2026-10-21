@@ -10,6 +10,7 @@ import com.sixpack.dashboard.domain.Sections.CouponUse;
 import com.sixpack.dashboard.domain.Sections.CustomerTotals;
 import com.sixpack.dashboard.domain.Sections.IdleProduct;
 import com.sixpack.dashboard.domain.Sections.MethodShare;
+import com.sixpack.dashboard.domain.Sections.Place;
 import com.sixpack.dashboard.domain.Sections.ProductSales;
 import com.sixpack.dashboard.domain.Sections.RefundPoint;
 import com.sixpack.dashboard.domain.Sections.StockLeft;
@@ -20,11 +21,13 @@ import com.sixpack.dashboard.domain.SectionsReadPort.RefundIssued;
 import com.sixpack.dashboard.domain.SectionsReadPort.TaxGroup;
 import com.sixpack.product.LowStockLine;
 import com.sixpack.product.ProductCatalog;
+import com.sixpack.shared.geo.IndianStates;
 import com.sixpack.shared.tenant.StoreConfig;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -103,7 +106,7 @@ public class SectionsService {
         long repeat = buyers.stream().filter(b -> b.orders() >= 2).count();
         return new Sections.Customers(buyers.size(), buyers.size() - returning, returning,
                 Sections.percent(repeat, buyers.size()), cut(buyers, limit),
-                cut(read.places(from, to), limit == 0 ? 0 : PLACES_SHOWN));
+                cut(places(read.places(from, to)), limit == 0 ? 0 : PLACES_SHOWN));
     }
 
     @Cacheable(cacheNames = DASHBOARD, key = "'coupons:' + #root.target.zone() + #period")
@@ -179,6 +182,32 @@ public class SectionsService {
         }).toList();
         return new Sections.Tax(sellerState, out, out.stream().mapToDouble(TaxRow::taxableValue).sum(),
                 out.stream().mapToDouble(TaxRow::tax).sum());
+    }
+
+    /**
+     * Groups places by state and city the way the Location tab does: spellings of one Indian state ("KA",
+     * "karnataka ") merge under its official name, and a state the list does not know keeps the shopper's text.
+     * Cities match ignoring case and surrounding spaces; a merged row keeps the spelling of its biggest part.
+     */
+    static List<Place> places(List<Place> rows) {
+        Map<String, Place> merged = new LinkedHashMap<>();
+        for (Place p : rows) {
+            String state = IndianStates.normalise(p.state()).map(IndianStates.State::name).orElse(trim(p.state()));
+            String city = trim(p.city());
+            String key = lower(state) + '\u0000' + lower(city);
+            merged.merge(key, new Place(state, city, p.orders(), p.revenue()),
+                    (a, b) -> new Place(a.state(), a.city(), a.orders() + b.orders(), a.revenue() + b.revenue()));
+        }
+        return merged.values().stream().sorted(Comparator.comparingDouble(Place::revenue).reversed()
+                .thenComparing(Comparator.comparingLong(Place::orders).reversed())).toList();
+    }
+
+    private static String trim(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private static String lower(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ROOT);
     }
 
     private static boolean sameState(String a, String b) {
