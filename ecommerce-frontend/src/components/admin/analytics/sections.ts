@@ -1,29 +1,30 @@
-import { SectionName, SeriesPoint } from "../../../types/analytics";
+import { RangeSectionName, SectionName, SeriesPoint } from "../../../types/analytics";
 
+export { bucketLabel } from "../../../utils/dateRange";
+
+/** The one Analytics tab bar, in order. */
 export const TABS: { id: SectionName; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "sales", label: "Sales" },
   { id: "orders", label: "Orders" },
-  { id: "stock", label: "Stock" },
+  { id: "products", label: "Products" },
   { id: "customers", label: "Customers" },
-  { id: "demand", label: "Demand" },
-  { id: "location", label: "Location" },
+  { id: "coupons", label: "Coupons" },
+  { id: "payments", label: "Payments" },
+  { id: "tax", label: "Tax" },
 ];
 
 export const tabFrom = (value: string | null): SectionName => TABS.find((t) => t.id === value)?.id ?? "overview";
+
+const RANGE_ONLY: readonly SectionName[] = ["products", "customers", "coupons", "payments", "tax"];
+
+/** Step 3's tabs read only the date range, so the compare, basis and category filters are hidden on them. */
+export const isRangeOnly = (tab: SectionName): tab is RangeSectionName => RANGE_ONLY.includes(tab);
 
 export const COMPARE_LABEL = { previous: "vs previous period", year: "vs last year", none: "" } as const;
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const HOURS = Array.from({ length: 24 }, (_, h) => h);
-
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "5 Oct" for days and weeks, "Oct 2026" for months; the date string is read as is, never shifted by time zone. */
-export const bucketLabel = (start: string, granularity: "day" | "week" | "month") => {
-  const [y, m, d] = start.split("-").map(Number);
-  return granularity === "month" ? `${MONTH_SHORT[m - 1]} ${y}` : `${d} ${MONTH_SHORT[m - 1]}`;
-};
 
 /** 0 for nothing, else 1..4 relative to the busiest cell. */
 export const heatLevel = (value: number, max: number) =>

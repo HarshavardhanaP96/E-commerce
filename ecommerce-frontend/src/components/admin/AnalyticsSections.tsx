@@ -11,7 +11,8 @@ import {
 } from "../../redux/api/dashboardAPI";
 import { bucketLabel, DateRange } from "../../utils/dateRange";
 import { formatMoney } from "../../utils/features";
-import { daysLeftLabel, downloadCsv, ExportTable, SectionTab } from "../../utils/sections";
+import type { RangeSectionName } from "../../types/analytics";
+import { daysLeftLabel, downloadCsv, ExportTable } from "../../utils/sections";
 import { BarChart, DoughnutChart } from "./Charts";
 import { chartColors as c } from "./chartTheme";
 
@@ -272,8 +273,8 @@ const Tax = ({ range }: { range: DateRange }) => {
   );
 };
 
-/** The section shown under the Analytics toolbar for every tab but Overview. */
-const AnalyticsSection = ({ tab, range }: { tab: Exclude<SectionTab, "overview">; range: DateRange }) => {
+/** The body of one of step 3's tabs (Products, Customers, Coupons, Payments, Tax). */
+const AnalyticsSection = ({ tab, range }: { tab: RangeSectionName; range: DateRange }) => {
   switch (tab) {
     case "products": return <Products range={range} />;
     case "customers": return <Customers range={range} />;

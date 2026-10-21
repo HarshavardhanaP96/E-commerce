@@ -1,6 +1,10 @@
 import { SummaryChange, SummaryKpis } from "./api-types";
 
-export type SectionName = "overview" | "sales" | "orders" | "stock" | "customers" | "demand" | "location";
+/** Step 3's tabs (DashboardSectionsController): date range only. */
+export type RangeSectionName = "products" | "customers" | "coupons" | "payments" | "tax";
+
+/** Every Analytics tab; Overview, Sales and Orders also take compare, basis and category. */
+export type SectionName = "overview" | "sales" | "orders" | RangeSectionName;
 
 export type SectionParams = {
   from: string;

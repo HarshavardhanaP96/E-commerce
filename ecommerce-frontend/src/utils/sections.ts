@@ -2,17 +2,6 @@ import { getToken } from "../redux/api/baseQuery";
 import { server } from "../redux/config";
 import type { DateRange } from "./dateRange";
 
-export type SectionTab = "overview" | "products" | "customers" | "coupons" | "payments" | "tax";
-
-export const SECTION_TABS: { value: SectionTab; label: string }[] = [
-  { value: "overview", label: "Overview" },
-  { value: "products", label: "Products" },
-  { value: "customers", label: "Customers" },
-  { value: "coupons", label: "Coupons" },
-  { value: "payments", label: "Payments" },
-  { value: "tax", label: "Tax" },
-];
-
 /** The tables that download as CSV (GET /dashboard/export/{table}). */
 export type ExportTable = "top-products" | "categories" | "stock" | "idle-products" | "top-customers" | "places"
   | "coupons" | "payment-methods" | "refunds" | "tax";

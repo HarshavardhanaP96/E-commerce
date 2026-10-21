@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysLeftLabel, exportFileName, exportPath, SECTION_TABS } from "./sections";
+import { daysLeftLabel, exportFileName, exportPath } from "./sections";
 
 describe("dashboard sections", () => {
   it("builds the export path with the range", () => {
@@ -16,10 +16,5 @@ describe("dashboard sections", () => {
     expect(daysLeftLabel(null)).toBe("No sales in range");
     expect(daysLeftLabel(1)).toBe("1 day");
     expect(daysLeftLabel(31)).toBe("31 days");
-  });
-
-  it("starts with the overview tab", () => {
-    expect(SECTION_TABS[0]).toEqual({ value: "overview", label: "Overview" });
-    expect(SECTION_TABS.map((t) => t.value)).toEqual(["overview", "products", "customers", "coupons", "payments", "tax"]);
   });
 });

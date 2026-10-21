@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { alignPrevious, bucketLabel, csvPath, fileNameFrom, formatHours, heatLevel, tabFrom } from "./sections";
+import { alignPrevious, bucketLabel, csvPath, fileNameFrom, formatHours, heatLevel, isRangeOnly, TABS, tabFrom } from "./sections";
 
 describe("analytics sections", () => {
   it("reads the tab from the URL and falls back to overview", () => {
     expect(tabFrom("sales")).toBe("sales");
+    expect(tabFrom("products")).toBe("products");
+    expect(tabFrom("tax")).toBe("tax");
     expect(tabFrom(null)).toBe("overview");
     expect(tabFrom("nope")).toBe("overview");
+  });
+
+  it("lists every analytics tab once, overview first", () => {
+    expect(TABS.map((t) => t.id))
+      .toEqual(["overview", "sales", "orders", "products", "customers", "coupons", "payments", "tax"]);
+    expect(TABS[0]).toEqual({ id: "overview", label: "Overview" });
+  });
+
+  it("keeps step 3's tabs to the date range and gives the rest every filter", () => {
+    expect(TABS.filter((t) => isRangeOnly(t.id)).map((t) => t.id))
+      .toEqual(["products", "customers", "coupons", "payments", "tax"]);
+    expect(isRangeOnly("overview")).toBe(false);
+    expect(isRangeOnly("orders")).toBe(false);
   });
 
   it("builds a CSV path without empty parameters", () => {

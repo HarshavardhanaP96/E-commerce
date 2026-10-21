@@ -1,9 +1,10 @@
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
+import AnalyticsSection from "../../components/admin/AnalyticsSections";
 import OrdersTab from "../../components/admin/analytics/OrdersTab";
 import OverviewTab from "../../components/admin/analytics/OverviewTab";
 import SalesTab from "../../components/admin/analytics/SalesTab";
-import { TABS, tabFrom } from "../../components/admin/analytics/sections";
+import { isRangeOnly, TABS, tabFrom } from "../../components/admin/analytics/sections";
 import { useCategoriesQuery } from "../../redux/api/productAPI";
 import { SectionParams } from "../../types/analytics";
 import { SummaryParams } from "../../types/types";
@@ -27,6 +28,8 @@ const Analytics = () => {
   const { data: categories } = useCategoriesQuery();
 
   const tab = tabFrom(params.get("tab"));
+  // Step 3's tabs read only the date range; the other filters would do nothing there.
+  const rangeOnly = isRangeOnly(tab);
   const section: SectionParams = { from: range.from, to: range.to, compare: compare ?? "previous",
                                    basis: basis ?? "net", category: category || undefined };
 
@@ -50,37 +53,48 @@ const Analytics = () => {
                        onChange={(e) => e.target.value && setParam({ to: e.target.value })} />
               </>
             )}
-            <select value={compare} onChange={(e) => setParam({ compare: e.target.value })} aria-label="Compare with">
-              <option value="previous">Compare: previous period</option>
-              <option value="year">Compare: same period last year</option>
-              <option value="none">No comparison</option>
-            </select>
-            <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
-              <option value="net">Net revenue (after refunds)</option>
-              <option value="gross">Gross revenue</option>
-            </select>
-            <select value={category} onChange={(e) => setParam({ category: e.target.value })}
-                    aria-label="Scope by category">
-              <option value="">All categories</option>
-              {categories?.categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            {!rangeOnly && (
+              <>
+                <select value={compare} onChange={(e) => setParam({ compare: e.target.value })} aria-label="Compare with">
+                  <option value="previous">Compare: previous period</option>
+                  <option value="year">Compare: same period last year</option>
+                  <option value="none">No comparison</option>
+                </select>
+                <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
+                  <option value="net">Net revenue (after refunds)</option>
+                  <option value="gross">Gross revenue</option>
+                </select>
+                <select value={category} onChange={(e) => setParam({ category: e.target.value })}
+                        aria-label="Scope by category">
+                  <option value="">All categories</option>
+                  {categories?.categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </>
+            )}
           </div>
+          <nav className="tabs analytics__tabs" role="tablist" aria-label="Analytics sections"
+               ref={(el) => el?.querySelector(".is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" })}>
+            {TABS.map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
+                      className={tab === t.id ? "is-active" : undefined}
+                      onClick={() => setParam({ tab: t.id === "overview" ? "" : t.id })}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
         </header>
-        <nav className="tabs" role="tablist" aria-label="Analytics sections">
-          {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
-                    className={tab === t.id ? "is-active" : ""}
-                    onClick={() => setParam({ tab: t.id === "overview" ? "" : t.id })}>
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        {rangeOnly && (
+          <p className="analytics__note">
+            {range.from} to {range.to}, in the store&apos;s time zone. Revenue here is the value of orders placed.
+          </p>
+        )}
         <div className="analytics__body" role="tabpanel">
           {tab === "overview" && <OverviewTab params={section} />}
           {tab === "sales" && <SalesTab params={section} />}
           {tab === "orders" && <OrdersTab params={section} />}
+          {rangeOnly && <AnalyticsSection tab={tab} range={range} />}
         </div>
       </div>
     </AdminLayout>
