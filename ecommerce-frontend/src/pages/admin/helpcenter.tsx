@@ -47,7 +47,7 @@ const Index = () => {
   return (
     <div className="kb">
       <header className="kb__head">
-        <h2>Help &amp; guides</h2>
+        <h1>Help &amp; guides</h1>
         <p>How-to guides for running the store from this admin panel.</p>
         <label className="kb__search">
           <LuSearch aria-hidden />
@@ -94,7 +94,7 @@ const Article = ({ guide }: { guide: Guide }) => (
     <div className="kb__layout">
       <article className="card">
         <p className="kb__group-label">{guide.group}</p>
-        <h2>{guide.title}</h2>
+        <h1>{guide.title}</h1>
         <p className="kb__summary">{guide.summary}</p>
         {guide.body.map((block, i) => (
           <Block key={i} block={block} />

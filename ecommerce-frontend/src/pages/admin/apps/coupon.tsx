@@ -164,7 +164,7 @@ const Coupon = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Coupons" description="Discount codes customers can use at checkout.">
       <DataTable
         columns={columns}
         data={data?.coupons ?? []}

@@ -47,6 +47,7 @@ const TransactionManagement = () => {
 
   return (
     <DetailLayout
+      parent={{ to: "/admin/transaction", label: "Transactions" }}
       title={`Order ${orderLabel(order)}`}
       subtitle={<>Placed {formatDate(order.createdAt)} · <StatusBadge status={order.status} /></>}
       actions={

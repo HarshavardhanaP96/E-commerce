@@ -75,6 +75,7 @@ const CustomerManagement = () => {
 
   return (
     <DetailLayout
+      parent={{ to: "/admin/customer", label: "Customers" }}
       title={user.name}
       subtitle={`ID ${user._id}`}
       actions={

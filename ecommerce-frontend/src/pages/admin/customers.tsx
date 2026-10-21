@@ -43,7 +43,7 @@ const Customers = () => {
   const { data, isLoading } = useAllUsersQuery({ gender, role });
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Customers" description="People with an account in your store.">
       <DataTable
         columns={columns}
         data={data?.users ?? []}

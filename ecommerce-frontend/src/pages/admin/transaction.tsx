@@ -32,7 +32,7 @@ const Transaction = () => {
   }));
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Transactions" description="Every order and where it is in delivery.">
       <DataTable
         columns={columns}
         data={rows}

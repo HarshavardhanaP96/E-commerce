@@ -67,7 +67,7 @@ const StoreSettings = () => {
     <AdminLayout>
       <div className="store-settings">
         <header className="store-settings__head">
-          <h2>Store settings</h2>
+          <h1>Store settings</h1>
           <p>Your shop&apos;s own rules. Leave a field empty to use the platform default shown in it.</p>
         </header>
 

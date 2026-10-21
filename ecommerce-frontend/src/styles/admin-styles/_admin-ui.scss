@@ -107,6 +107,45 @@
   overflow: hidden;
 }
 
+// Shared top of admin pages (components/admin/PageHeader.tsx).
+.page-header {
+  flex: none;
+  @include flex(row, space-between, flex-end, $spacing-md);
+  flex-wrap: wrap;
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    @include text(h2);
+  }
+
+  p {
+    margin-top: $spacing-xs;
+    @include text(body);
+    color: $color-text-secondary;
+    max-width: 60ch;
+  }
+
+  &__actions {
+    @include flex(row, flex-end, center, $spacing-sm);
+    flex-wrap: wrap;
+  }
+}
+
+.breadcrumb {
+  @include flex(row, flex-start, center, $spacing-xs);
+  @include text(body-sm);
+  color: $color-text-muted;
+
+  a {
+    color: $color-text-secondary;
+  }
+
+  a:hover {
+    color: $color-accent-text;
+    text-decoration: underline;
+  }
+}
+
 .card {
   background: $color-bg-secondary;
   border: 1px solid $color-border;
@@ -361,6 +400,7 @@
   &__title {
     min-width: 0;
 
+    h1,
     h2 {
       @include text(h3);
       white-space: nowrap;
@@ -572,6 +612,7 @@
   &__head {
     @include flex(column, flex-start, stretch, $spacing-sm);
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -671,6 +712,7 @@
     @include flex(column, flex-start, stretch, $spacing-md);
     padding: $spacing-xl;
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -775,6 +817,7 @@
     flex-wrap: wrap;
     gap: $spacing-md;
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -1572,6 +1615,7 @@
   }
 
   &__head {
+    h1,
     h2 {
       margin-bottom: 0.25rem;
     }

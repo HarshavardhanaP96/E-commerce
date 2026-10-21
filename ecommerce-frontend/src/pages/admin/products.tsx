@@ -55,7 +55,7 @@ const Products = () => {
   );
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Products" description="Add, edit and restock what your store sells.">
       <DataTable
         columns={columns}
         data={rows}
