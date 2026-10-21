@@ -12,6 +12,7 @@ export const TABS: { id: SectionName; label: string }[] = [
   { id: "coupons", label: "Coupons" },
   { id: "payments", label: "Payments" },
   { id: "tax", label: "Tax" },
+  { id: "location", label: "Location" },
 ];
 
 export const tabFrom = (value: string | null): SectionName => TABS.find((t) => t.id === value)?.id ?? "overview";
@@ -20,6 +21,14 @@ const RANGE_ONLY: readonly SectionName[] = ["products", "customers", "coupons", 
 
 /** Step 3's tabs read only the date range, so the compare, basis and category filters are hidden on them. */
 export const isRangeOnly = (tab: SectionName): tab is RangeSectionName => RANGE_ONLY.includes(tab);
+
+/** The URL parameter that drills into a Location row, or null when the row cannot be opened. */
+export const drillTo = (level: string, key: string): Record<string, string> | null => {
+  if (level === "country") return key === "india" ? { country: "India" } : null;
+  if (level === "state") return /^[A-Z]{2}$/.test(key) ? { state: key } : null;
+  if (level === "pin_prefix") return /^\d{3}$/.test(key) ? { pinPrefix: key } : null;
+  return null;
+};
 
 export const COMPARE_LABEL = { previous: "vs previous period", year: "vs last year", none: "" } as const;
 

@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
 import AnalyticsSection from "../../components/admin/AnalyticsSections";
+import LocationTab from "../../components/admin/analytics/LocationTab";
 import OrdersTab from "../../components/admin/analytics/OrdersTab";
 import OverviewTab from "../../components/admin/analytics/OverviewTab";
 import SalesTab from "../../components/admin/analytics/SalesTab";
@@ -60,10 +61,12 @@ const Analytics = () => {
                   <option value="year">Compare: same period last year</option>
                   <option value="none">No comparison</option>
                 </select>
-                <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
-                  <option value="net">Net revenue (after refunds)</option>
-                  <option value="gross">Gross revenue</option>
-                </select>
+                {tab !== "location" && (
+                  <select value={basis} onChange={(e) => setParam({ basis: e.target.value })} aria-label="Revenue basis">
+                    <option value="net">Net revenue (after refunds)</option>
+                    <option value="gross">Gross revenue</option>
+                  </select>
+                )}
                 <select value={category} onChange={(e) => setParam({ category: e.target.value })}
                         aria-label="Scope by category">
                   <option value="">All categories</option>
@@ -79,7 +82,7 @@ const Analytics = () => {
             {TABS.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
                       className={tab === t.id ? "is-active" : undefined}
-                      onClick={() => setParam({ tab: t.id === "overview" ? "" : t.id })}>
+                      onClick={() => setParam({ tab: t.id === "overview" ? "" : t.id, country: "", state: "", pinPrefix: "" })}>
                 {t.label}
               </button>
             ))}
@@ -94,6 +97,7 @@ const Analytics = () => {
           {tab === "overview" && <OverviewTab params={section} />}
           {tab === "sales" && <SalesTab params={section} />}
           {tab === "orders" && <OrdersTab params={section} />}
+          {tab === "location" && <LocationTab params={section} />}
           {rangeOnly && <AnalyticsSection tab={tab} range={range} />}
         </div>
       </div>

@@ -64,3 +64,37 @@
   overflow-y: auto;
   @include custom-scrollbar();
 }
+
+// Location tab: a breadcrumb for the drill-down, rows that open the next level, and small regions greyed out.
+.breadcrumb {
+  margin-right: auto;
+  color: $color-text-secondary;
+
+  .link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+.location-table {
+  overflow-y: auto;
+  @include custom-scrollbar();
+
+  .mini-table tr.is-muted td {
+    color: $color-text-secondary;
+  }
+
+  .mini-table .link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+}

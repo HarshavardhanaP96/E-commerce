@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { alignPrevious, bucketLabel, csvPath, fileNameFrom, formatHours, heatLevel, isRangeOnly, TABS, tabFrom } from "./sections";
+import {
+  alignPrevious, bucketLabel, csvPath, drillTo, fileNameFrom, formatHours, heatLevel, isRangeOnly, TABS, tabFrom,
+} from "./sections";
 
 describe("analytics sections", () => {
   it("reads the tab from the URL and falls back to overview", () => {
     expect(tabFrom("sales")).toBe("sales");
     expect(tabFrom("products")).toBe("products");
     expect(tabFrom("tax")).toBe("tax");
+    expect(tabFrom("location")).toBe("location");
     expect(tabFrom(null)).toBe("overview");
     expect(tabFrom("nope")).toBe("overview");
   });
 
   it("lists every analytics tab once, overview first", () => {
     expect(TABS.map((t) => t.id))
-      .toEqual(["overview", "sales", "orders", "products", "customers", "coupons", "payments", "tax"]);
+      .toEqual(["overview", "sales", "orders", "products", "customers", "coupons", "payments", "tax", "location"]);
+    expect(TABS[TABS.length - 1]).toEqual({ id: "location", label: "Location" });
     expect(TABS[0]).toEqual({ id: "overview", label: "Overview" });
   });
 
@@ -21,6 +25,7 @@ describe("analytics sections", () => {
       .toEqual(["products", "customers", "coupons", "payments", "tax"]);
     expect(isRangeOnly("overview")).toBe(false);
     expect(isRangeOnly("orders")).toBe(false);
+    expect(isRangeOnly("location")).toBe(false);
   });
 
   it("builds a CSV path without empty parameters", () => {
@@ -73,5 +78,17 @@ describe("alignPrevious with a picker", () => {
   it("can line up orders instead of revenue", () => {
     const p = (orders: number) => ({ start: "2026-10-01", revenue: 0, orders });
     expect(alignPrevious([p(1), p(2)], [p(7)], (x) => x.orders)).toEqual([7, 0]);
+  });
+});
+
+describe("drillTo", () => {
+  it("goes one level down from a row, and nowhere from a dead end", () => {
+    expect(drillTo("country", "india")).toEqual({ country: "India" });
+    expect(drillTo("country", "nepal")).toBeNull();
+    expect(drillTo("state", "KA")).toEqual({ state: "KA" });
+    expect(drillTo("state", "unrecognised")).toBeNull();
+    expect(drillTo("pin_prefix", "560")).toEqual({ pinPrefix: "560" });
+    expect(drillTo("pin_prefix", "invalid")).toBeNull();
+    expect(drillTo("pin", "560001")).toBeNull();
   });
 });
