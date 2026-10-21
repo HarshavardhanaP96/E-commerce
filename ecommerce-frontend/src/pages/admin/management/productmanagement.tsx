@@ -74,6 +74,7 @@ const ProductManagement = () => {
 
   return (
     <DetailLayout
+      parent={{ to: "/admin/product", label: "Products" }}
       title={product.name}
       subtitle={`ID ${product._id}`}
       actions={

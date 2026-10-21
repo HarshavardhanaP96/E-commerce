@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { LuArrowLeft, LuMinus, LuPlus, LuShoppingBag } from "react-icons/lu";
+import { LuArrowLeft, LuMinus, LuPlus, LuShoppingBag, LuTruck } from "react-icons/lu";
 import Loader from "../components/loader";
 import SizeGuide from "../components/sizeGuide";
 import { useProductDetailsQuery } from "../redux/api/productAPI";
@@ -10,6 +10,8 @@ import { addToCart } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { OptionAxis, Product as ProductType } from "../types/types";
 import { formatMoney, transformImage } from "../utils/features";
+import { commerce, shippingNote } from "../utils/pricing";
+import { policyPath } from "../legal/policies";
 import {
   Selection,
   cartKey,
@@ -107,7 +109,12 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
       <div className="product-page__grid">
         <section className="gallery" aria-label="Product images">
           <div className="gallery__main">
-            {images[imageIndex] && <img src={transformImage(images[imageIndex])} alt={product.name} />}
+            {images[imageIndex] && (
+              <>
+                <img className="gallery__backdrop" src={transformImage(images[imageIndex])} alt="" aria-hidden />
+                <img src={transformImage(images[imageIndex])} alt={product.name} />
+              </>
+            )}
           </div>
           {images.length > 1 && (
             <ul className="gallery__thumbs">
@@ -208,6 +215,14 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
               {inCart} in your cart · <Link to="/cart">View cart</Link>
             </p>
           )}
+
+          <div className="product-info__delivery">
+            <LuTruck aria-hidden />
+            <p>
+              {shippingNote(commerce, formatMoney)}{" "}
+              <Link to={policyPath("refunds")}>Returns and refunds</Link>
+            </p>
+          </div>
 
           {product.description && <p className="product-info__desc">{product.description}</p>}
           <dl className="product-info__facts">

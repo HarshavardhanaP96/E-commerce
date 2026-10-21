@@ -13,9 +13,9 @@ type Row = Order & { customer: string; items: number };
 const columns: Column<Row>[] = [
   { Header: "Order", accessor: "_id", width: 220 },
   { Header: "Customer", accessor: "customer" },
-  { Header: "Items", accessor: "items", width: 80 },
-  { Header: "Discount", accessor: "discount", width: 110, Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
-  { Header: "Amount", accessor: "total", width: 120, Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
+  { Header: "Items", accessor: "items", width: 80, align: "right" } as Column<Row>,
+  { Header: "Discount", accessor: "discount", width: 110, align: "right", Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
+  { Header: "Amount", accessor: "total", width: 120, align: "right", Cell: ({ value }: CellProps<Row>) => formatMoney(value) } as Column<Row>,
   { Header: "Date", accessor: "createdAt", width: 130, Cell: ({ value }: CellProps<Row>) => formatDate(value) } as Column<Row>,
   { Header: "Status", accessor: "status", width: 120, Cell: ({ value }: CellProps<Row>) => <StatusBadge status={value} /> } as Column<Row>,
 ];
@@ -32,7 +32,7 @@ const Transaction = () => {
   }));
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Transactions" description="Every order and where it is in delivery.">
       <DataTable
         columns={columns}
         data={rows}

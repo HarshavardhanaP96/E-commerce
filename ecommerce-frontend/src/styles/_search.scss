@@ -12,47 +12,11 @@
   align-items: start;
   animation: fadeIn 0.3s ease;
 
-  // ---------- filters ----------
+  // ---------- filters (a <dialog>: the sidebar on wide screens, a bottom panel on phones) ----------
   > aside {
     position: sticky;
     top: calc(var(--header-h) + #{$spacing-lg});
     @include flex(column, flex-start, stretch, $spacing-lg);
-
-    > h2 {
-      @include text(h4);
-      font-family: $font-primary;
-      letter-spacing: 0;
-    }
-
-    > div {
-      @include flex(column, flex-start, stretch, $spacing-sm);
-
-      > h4 {
-        @include flex(row, space-between, baseline);
-        @include overline;
-        font-family: $font-primary;
-
-        b {
-          @include text(body-sm);
-          @include tabular;
-          font-weight: 600;
-          letter-spacing: 0;
-          text-transform: none;
-          color: $color-text-primary;
-        }
-      }
-
-      > select {
-        @include field;
-        cursor: pointer;
-      }
-
-      > input[type="range"] {
-        width: 100%;
-        accent-color: var(--accent);
-        cursor: pointer;
-      }
-    }
   }
 
   // ---------- results ----------
@@ -114,32 +78,134 @@
   }
 }
 
-@media (max-width: 860px) {
-  .search-page {
-    grid-template-columns: minmax(0, 1fr);
-    padding: $spacing-lg $spacing-md $spacing-2xl;
-    gap: $spacing-lg;
+.search-filters {
+  > h2 {
+    @include text(h4);
+    font-family: $font-primary;
+    letter-spacing: 0;
+  }
 
-    > aside {
-      position: static;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: $spacing-md;
+  > div {
+    @include flex(column, flex-start, stretch, $spacing-sm);
 
-      > h2 {
-        display: none;
-      }
+    > h4 {
+      @include overline;
+      font-family: $font-primary;
+    }
+
+    > select {
+      @include field;
+      cursor: pointer;
     }
   }
 }
 
-@media (max-width: 560px) {
-  .search-page > aside {
-    grid-template-columns: 1fr 1fr;
+.search-page__price {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.5rem;
+  gap: $spacing-sm;
+  align-items: center;
 
-    > div:nth-of-type(2) {
-      grid-column: 1 / -1;
-      order: 3;
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  input[type="number"] {
+    @include field;
+    padding: 0 0.5rem;
+    @include tabular;
+  }
+}
+
+.active-filters {
+  @include flex(row, flex-start, center, $spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: $spacing-lg;
+
+  .chip--removable {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.25rem;
+  }
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  color: $color-accent-text;
+  font: inherit;
+  @include text(body-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+// Two classes: .btn (admin UI kit, loaded later) would otherwise win and show it on desktop.
+.search-page .search-page__filters-btn {
+  display: none;
+}
+
+// Wide screens: the dialog is only a wrapper, its contents flow into the sidebar.
+@media (min-width: 861px) {
+  .search-filters {
+    display: contents;
+
+    &__footer {
+      display: none !important;
+    }
+  }
+}
+
+@media (max-width: 860px) {
+  .search-page {
+    grid-template-columns: minmax(0, 1fr);
+    padding: $spacing-lg $spacing-md $spacing-2xl;
+    gap: 0;
+
+    > aside {
+      position: static;
+    }
+  }
+
+  .search-page .search-page__filters-btn {
+    display: inline-flex;
+    margin-bottom: $spacing-md;
+  }
+
+  .search-filters {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85dvh;
+    margin: auto 0 0;
+    padding: $spacing-lg $spacing-md 0;
+    border: 0;
+    border-radius: $radius-lg $radius-lg 0 0;
+    background: $color-bg-secondary;
+    color: $color-text-primary;
+    overflow-y: auto;
+
+    &[open] {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-lg;
+    }
+
+    &::backdrop {
+      background: rgba(28, 25, 23, 0.45);
+    }
+
+    &__footer {
+      position: sticky;
+      bottom: 0;
+      padding: $spacing-md 0 calc(#{$spacing-md} + env(safe-area-inset-bottom));
+      background: $color-bg-secondary;
+
+      .btn {
+        width: 100%;
+      }
     }
   }
 }

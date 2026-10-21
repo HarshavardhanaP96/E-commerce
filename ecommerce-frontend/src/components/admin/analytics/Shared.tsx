@@ -9,15 +9,17 @@ import { csvPath, fileNameFrom } from "./sections";
 export const ChangeBadge = ({ change, against }: { change?: number | null; against: string }) =>
   change == null ? null : (
     <small className={change >= 0 ? "green" : "red"}>
-      {change >= 0 ? <LuTrendingUp /> : <LuTrendingDown />} {change > 0 ? "+" : ""}
-      {change}% <em>{against}</em>
+      {change >= 0 ? <LuTrendingUp aria-hidden /> : <LuTrendingDown aria-hidden />}
+      <span className="sr-only">{change >= 0 ? "Up" : "Down"}</span>
+      {change > 0 ? "+" : ""}{change}% <em>{against}</em>
     </small>
   );
 
-export const Kpi = ({ label, value, change, against = "" }: {
-  label: string; value: string; change?: number | null; against?: string;
+/** One figure. `lead` makes it the largest on the row; the change reads as words too, not colour alone. */
+export const Kpi = ({ label, value, change, against = "", lead }: {
+  label: string; value: string; change?: number | null; against?: string; lead?: boolean;
 }) => (
-  <article className="kpi">
+  <article className={`kpi${lead ? " kpi--lead" : ""}`}>
     <span>{label}</span>
     <strong>{value}</strong>
     <ChangeBadge change={change} against={against} />

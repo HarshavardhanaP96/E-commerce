@@ -11,6 +11,17 @@
   grid-template-areas:
     "title title"
     "items summary";
+
+  &:has(> .checkout-steps) {
+    grid-template-areas:
+      "steps steps"
+      "title title"
+      "items summary";
+  }
+
+  > .checkout-steps {
+    grid-area: steps;
+  }
   gap: $spacing-lg $spacing-xl;
   align-items: start;
   animation: fadeIn 0.3s ease;
@@ -221,6 +232,14 @@
       "items"
       "summary";
 
+    &:has(> .checkout-steps) {
+      grid-template-areas:
+        "steps"
+        "title"
+        "items"
+        "summary";
+    }
+
     > aside {
       position: static;
     }
@@ -257,4 +276,47 @@
       grid-area: remove;
     }
   }
+}
+
+// ---------- checkout progress (cart and shipping pages) ----------
+.checkout-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm $spacing-lg;
+  list-style: none;
+  @include text(body-sm);
+  color: $color-text-muted;
+
+  &__step {
+    @include flex(row, flex-start, center, $spacing-sm);
+
+    > span[aria-hidden] {
+      @include flex;
+      @include square(1.75rem);
+      border: 1px solid $color-border-hover;
+      border-radius: 50%;
+      @include tabular;
+      font-weight: 600;
+    }
+
+    &.is-current {
+      color: $color-text-primary;
+      font-weight: 600;
+
+      > span[aria-hidden] {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--on-primary);
+      }
+    }
+
+    &.is-done > span[aria-hidden] {
+      border-color: $color-success;
+      color: $color-success;
+    }
+  }
+}
+
+.shipping > .checkout-steps {
+  margin-top: $spacing-lg;
 }

@@ -26,28 +26,34 @@
   --dur: 200ms;
 }
 
-// ---------- STORE: warm, editorial, generous ----------
+// ---------- STORE: "Studio shelf". Photos carry the colour; chrome is ink and warm grey ----------
 :root,
 [data-surface="store"] {
-  --bg: #fafaf9;
+  --bg: #f5f5f3; // studio backdrop
   --surface: #ffffff;
-  --surface-2: #f5f5f4;
-  --border: #e7e5e4;
-  --border-strong: #d6d3d1;
+  --surface-2: #ececea; // photo mat, chips, skeletons
+  --border: #e2e0dc; // decorative dividers only
+  --border-strong: #8a837d; // control outlines: 3.73:1 on white
 
-  --text: #0f172a;
-  --text-2: #57534e;
-  --text-muted: #78716c; // 4.8:1 on white
+  --text: #1c1917;
+  --text-2: #57534e; // 6.99:1 on bg
+  --text-muted: #6b6560; // 4.86:1 on surface-2
 
-  --accent: #e4572e; // coral: badges, counts, highlights (not small body text)
+  --accent: #e4572e; // brand dot, range thumb, focus ring: large marks only
   --accent-hover: #c2410c;
-  --accent-text: #c2410c; // accent for links / small text, passes AA
+  --accent-strong: #c2410c; // badge / count backgrounds: white on it 5.18:1
+  --on-accent: #ffffff;
+  --accent-text: #c2410c; // links and small accent text
   --accent-subtle: #fff1ec;
 
-  --primary: #0f172a; // main CTA is ink
-  --primary-hover: #1e293b;
+  --primary: #1c1917; // main CTA is ink
+  --primary-hover: #3a3532;
   --on-primary: #ffffff;
   --ring: rgba(228, 87, 46, 0.35);
+
+  // The one gradient: the home banner, tinted from the store's own accent.
+  --hero-from: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  --hero-to: var(--bg);
 
   --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", var(--font-sans);
   --weight-heading: 700;
@@ -77,27 +83,34 @@
   --gutter: max(1.5rem, calc((100vw - 1200px) / 2 + 1.5rem));
 }
 
-// ---------- ADMIN: neutral slate, dense, flat ----------
+// ---------- ADMIN: "Ink console". Petrol sidebar, calm work area, one peacock action colour ----------
 [data-surface="admin"] {
-  --bg: #f8fafc;
+  --bg: #f4f6f6;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --surface-2: #eaeeee;
+  --border: #dbe1e1;
+  --border-strong: #7d8a8c; // control outlines: 3.57:1 on white
 
-  --text: #0f172a;
-  --text-2: #475569;
-  --text-muted: #64748b; // 4.8:1 on white
+  --text: #102227;
+  --text-2: #44565a;
+  --text-muted: #5b6b6e; // 4.76:1 on surface-2
 
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-text: #4338ca;
-  --accent-subtle: #eef2ff;
+  --accent: #0b6a88; // peacock
+  --accent-hover: #0b5f7a;
+  --accent-strong: #0b6a88;
+  --on-accent: #ffffff;
+  --accent-text: #0b5f7a;
+  --accent-subtle: #e6f2f6;
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --primary: #0b6a88;
+  --primary-hover: #0b5f7a;
   --on-primary: #ffffff;
-  --ring: rgba(79, 70, 229, 0.3);
+  --ring: rgba(11, 106, 136, 0.35);
+
+  --nav-bg: #0f2430;
+  --nav-text: #c9d6d8; // 10.7:1 on nav
+  --nav-muted: #8fa3a6; // 6.05:1
+  --nav-active: #67c6e0; // active bar and icon, 8.16:1
 
   --font-display: var(--font-sans);
   --weight-heading: 600;
@@ -113,13 +126,14 @@
   --fs-h2: 1.375rem; // 22
   --fs-h1: 1.75rem; // 28
 
-  --radius-sm: 6px;
+  --radius-sm: 6px; // controls
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: 10px; // cards
 
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  // Flat cards; shadows only on floating layers (menus, drawer, toasts).
+  --shadow-sm: none;
+  --shadow-md: 0 4px 12px rgba(15, 36, 48, 0.1);
+  --shadow-lg: 0 12px 32px rgba(15, 36, 48, 0.16);
 
   --control-h: 2.25rem;
   --header-h: 3.5rem;

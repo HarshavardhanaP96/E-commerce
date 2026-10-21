@@ -66,6 +66,16 @@ export const inStock = (p: Product) => p.stock > 0;
 export const discountPercent = (price: number, mrp?: number | null) =>
   mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
 
+/** What a product card shows: the price (lowest variant's, marked "from" when variants differ), and MRP/% off for plain products. */
+export const cardPricing = (p: Product) => {
+  if (hasVariants(p)) {
+    const { min, max } = priceRange(p);
+    return { price: min, from: min !== max, mrp: null, off: 0 };
+  }
+  const off = discountPercent(p.price, p.mrp);
+  return { price: p.price, from: false, mrp: off > 0 ? (p.mrp as number) : null, off };
+};
+
 /** Units of this line already in the cart, so "add" tops up instead of replacing. */
 export const quantityInCart = (cart: CartItem[], key: string) =>
   cart.find((i) => cartKey(i) === key)?.quantity ?? 0;

@@ -23,6 +23,7 @@ const NewProduct = () => {
 
   return (
     <DetailLayout
+      parent={{ to: "/admin/product", label: "Products" }}
       title="New product"
       actions={
         <button form="product-form" type="submit" className="btn btn--primary" disabled={isLoading}>

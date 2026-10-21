@@ -112,31 +112,54 @@
 }
 
 .footer {
-  @include flex(column, center, center, $spacing-sm);
   margin-top: auto; // sticky footer: #root is a flex column
-  padding: $spacing-xl var(--gutter);
+  padding: $spacing-2xl var(--gutter) $spacing-xl;
   border-top: 1px solid $color-border;
-  text-align: center;
+  background: $color-bg-secondary;
 
-  > nav {
-    @include flex(row, center, center, $spacing-xs $spacing-lg);
-    flex-wrap: wrap;
+  &__groups {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: $spacing-xl;
+    margin-bottom: $spacing-xl;
 
-    a {
-      color: $color-text-secondary;
+    nav,
+    address {
+      @include flex(column, flex-start, flex-start, $spacing-sm);
+      font-style: normal;
+    }
+
+    h2 {
+      @include text(label);
+      font-family: $font-primary;
+      letter-spacing: 0;
+      color: $color-text-primary;
+      margin-bottom: $spacing-xs;
+    }
+
+    a,
+    span {
       @include text(body-sm);
+      color: $color-text-secondary;
+    }
 
-      &:hover {
-        color: $color-text-primary;
-        text-decoration: underline;
-      }
+    a:hover {
+      color: $color-text-primary;
+      text-decoration: underline;
     }
   }
 
   > small {
+    display: block;
     @include text(caption);
     font-weight: 400;
     color: $color-text-muted;
+  }
+
+  @media (max-width: 720px) {
+    &__groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 }
 

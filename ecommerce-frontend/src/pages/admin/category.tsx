@@ -142,7 +142,7 @@ const CategoryAdmin = () => {
   ];
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Categories" description="Group products so customers can browse them.">
       <DataTable
         columns={columns}
         data={rows}

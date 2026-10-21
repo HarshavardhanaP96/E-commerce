@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { transformImage } from "../../utils/features";
 import { useCategoryTreeQuery } from "../../redux/api/categoryAPI";
-import { LuImagePlus } from "react-icons/lu";
+import { LuAlertCircle, LuImagePlus } from "react-icons/lu";
 import { MAX_GALLERY, ProductFormValues, splitPictures } from "./productFormData";
 import { currencySymbol, formatMoney } from "../../utils/money";
 
@@ -20,6 +20,8 @@ type Props = {
 const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages = [], derived }: Props) => {
   const [preview, setPreview] = useState<string>("");
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  // Why the last pick was refused, shown next to the field (was a browser alert()).
+  const [pictureError, setPictureError] = useState("");
   const { data: categoryData } = useCategoryTreeQuery();
   const categories = categoryData?.categories ?? [];
 
@@ -45,8 +47,9 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
     const result = splitPictures(Array.from(e.target.files ?? []));
     if ("error" in result) {
       e.target.value = "";
-      return alert(result.error);
+      return setPictureError(result.error);
     }
+    setPictureError("");
     onChange({ ...values, ...result });
   };
 
@@ -99,9 +102,16 @@ const ProductForm = ({ values, onChange, onSubmit, currentPhoto, currentImages =
               accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={onPictures}
               required={!currentPhoto}
+              aria-describedby={pictureError ? "pictures-hint pictures-error" : "pictures-hint"}
+              aria-invalid={!!pictureError}
             />
           </label>
-          <small>{hint}</small>
+          <small id="pictures-hint" className="field-help">{hint}</small>
+          {pictureError && (
+            <p id="pictures-error" className="field-error" role="alert">
+              <LuAlertCircle aria-hidden /> {pictureError}
+            </p>
+          )}
         </div>
       </section>
 
