@@ -16,34 +16,29 @@
 
 // ---------- hero ----------
 .hero {
-  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 26rem;
-  margin-bottom: $spacing-3xl;
+  gap: $spacing-xl;
+  min-height: 24rem;
+  margin-bottom: $spacing-xl;
+  padding: $spacing-2xl $spacing-3xl;
   border-radius: $radius-lg;
-  overflow: hidden;
-  background: #151515; // matches the photo's backdrop so the image bleeds in seamlessly
-  color: #fafaf9;
+  background: linear-gradient(135deg, var(--hero-from), var(--hero-to) 70%);
 
   &__copy {
-    position: relative;
-    z-index: 1;
-    padding: $spacing-3xl;
     @include flex(column, center, flex-start, $spacing-md);
 
     h1 {
       @include text(h1);
-      color: #fff;
-      max-width: 14ch;
+      font-variation-settings: "opsz" 96;
+      max-width: 12ch;
     }
 
-    > p:not(.eyebrow) {
-      @include text(body);
+    > p {
       font-size: 1.125rem;
-      color: #d6d3d1;
-      max-width: 40ch;
+      color: $color-text-secondary;
+      max-width: 36ch;
     }
   }
 
@@ -52,33 +47,47 @@
     margin-top: $spacing-sm;
     height: 3rem;
     padding: 0 1.5rem;
-    border-color: #fff;
-    background: #fff;
-    color: var(--text);
 
     svg {
       transition: transform $transition-fast;
     }
 
-    &:hover:not(:disabled) {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-
-      svg {
-        transform: translateX(3px);
-      }
+    &:hover svg {
+      transform: translateX(3px);
     }
   }
 
-  &__art {
-    width: 100%;
-    height: 100%;
-    max-height: 30rem;
-    object-fit: cover;
-    // Feather the photo's edges into the panel so there is no visible seam.
-    -webkit-mask-image: radial-gradient(ellipse 70% 75% at 55% 50%, #000 55%, transparent 100%);
-    mask-image: radial-gradient(ellipse 70% 75% at 55% 50%, #000 55%, transparent 100%);
+  // Up to three of the newest product photos, overlapped like items on a shelf.
+  &__shelf {
+    position: relative;
+    height: 20rem;
+
+    img {
+      position: absolute;
+      width: 13rem;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      border: 4px solid var(--surface);
+      border-radius: $radius-md;
+      box-shadow: $shadow-lg;
+    }
+
+    img:nth-child(1) { left: 0; top: 2.5rem; transform: rotate(-4deg); }
+    img:nth-child(2) { left: 30%; top: 0; z-index: 1; }
+    img:nth-child(3) { right: 0; top: 3.5rem; transform: rotate(5deg); }
+  }
+}
+
+.category-chips {
+  @include flex(row, flex-start, center, $spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: $spacing-2xl;
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    color: $color-text-primary;
+    text-decoration: none;
   }
 }
 
@@ -116,6 +125,56 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: $spacing-lg;
+}
+
+.product-grid--home {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  .view-all-tile { grid-column: span var(--span-2); }
+
+  @media (min-width: 720px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    .view-all-tile { grid-column: span var(--span-3); }
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    .view-all-tile { grid-column: span var(--span-4); }
+  }
+}
+
+// Fills what the last row leaves; tinted like the banner so it reads as a way on, not an empty slot.
+.view-all-tile {
+  @include flex(column, flex-end, flex-start, $spacing-xs);
+  min-height: 8rem;
+  padding: $spacing-xl;
+  border-radius: $radius-lg;
+  background: linear-gradient(135deg, var(--hero-from), var(--surface-2));
+  color: $color-text-primary;
+
+  strong {
+    font-family: $font-display;
+    @include text(h3);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  span {
+    @include flex(row, flex-start, center, 0.375rem);
+    @include text(body-sm);
+    color: $color-text-secondary;
+  }
+
+  svg {
+    transition: transform $transition-fast;
+  }
+
+  &:hover {
+    color: $color-text-primary;
+
+    svg {
+      transform: translateX(3px);
+    }
+  }
 }
 
 .product-card {
@@ -293,17 +352,26 @@
   .hero {
     grid-template-columns: 1fr;
     min-height: 0;
+    padding: $spacing-xl $spacing-lg;
 
-    &__copy {
-      padding: $spacing-xl $spacing-lg;
-    }
+    &__shelf {
+      height: 15rem; // 8.5rem photos at 4:5 plus the 3.5rem drop of the third
 
-    &__art {
-      position: absolute;
-      inset: 0;
-      max-height: none;
-      opacity: 0.35;
+      img { width: 8.5rem; }
     }
+  }
+}
+
+// Phones: one swipeable row of categories instead of three wrapped rows.
+@media (max-width: 640px) {
+  .category-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    scrollbar-width: none;
+
+    .chip { flex: none; }
   }
 }
 
@@ -317,7 +385,17 @@
     gap: 0.75rem;
   }
 
+  .view-all-tile {
+    padding: $spacing-md;
+
+    strong { @include text(h4); }
+  }
+
   .product-card {
+    // The add button rides on the photo's bottom corner, so name and price get the card's full width.
+    container-type: inline-size;
+    position: relative;
+
     &__body {
       padding: 0.75rem;
       gap: $spacing-sm;
@@ -330,6 +408,10 @@
 
     &__add {
       @include square(2.75rem);
+      position: absolute;
+      right: 0.5rem;
+      top: calc(100cqw - 3.25rem); // the photo is square: its height is the card's width
+      box-shadow: $shadow-md;
     }
   }
 }
