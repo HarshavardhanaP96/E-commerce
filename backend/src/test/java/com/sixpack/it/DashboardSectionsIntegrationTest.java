@@ -31,6 +31,9 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     private static final String MUG = new ObjectId().toHexString();
     private static final String CAP = new ObjectId().toHexString();
     private static final String DRAFT = new ObjectId().toHexString();
+    /** Made last, so it sorts after the others: a product no longer in the catalogue. */
+    private static final String GONE = new ObjectId().toHexString();
+    private static final String LEGACY = "legacy-42";
 
     private String admin;
     private String tenant;
@@ -83,6 +86,108 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
                 // on sale but not sold in the period; drafts are left out
                 .andExpect(jsonPath("$.products.idle.length()").value(1))
                 .andExpect(jsonPath("$.products.idle[0].name").value("Cap"));
+    }
+
+    /**
+     * December 2026 against the 31 days before it (31 Oct – 30 Nov). Tee 2 → 8, Mug 6 → 5, Cap 0 → 4, the removed
+     * product 0 → 3, a legacy string id 0 → 5, Draft hat 2 → 1 (too few). Tee and Mug share four orders, the
+     * removed product shares three with each; Cap shares only two. One order of 21 products is skipped for pairs,
+     * one order has no items at all, and gift wrap (no product id) never pairs or trends.
+     */
+    private void seedDecember() {
+        List<Document> filler = new ArrayList<>();
+        for (int i = 0; i < 19; i++) {
+            filler.add(item(new ObjectId().toHexString(), "Filler " + i, 10, 1, 18.0));
+        }
+        List<Document> big = new ArrayList<>(List.of(item(TEE, "Tee", 500, 1, 18.0), item(MUG, "Mug XL", 200, 1, 12.0)));
+        big.addAll(filler);
+        // the latest order is saved first: its item names are still the ones shown
+        sale("2026-12-20T06:00:00Z", big);
+        sale("2026-12-02T06:00:00Z", List.of(item(TEE, "Tee", 500, 2, 18.0), item(MUG, "Mug", 200, 1, 12.0),
+                unnamed(GONE, 1), giftWrap()));
+        sale("2026-12-05T06:00:00Z", List.of(item(TEE, "Tee", 500, 2, 18.0), item(MUG, "Mug", 200, 1, 12.0),
+                unnamed(GONE, 1), giftWrap()));
+        sale("2026-12-09T06:00:00Z", List.of(item(TEE, "Tee", 500, 2, 18.0), item(MUG, "Mug", 200, 1, 12.0),
+                unnamed(GONE, 1), unnamed(CAP, 2), giftWrap()));
+        sale("2026-12-14T06:00:00Z", List.of(item(TEE, "Tee", 500, 1, 18.0), item(MUG, "Mug", 200, 1, 12.0),
+                unnamed(CAP, 2), item(DRAFT, "Draft hat", 100, 1, 18.0)));
+        sale("2026-12-15T06:00:00Z", null);
+        sale("2026-12-16T06:00:00Z", List.of(new Document("productId", LEGACY).append("price", 50).append("quantity", 5)));
+        sale("2026-11-10T06:00:00Z", List.of(item(TEE, "Tee", 500, 2, 18.0)));
+        sale("2026-11-12T06:00:00Z", List.of(item(MUG, "Mug", 200, 6, 12.0)));
+        sale("2026-11-14T06:00:00Z", List.of(item(DRAFT, "Draft hat", 100, 2, 18.0)));
+    }
+
+    private ResultActions december(String path) throws Exception {
+        return mvc.perform(get("/api/v1/dashboard/" + path).header("Authorization", bearer(admin))
+                .param("from", "2026-12-01").param("to", "2026-12-31"));
+    }
+
+    @Test
+    void productsShowRisingAndFallingAgainstThePreviousPeriod() throws Exception {
+        seedDecember();
+        december("products").andExpect(status().isOk())
+                // ranked by the change in units; at least 3 units in one of the periods
+                .andExpect(jsonPath("$.products.trending.rising.length()").value(4))
+                .andExpect(jsonPath("$.products.trending.rising[0].productId").value(TEE))
+                .andExpect(jsonPath("$.products.trending.rising[0].name").value("Tee"))
+                .andExpect(jsonPath("$.products.trending.rising[0].units").value(8.0))
+                .andExpect(jsonPath("$.products.trending.rising[0].previousUnits").value(2.0))
+                .andExpect(jsonPath("$.products.trending.rising[0].change").value(300))
+                .andExpect(jsonPath("$.products.trending.rising[0].isNew").value(false))
+                .andExpect(jsonPath("$.products.trending.rising[1].productId").value(LEGACY))
+                .andExpect(jsonPath("$.products.trending.rising[1].name").value("Removed product"))
+                .andExpect(jsonPath("$.products.trending.rising[1].isNew").value(true))
+                .andExpect(jsonPath("$.products.trending.rising[1].change").doesNotExist())
+                // no name on its order lines: the product's name
+                .andExpect(jsonPath("$.products.trending.rising[2].name").value("Cap"))
+                .andExpect(jsonPath("$.products.trending.rising[3].productId").value(GONE))
+                .andExpect(jsonPath("$.products.trending.rising[3].name").value("Removed product"))
+                .andExpect(jsonPath("$.products.trending.falling.length()").value(1))
+                .andExpect(jsonPath("$.products.trending.falling[0].name").value("Mug XL"))
+                .andExpect(jsonPath("$.products.trending.falling[0].change").value(-17));
+    }
+
+    @Test
+    void productsShowWhatIsOftenBoughtTogether() throws Exception {
+        seedDecember();
+        december("products").andExpect(status().isOk())
+                .andExpect(jsonPath("$.products.boughtTogether.length()").value(3))
+                .andExpect(jsonPath("$.products.boughtTogether[0].productA").value(TEE))
+                .andExpect(jsonPath("$.products.boughtTogether[0].nameA").value("Tee"))
+                .andExpect(jsonPath("$.products.boughtTogether[0].productB").value(MUG))
+                .andExpect(jsonPath("$.products.boughtTogether[0].nameB").value("Mug XL"))
+                .andExpect(jsonPath("$.products.boughtTogether[0].orders").value(4))
+                .andExpect(jsonPath("$.products.boughtTogether[1].nameA").value("Tee"))
+                .andExpect(jsonPath("$.products.boughtTogether[1].productB").value(GONE))
+                .andExpect(jsonPath("$.products.boughtTogether[1].nameB").value("Removed product"))
+                .andExpect(jsonPath("$.products.boughtTogether[1].orders").value(3))
+                .andExpect(jsonPath("$.products.boughtTogether[2].nameA").value("Mug XL"))
+                .andExpect(jsonPath("$.products.boughtTogether[2].nameB").value("Removed product"))
+                .andExpect(jsonPath("$.products.boughtTogether[2].orders").value(3));
+    }
+
+    @Test
+    void trendingAndBoughtTogetherDownloadAsCsv() throws Exception {
+        seedDecember();
+        String trending = december("export/trending").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(trending.substring(1).lines().toList()).containsExactly(
+                "direction,product_id,product,units,previous_units,change_percent,new",
+                "rising," + TEE + ",Tee,8,2,300,false",
+                "rising," + LEGACY + ",Removed product,5,0,,true",
+                "rising," + CAP + ",Cap,4,0,,true",
+                "rising," + GONE + ",Removed product,3,0,,true",
+                "falling," + MUG + ",Mug XL,5,6,-17,false");
+        String pairs = december("export/bought-together").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(pairs.substring(1).lines().toList()).containsExactly(
+                "product_a_id,product_a,product_b_id,product_b,orders",
+                TEE + ",Tee," + MUG + ",Mug XL,4",
+                TEE + ",Tee," + GONE + ",Removed product,3",
+                MUG + ",Mug XL," + GONE + ",Removed product,3");
+        assertThat(auditEntries("ANALYTICS_EXPORTED")).extracting(a -> a.getString("entityId"))
+                .containsExactlyInAnyOrder("trending", "bought-together");
     }
 
     @Test
@@ -194,7 +299,7 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     @Test
     void everyTableHasAnExport() throws Exception {
         for (String table : new String[] {"top-products", "categories", "stock", "idle-products", "top-customers",
-                "places", "coupons", "payment-methods", "refunds", "tax"}) {
+                "places", "coupons", "payment-methods", "refunds", "tax", "trending", "bought-together"}) {
             mvc.perform(get("/api/v1/dashboard/export/" + table).header("Authorization", bearer(admin))
                             .param("from", "2026-10-01").param("to", "2026-10-31"))
                     .andExpect(status().isOk());
@@ -235,6 +340,25 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
         // no coupon: stored as null, as older data may have it, rather than left out
         order.append("couponCode", coupon);
         mongo.getCollection("orders").insertOne(order);
+    }
+
+    /** A bare order in this store; {@code items} null leaves the field out, as some old orders have it. */
+    private void sale(String at, List<Document> items) {
+        Document order = new Document("_id", new ObjectId()).append("tenantId", tenant).append("user", "u9")
+                .append("status", "Processing").append("total", 100)
+                .append("createdAt", Date.from(Instant.parse(at)));
+        if (items != null) {
+            order.append("orderItems", new ArrayList<>(items));
+        }
+        mongo.getCollection("orders").insertOne(order);
+    }
+
+    private static Document unnamed(String productId, int quantity) {
+        return new Document("productId", new ObjectId(productId)).append("price", 100).append("quantity", quantity);
+    }
+
+    private static Document giftWrap() {
+        return new Document("productId", null).append("name", "Gift wrap").append("price", 20).append("quantity", 1);
     }
 
     private static Document item(String productId, String name, double price, int quantity, Double taxRate) {

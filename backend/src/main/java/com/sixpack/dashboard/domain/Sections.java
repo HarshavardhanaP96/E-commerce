@@ -26,8 +26,16 @@ public final class Sections {
     public record IdleProduct(String productId, String name, int stock) {
     }
 
+    /** Two different products in the same {@code orders} orders of the period; productA sorts before productB. */
+    public record Pair(String productA, String nameA, String productB, String nameB, long orders) {
+    }
+
+    /**
+     * @param trending       against the previous period of the same length
+     * @param boughtTogether pairs in at least 3 orders, most first, top 10
+     */
     public record Products(List<ProductSales> top, List<CategoryShare> categories, List<StockLeft> stock,
-                           List<IdleProduct> idle) {
+                           List<IdleProduct> idle, Trending trending, List<Pair> boughtTogether) {
     }
 
     /** @param name, email the customer's details on their latest order in the period (null once erased) */

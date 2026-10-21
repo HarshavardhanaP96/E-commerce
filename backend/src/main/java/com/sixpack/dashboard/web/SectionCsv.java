@@ -2,6 +2,7 @@ package com.sixpack.dashboard.web;
 
 import com.sixpack.dashboard.application.SectionsService;
 import com.sixpack.dashboard.domain.Period;
+import com.sixpack.dashboard.domain.Trending;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -38,6 +39,19 @@ final class SectionCsv {
         TABLES.put("idle-products", new Table(List.of("product_id", "product", "stock"),
                 (s, p) -> s.products(p, 0).idle().stream()
                         .map(r -> row(r.productId(), text(r.name()), r.stock())).toList()));
+        TABLES.put("trending", new Table(List.of("direction", "product_id", "product", "units", "previous_units",
+                "change_percent", "new"),
+                (s, p) -> {
+                    Trending t = s.products(p, 0).trending();
+                    List<List<Object>> rows = new ArrayList<>();
+                    t.rising().forEach(r -> rows.add(trend("rising", r)));
+                    t.falling().forEach(r -> rows.add(trend("falling", r)));
+                    return rows;
+                }));
+        TABLES.put("bought-together", new Table(List.of("product_a_id", "product_a", "product_b_id", "product_b",
+                "orders"),
+                (s, p) -> s.products(p, 0).boughtTogether().stream().map(r -> row(r.productA(), text(r.nameA()),
+                        r.productB(), text(r.nameB()), r.orders())).toList()));
         TABLES.put("top-customers", new Table(List.of("customer_id", "name", "email", "orders", "revenue"),
                 (s, p) -> s.customers(p, 0).top().stream().map(r -> row(r.userId(), text(r.name()), text(r.email()),
                         r.orders(), r.revenue())).toList()));
@@ -82,6 +96,10 @@ final class SectionCsv {
             throw new UncheckedIOException(e);
         }
         return out.toString();
+    }
+
+    private static List<Object> trend(String direction, Trending.Row r) {
+        return row(direction, r.productId(), text(r.name()), r.units(), r.previousUnits(), r.change(), r.isNew());
     }
 
     /** Allows nulls, unlike List.of. */

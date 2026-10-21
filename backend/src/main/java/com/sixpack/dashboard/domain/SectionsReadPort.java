@@ -15,8 +15,21 @@ import java.util.Set;
 /** Raw figures behind the dashboard sections for the current store, for orders placed in [from, to). */
 public interface SectionsReadPort {
 
-    /** Every product sold, by revenue, highest first. */
+    /** Every product sold, by revenue, highest first; the name is the one on the latest order line. */
     List<ProductSales> productSales(Instant from, Instant to);
+
+    record PairCount(String productA, String productB, long orders) {
+    }
+
+    /**
+     * Pairs of different products in the same order, in at least {@code minOrders} orders, most first, then by id;
+     * productA sorts before productB. Orders with more than {@code maxDistinct} distinct products are skipped, and
+     * lines without a product id never pair.
+     */
+    List<PairCount> boughtTogether(Instant from, Instant to, int minOrders, int limit, int maxDistinct);
+
+    /** Catalogue names of the products that still exist; ids that are null or not ObjectIds are skipped. */
+    Map<String, String> productNames(Collection<String> productIds);
 
     /** Units sold per line: the key is the product id, or "productId:variantId" for a variant. */
     Map<String, Double> unitsByLine(Instant from, Instant to);
