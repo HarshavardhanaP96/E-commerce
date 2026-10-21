@@ -8,6 +8,10 @@ import "./styles/app.scss"
 import { Provider } from 'react-redux'
 import { store } from './redux/store.ts'
 import { loadTenantConfig } from './tenant/tenant.ts'
+import { surfaceFor } from './utils/routes.ts'
+
+// Tag the surface before anything paints, so a hard refresh on /admin never shows store colours.
+document.documentElement.dataset.surface = surfaceFor(window.location.pathname)
 
 // Which store is this? Load its name, theme and business details before the first render, so nothing flashes.
 loadTenantConfig().finally(() => {
