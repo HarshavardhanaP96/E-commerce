@@ -14,7 +14,10 @@ export const REMOVED_PRODUCT = "Removed product";
 export const trendChange = ({ change, isNew }: { change: number | null; isNew: boolean }) =>
   isNew || change === null ? "New" : `${change > 0 ? "+" : ""}${change}%`;
 
-/** What an audience cell of fewer than 5 buyers shows instead of its figures (the server sends none). */
+/**
+ * What a hidden audience cell shows instead of its figures (the server sends none): a group of fewer than 5 buyers,
+ * or a cell hidden so the totals cannot give such a group away.
+ */
 export const SMALL_GROUP = "fewer than 5 buyers";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;

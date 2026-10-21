@@ -277,28 +277,28 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
                         "18-24", "25-34", "35-44", "45-54", "55+", "unknown")))
                 .andExpect(jsonPath("$.customers.audience.rows[*].gender").value(org.hamcrest.Matchers.contains(
                         "female", "male", "unknown", "all")))
-                // female 25-34: five buyers, shown
-                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].small").value(false))
-                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].buyers").value(5))
-                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].orders").value(6))
-                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].revenue").value(600.0))
-                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].share").value(31.6))
                 // female 18-24: four buyers, small, no figures
                 .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].small").value(true))
                 .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].buyers").value(nullValue()))
                 .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].orders").value(nullValue()))
                 .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].revenue").value(nullValue()))
                 .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].share").value(nullValue()))
+                // female 25-34 has five buyers but is hidden: the female total (9) minus it would give 18-24 away
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].buyers").value(nullValue()))
                 .andExpect(jsonPath("$.customers.audience.rows[0].total.buyers").value(9))
+                .andExpect(jsonPath("$.customers.audience.rows[0].total.orders").value(10))
                 .andExpect(jsonPath("$.customers.audience.rows[0].total.share").value(52.6))
-                // male, age unknown: no birth date, under 18, born in the future
-                .andExpect(jsonPath("$.customers.audience.rows[1].cells[5].buyers").value(5))
-                .andExpect(jsonPath("$.customers.audience.rows[1].cells[5].share").value(26.3))
-                // unknown gender: four buyers in all, small
+                // unknown gender: four buyers in all, small; so the male total (5) is hidden too, or the grand
+                // total minus female and male would give it away, and male / age unknown with it
                 .andExpect(jsonPath("$.customers.audience.rows[2].total.small").value(true))
                 .andExpect(jsonPath("$.customers.audience.rows[2].total.buyers").value(nullValue()))
+                .andExpect(jsonPath("$.customers.audience.rows[1].total.small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[1].cells[5].small").value(true))
                 // column totals and the whole period, without the other shop's sale
                 .andExpect(jsonPath("$.customers.audience.rows[3].cells[0].small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[3].cells[1].buyers").value(5))
+                .andExpect(jsonPath("$.customers.audience.rows[3].cells[1].share").value(31.6))
                 .andExpect(jsonPath("$.customers.audience.rows[3].cells[5].buyers").value(8))
                 .andExpect(jsonPath("$.customers.audience.rows[3].total.buyers").value(18))
                 .andExpect(jsonPath("$.customers.audience.rows[3].total.orders").value(19))
@@ -307,15 +307,15 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void theAudienceDownloadsAsCsvWithSmallCellsBlank() throws Exception {
+    void theAudienceDownloadsAsCsvWithHiddenCellsBlank() throws Exception {
         seedSeptember();
         String csv = september("export/audience").andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         List<String> expected = new ArrayList<>(List.of("gender,age_band,buyers,orders,revenue,share_percent",
-                "female,18-24,,,,", "female,25-34,5,6,600,31.6", "female,35-44,,,,", "female,45-54,,,,",
+                "female,18-24,,,,", "female,25-34,,,,", "female,35-44,,,,", "female,45-54,,,,",
                 "female,55+,,,,", "female,unknown,,,,", "female,all,9,10,1000,52.6",
                 "male,18-24,,,,", "male,25-34,,,,", "male,35-44,,,,", "male,45-54,,,,", "male,55+,,,,",
-                "male,unknown,5,5,500,26.3", "male,all,5,5,500,26.3"));
+                "male,unknown,,,,", "male,all,,,,"));
         for (String band : new String[] {"18-24", "25-34", "35-44", "45-54", "55+", "unknown", "all"}) {
             expected.add("unknown," + band + ",,,,");
         }

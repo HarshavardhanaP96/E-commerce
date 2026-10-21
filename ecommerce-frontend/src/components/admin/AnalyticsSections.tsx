@@ -249,7 +249,8 @@ const Customers = ({ range }: { range: DateRange }) => {
             Revenue from signed-in buyers by gender and age band, with its share of their revenue in this range.
             Age is counted on {bucketLabel(s.audience.asOf, "day")} {s.audience.asOf.slice(0, 4)}, the range&apos;s
             last day, so a birthday inside the range can move a buyer up one band. Groups of fewer than 5 buyers
-            are hidden so no one can be singled out.
+            are hidden so no one can be singled out, and so is any cell the totals would let you work one out from:
+            &ldquo;fewer than 5 buyers&rdquo; can mark either.
           </p>
         </Card>
         <Card title="Orders by place" table="places" range={range} wide>

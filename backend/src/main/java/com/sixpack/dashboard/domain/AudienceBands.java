@@ -11,8 +11,10 @@ import java.util.Locale;
 
 /**
  * Bins the period's buyers by gender and age band into the audience table (see {@link Audience}). Any cell or
- * total with fewer than {@link #MIN_BUYERS} distinct buyers is {@code small}, its figures null. A fixed analysis
- * rule, like trending's minimum, not a store setting.
+ * total with fewer than {@link #MIN_BUYERS} distinct buyers is hidden ({@code small}, figures null), and so is any
+ * other cell or total that would let such a group be worked out from the table's sums (see
+ * {@link AudienceSuppression}); the grand total is always shown.
+ * A fixed analysis rule, like trending's minimum, not a store setting.
  */
 public final class AudienceBands {
 
@@ -77,19 +79,32 @@ public final class AudienceBands {
             }
             revenue += buyer.revenue();
         }
+        boolean[][] hidden = hide(sums);
         List<AudienceRow> rows = new ArrayList<>();
         for (int gi = 0; gi <= g; gi++) {
             List<AudienceCell> cells = new ArrayList<>();
             for (int bi = 0; bi < b; bi++) {
-                cells.add(cell(sums[gi][bi], revenue));
+                cells.add(cell(sums[gi][bi], hidden[gi][bi], revenue));
             }
-            rows.add(new AudienceRow(gi < g ? GENDERS.get(gi) : ALL, List.copyOf(cells), cell(sums[gi][b], revenue)));
+            rows.add(new AudienceRow(gi < g ? GENDERS.get(gi) : ALL, List.copyOf(cells),
+                    cell(sums[gi][b], hidden[gi][b], revenue)));
         }
         return new Audience(asOf, BANDS, List.copyOf(rows));
     }
 
-    private static AudienceCell cell(double[] sum, double revenue) {
-        if (sum[0] < MIN_BUYERS) {
+    /** Which items to hide: see {@link AudienceSuppression}. */
+    private static boolean[][] hide(double[][][] sums) {
+        double[][] buyers = new double[sums.length][sums[0].length];
+        for (int gi = 0; gi < sums.length; gi++) {
+            for (int bi = 0; bi < sums[0].length; bi++) {
+                buyers[gi][bi] = sums[gi][bi][0];
+            }
+        }
+        return AudienceSuppression.hide(buyers, MIN_BUYERS);
+    }
+
+    private static AudienceCell cell(double[] sum, boolean hidden, double revenue) {
+        if (hidden) {
             return new AudienceCell(null, null, null, null, true);
         }
         return new AudienceCell((long) sum[0], (long) sum[1], sum[2], Sections.percent(sum[2], revenue), false);

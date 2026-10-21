@@ -46,9 +46,11 @@ public final class Sections {
     }
 
     /**
-     * One gender × age band cell of the audience table, or a row's or column's total. When fewer than
-     * {@link AudienceBands#MIN_BUYERS} distinct buyers fall in it, {@code small} is true and every figure is null,
-     * so no small group (and no single person) can be picked out; an empty cell is small too.
+     * One gender × age band cell of the audience table, or a row's or column's total. {@code small} true means
+     * hidden: every figure is null. An item is hidden when fewer than {@link AudienceBands#MIN_BUYERS} distinct
+     * buyers fall in it (an empty one too), and also when a total minus the shown figures would otherwise give such
+     * a group away, so a hidden item may hold 5 or more buyers. No group of 1 to 4 buyers can be worked out exactly
+     * from one table's figures. The grand total (the "all" row's total) is never hidden.
      *
      * @param buyers distinct buyers with an order in the period
      * @param share  percent of the period's revenue from buyers (all cells of the table add up to 100)

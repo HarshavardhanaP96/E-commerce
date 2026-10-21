@@ -24,7 +24,10 @@ export type CustomersSection = {
   audience: Audience;
 };
 
-/** Fewer than 5 buyers: `small` is true and every figure is null. `share` = percent of the range's buyer revenue. */
+/**
+ * `small` = hidden, every figure null: fewer than 5 buyers, or a cell the totals would give such a group away from.
+ * The grand total is never hidden. `share` = percent of the range's buyer revenue.
+ */
 export type AudienceCell = {
   buyers: number | null; orders: number | null; revenue: number | null; share: number | null; small: boolean;
 };
