@@ -48,7 +48,7 @@ class MongoOrderReads implements OrderReads {
 
     private List<OrderFacts> find(Query query) {
         query.fields().include("orderNumber", "createdAt", "status", "orderItems.quantity", "total", "discount",
-                "payment.method", "payment.refunds.status", "couponCode", "statusHistory");
+                "payment.method", "payment.refunds.status", "statusHistory");
         return q.mongo().find(query, Document.class, OrderQueries.ORDERS).stream().map(MongoOrderReads::facts)
                 .toList();
     }
@@ -63,7 +63,7 @@ class MongoOrderReads implements OrderReads {
         return new OrderFacts(OrderQueries.hex(d.get("_id")), d.getString("orderNumber"),
                 placed == null ? null : placed.toInstant(), d.getString("status"), items,
                 OrderQueries.number(d.get("total")), OrderQueries.number(d.get("discount")),
-                payment == null ? null : payment.getString("method"), d.getString("couponCode"),
+                payment == null ? null : payment.getString("method"),
                 firstAt(d, "Shipped"), firstAt(d, "Delivered"), refunded);
     }
 

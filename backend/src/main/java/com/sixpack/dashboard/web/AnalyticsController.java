@@ -1,5 +1,8 @@
 package com.sixpack.dashboard.web;
 
+import com.sixpack.audit.AuditAction;
+import com.sixpack.audit.AuditEvent;
+import com.sixpack.audit.AuditTrail;
 import com.sixpack.dashboard.application.OrdersService;
 import com.sixpack.dashboard.application.OverviewService;
 import com.sixpack.dashboard.application.SalesService;
@@ -20,7 +23,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** One route per analytics tab. Each answers JSON, or its main table as CSV with {@code ?format=csv}. */
+/**
+ * One route per analytics tab. Each answers JSON, or its main table as CSV with {@code ?format=csv}. Every CSV download
+ * is audited, like the step-3 exports (ADR-025).
+ */
 @Validated
 @RestController
 @RequestMapping("/api/v1/dashboard")
@@ -32,12 +38,15 @@ class AnalyticsController {
     private final OverviewService overview;
     private final SalesService sales;
     private final OrdersService ordersSection;
+    private final AuditTrail audit;
 
-    AnalyticsController(StoreTime time, OverviewService overview, SalesService sales, OrdersService ordersSection) {
+    AnalyticsController(StoreTime time, OverviewService overview, SalesService sales, OrdersService ordersSection,
+                        AuditTrail audit) {
         this.time = time;
         this.overview = overview;
         this.sales = sales;
         this.ordersSection = ordersSection;
+        this.audit = audit;
     }
 
     @GetMapping("/overview")
@@ -67,9 +76,11 @@ class AnalyticsController {
         if (!csv) {
             return ResponseEntity.ok(ApiResponse.of("section", section));
         }
+        String body = CsvWriter.write(section.csvHeader(), section.csvRows());
+        audit.record(AuditEvent.of(AuditAction.ANALYTICS_EXPORTED).on("report", name));
         String file = name + "-" + section.window().from() + "_" + section.window().to() + ".csv";
         return ResponseEntity.ok().contentType(CSV)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(file).build().toString())
-                .body(CsvWriter.write(section.csvHeader(), section.csvRows()));
+                .body(body);
     }
 }

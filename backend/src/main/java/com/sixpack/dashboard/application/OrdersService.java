@@ -75,7 +75,7 @@ public class OrdersService {
         return new OrdersSection(Window.of(q, zone), series, previous, OrdersSection.byStatus(facts),
                 OrdersSection.fulfilment(facts, p, q.granularity(), zone),
                 OrdersSection.stuck(read.stuck(q.scope(), placedBefore, q.limit()), now),
-                read.stuckCount(q.scope(), placedBefore), stuckDays, OrdersSection.size(facts, q.limit()), refunds,
+                read.stuckCount(q.scope(), placedBefore), stuckDays, OrdersSection.size(facts), refunds,
                 truncated, facts);
     }
 }

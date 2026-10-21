@@ -9,7 +9,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,10 +42,8 @@ public record OrdersSection(@JsonUnwrapped Window window, List<Series.Point> ser
     public record StuckOrder(String id, String orderNumber, Instant placedAt, long ageDays, double total) {
     }
 
-    public record CouponUse(String code, long orders, double discount) {
-    }
-
-    public record Size(double averageItems, Map<String, Long> bands, List<CouponUse> topCoupons) {
+    /** Coupon use is on the Coupons tab. */
+    public record Size(double averageItems, Map<String, Long> bands) {
     }
 
     /** @param rate refunded orders as a percent of orders placed */
@@ -89,28 +86,19 @@ public record OrdersSection(@JsonUnwrapped Window window, List<Series.Point> ser
         return new Fulfilment(toShip, shipToDeliver, toDeliver, withoutHistory, trend);
     }
 
-    public static Size size(List<OrderFacts> facts, int limit) {
+    public static Size size(List<OrderFacts> facts) {
         Map<String, Long> bands = new LinkedHashMap<>();
         bands.put("1", 0L);
         bands.put("2-3", 0L);
         bands.put("4-5", 0L);
         bands.put("6+", 0L);
         long items = 0;
-        Map<String, CouponUse> coupons = new LinkedHashMap<>();
         for (OrderFacts f : facts) {
             items += f.items();
             String band = f.items() <= 1 ? "1" : f.items() <= 3 ? "2-3" : f.items() <= 5 ? "4-5" : "6+";
             bands.merge(band, 1L, Long::sum);
-            if (f.couponCode() != null && !f.couponCode().isBlank()) {
-                String code = f.couponCode().trim().toUpperCase(Locale.ROOT);
-                CouponUse was = coupons.getOrDefault(code, new CouponUse(code, 0, 0));
-                coupons.put(code, new CouponUse(code, was.orders() + 1, was.discount() + f.discount()));
-            }
         }
-        List<CouponUse> top = coupons.values().stream()
-                .sorted(Comparator.comparingLong(CouponUse::orders).reversed().thenComparing(CouponUse::code))
-                .limit(limit).toList();
-        return new Size(facts.isEmpty() ? 0 : Change.round2((double) items / facts.size()), bands, top);
+        return new Size(facts.isEmpty() ? 0 : Change.round2((double) items / facts.size()), bands);
     }
 
     public static Refunds refunds(List<OrderFacts> facts, double amount) {
