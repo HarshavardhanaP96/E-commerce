@@ -26,4 +26,7 @@ public interface ProductCatalog {
     void reserveStock(Collection<StockLine> lines);
 
     void releaseStock(Collection<StockLine> lines);
+
+    /** Sellable lines at or below their low-stock threshold (the product's own, else the store's), emptiest first. */
+    List<LowStockLine> lowStock();
 }

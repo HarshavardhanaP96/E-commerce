@@ -5,7 +5,7 @@ import DataTable from "../../components/admin/DataTable";
 import { errorMessage } from "../../redux/api/baseQuery";
 import { AUDIT_ACTIONS, AuditEntry, summariseChanges, useAuditLogQuery } from "../../redux/api/auditAPI";
 
-const ENTITY_TYPES = ["product", "category", "coupon", "order", "user", "address", "tenant"];
+const ENTITY_TYPES = ["product", "category", "coupon", "order", "user", "address", "tenant", "report"];
 
 type Row = AuditEntry & { actor: string; entity: string; summary: string };
 

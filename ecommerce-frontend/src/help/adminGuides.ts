@@ -33,7 +33,7 @@ export const GUIDES: Guide[] = [
     title: "Admin panel basics",
     summary: "What each section does and how to get around.",
     body: [
-      { type: "p", text: "The sidebar is your menu: Analytics for the numbers, Products for the catalogue, Categories for the category tree, Customers for accounts, Transactions for orders and Coupons for discount codes. On a phone or small window the menu opens from the button at the bottom left." },
+      { type: "p", text: "The sidebar is your menu: Analytics for the numbers, Products for the catalogue, Categories for the category tree, Customers for accounts, Transactions for orders, Coupons for discount codes, Audit log for who changed what, and Store settings for your shop's rules. Help & guides, at the bottom, opens this help centre. On a phone or small window the menu opens from the button at the bottom left." },
       { type: "steps", title: "Good to know", items: [
         "Click any row in a table to open that record.",
         "The Help button at the top right of every admin page opens the guide for the page you are on.",
@@ -41,13 +41,13 @@ export const GUIDES: Guide[] = [
       ] },
       { type: "tip", text: "Use the 6PACK logo to jump back to the store, and the account icon to sign out." },
     ],
-    related: ["tables", "analytics"],
+    related: ["tables", "analytics", "store-settings"],
   },
   {
     slug: "tables",
     group: "Start here",
     title: "Searching, sorting and paging tables",
-    summary: "Find records quickly in the Products, Customers, Transactions and Coupons lists.",
+    summary: "Find records quickly in the Products, Customers, Transactions, Coupons and Audit log lists.",
     body: [
       { type: "steps", items: [
         "Type in the search box to filter the rows on the page as you type.",
@@ -55,28 +55,60 @@ export const GUIDES: Guide[] = [
         "Click a column heading to sort by it; click again to reverse the order.",
         "Change Rows per page at the bottom, and use the arrows to move between pages.",
       ] },
-      { type: "tip", text: "Long values are cut off with “…” to keep columns tidy. Open the row to see the full value." },
+      { type: "p", text: "The Audit log is too long to load at once, so it fetches one page at a time. There the search box looks only at the rows on the current page; use its filters to search the whole log. The count at the bottom is the number of entries that match the filters." },
+      { type: "tip", text: "Long values are cut off with “…” to keep columns tidy. Hover over a cell to see it in full, or open the row." },
     ],
-    related: ["getting-started"],
+    related: ["getting-started", "audit-log"],
   },
   {
     slug: "analytics",
     group: "Start here",
     title: "Reading the Analytics dashboard",
-    summary: "Revenue, customers, products and orders at a glance.",
+    summary: "The Overview tab: revenue, orders and stock for any date range.",
     openLabel: { to: "/admin/analytics", label: "Open Analytics" },
     body: [
-      { type: "p", text: "The four cards at the top show totals for revenue, customers, products and orders, each with the change versus last month (green is up, red is down). The charts below break the numbers down." },
-      { type: "steps", title: "What the charts show", items: [
-        "Revenue & orders (6 months): purple bars are revenue and use the left axis (₹); blue bars are order counts and use the right axis.",
-        "Inventory by category, Gender ratio, Customers by age: how your catalogue and customers split.",
+      { type: "p", text: "Pick a date range at the top, then what to compare it with: the previous period, the same days last year, or nothing. The four cards show revenue, orders, average order value and units sold for that range, each with the change against the comparison (green is up, red is down). Days follow your store's time zone." },
+      { type: "steps", title: "Controls on the Overview tab", items: [
+        "Net revenue takes refunds off, on the day each refund was issued; Gross revenue is the value of orders placed. Switch between them with the revenue drop-down.",
+        "The category drop-down scopes the whole Overview, except Low stock, to one category. Revenue then counts only that category's items, so refunds, discounts and tax are left out.",
+        "The line under the cards adds refunds, discounts and tax collected for the range.",
+      ] },
+      { type: "steps", title: "What the cards below show", items: [
+        "Low stock: products and variants at or below their low-stock level. Click one to open it.",
+        "Revenue & orders: the chosen range by day, week or month (longer ranges use bigger steps). Revenue bars use the left axis, order counts the right one.",
+        "Inventory by category, Gender ratio and Customers by age: how your catalogue and customers split.",
         "Order fulfilment and Stock availability: how many orders are Processing, Shipped or Delivered, and how many products are in or out of stock.",
         "Revenue distribution: tax, shipping, discounts and net income.",
+        "New products & users (6 months), Revenue (12 months) and Discount given (12 months): longer trends by month, not tied to the date range.",
         "Latest transactions: click one to open the order.",
       ] },
-      { type: "tip", text: "Use the category drop-down at the top right to scope the whole dashboard to one category." },
+      { type: "tip", text: "The other tabs (Products, Customers, Coupons, Payments, Tax) break the same range down further and download as CSV." },
     ],
-    related: ["orders", "products"],
+    related: ["analytics-sections", "low-stock", "orders"],
+  },
+  {
+    slug: "analytics-sections",
+    group: "Start here",
+    title: "Analytics sections and CSV downloads",
+    summary: "Top sellers, customers, coupons, payment methods and monthly GST for any date range.",
+    openLabel: { to: "/admin/analytics?tab=products", label: "Open Analytics" },
+    body: [
+      { type: "steps", items: [
+        "Go to Analytics and pick a date range.",
+        "Choose a tab: Products, Customers, Coupons, Payments or Tax.",
+        "Click CSV on any card to download that table with every row (the page shows the top rows).",
+      ] },
+      { type: "steps", title: "What each tab shows", items: [
+        "Products: top sellers, revenue by category, products that did not sell in the range, and low-stock items with the days of stock left at the range's selling rate.",
+        "Customers: new and returning customers, how many ordered twice or more, your top customers, and orders by city.",
+        "Coupons: how often each code was used, what the discount cost you, and the revenue from those orders.",
+        "Payments: the mix of payment methods and the refunds over time.",
+        "Tax: GST by month and rate, split into CGST + SGST (buyers in your state) and IGST, as on your invoices.",
+      ] },
+      { type: "p", text: "Revenue in these tabs is the value of orders placed in the range. Refunds are shown on the Payments tab but not taken off the GST figures, so check credit notes with your accountant before filing." },
+      { type: "tip", text: "Set your GSTIN and state under Store settings first: without the state, all tax shows as IGST. Each CSV download is recorded in the audit log, because the customer list holds personal data." },
+    ],
+    related: ["analytics", "store-settings", "audit-log"],
   },
   {
     slug: "products",
@@ -104,10 +136,11 @@ export const GUIDES: Guide[] = [
       { type: "steps", items: [
         "Go to Products and click Add product.",
         "Enter the Name (up to 120 characters) and a Category (up to 50 characters, for example laptop or camera).",
-        "Enter the Price in ₹ and the Stock (a whole number, 0 or more).",
+        "Enter the Price in your store's currency and the Stock (a whole number, 0 or more).",
         "Use Upload pictures under the preview: JPEG, PNG, WEBP or GIF, no larger than 5 MB each. Pick up to 6 at once; the first is the main photo and the rest become the gallery.",
         "Click Save. The preview on the left updates as you type.",
       ] },
+      { type: "p", text: "Each store has a limit on the number of products and on the storage its pictures use. If you reach one, saving shows a message saying so; ask your platform administrator to raise it." },
       { type: "tip", text: "Reuse the same category spelling for similar products. Categories drive the store’s category filter and the analytics breakdown, so “Laptop” and “laptops” would count as two." },
     ],
     related: ["edit-product", "products"],
@@ -136,6 +169,7 @@ export const GUIDES: Guide[] = [
     summary: "Sell one product in several sizes, colours or other options, each with its own stock and price.",
     body: [
       { type: "p", text: "A variant is one buyable combination, such as size M in Black. Each variant has its own SKU, price, optional MRP, stock and status. Customers pick their options on the product page." },
+      { type: "tip", text: "No Variants tab on the product page? Variants are switched off for your store. Ask your platform administrator to turn them on." },
       { type: "steps", title: "Set up variants", items: [
         "Open the product and choose the Variants tab.",
         "Click Size, Colour or Add option, then type the values separated by commas (S, M, L). Press Enter to add them.",
@@ -174,11 +208,11 @@ export const GUIDES: Guide[] = [
       { type: "p", text: "Every product has a low-stock level. When the product's stock, or the stock of any active variant, is at or below that level, it shows up in the Low stock card on Analytics and gets a Low badge in the Products list." },
       { type: "steps", title: "Change the level for one product", items: [
         "Open the product. On the Details tab, set Low-stock alert at.",
-        "Click Save. Leave it empty to use the store default (5).",
+        "Click Save. Leave it empty to use your store's level from Store settings (5 unless you changed it).",
       ] },
       { type: "tip", text: "Set it to 0 to be told only when something has sold out. Disabled variants and draft or archived products never raise alerts." },
     ],
-    related: ["products-csv", "product-variants"],
+    related: ["products-csv", "product-variants", "store-settings"],
   },
   {
     slug: "products-csv",
@@ -293,7 +327,7 @@ export const GUIDES: Guide[] = [
     body: [
       { type: "steps", title: "Issue a refund", items: [
         "Open the order from Transactions and look at the Payment section: status, how the customer paid, and what has already been refunded.",
-        "Enter an Amount in ₹ (leave it empty to refund everything that is left) and a Reason. The customer can see the reason, so keep it polite and leave out names.",
+        "Enter an Amount (leave it empty to refund everything that is left) and a Reason. The customer can see the reason, so keep it polite and leave out names.",
         "Click Issue refund and confirm. The money goes back to the card, UPI or bank account the customer paid with.",
       ] },
       { type: "p", text: "You can refund in parts until the order total is reached. The status goes from Paid to Partially refunded to Refunded." },
@@ -303,27 +337,31 @@ export const GUIDES: Guide[] = [
         "Click Invoice at the top of the order page (customers have a View invoice link on their order).",
         "Click Print / Save as PDF and choose Save as PDF in the print window.",
       ] },
-      { type: "p", text: "The invoice shows your business details, the tax split by rate (CGST and SGST for buyers in your state, IGST for others) and any refunds. Ask your developer to set your business name, address, GSTIN and state." },
+      { type: "p", text: "The invoice shows your business details, the tax split by rate (CGST and SGST for buyers in your state, IGST for others) and any refunds. Set your legal name, address, GSTIN and state under Store settings, in Invoices and contact details." },
+      { type: "tip", text: "Each refund that goes through is recorded in the Audit log as ORDER_REFUNDED, with the order's id and the total refunded before and after." },
     ],
-    related: ["fulfil-order", "orders"],
+    related: ["fulfil-order", "orders", "store-settings"],
   },
   {
     slug: "store-settings",
     group: "Start here",
     title: "Setting your shop's rules",
-    summary: "Shipping, default GST, coupon cap, minimum age, catalogue paging, invoice details and time zone.",
+    summary: "Shipping, default GST, coupon cap, minimum age, catalogue paging, low-stock level, invoice and contact details, and time zone.",
     openLabel: { to: "/admin/settings", label: "Open Store settings" },
     body: [
       { type: "steps", items: [
         "Go to Store settings.",
         "Every field shows the platform default in grey. Type a value to use your own, or leave it empty to keep the default.",
-        "Under Invoices and contact details, enter your legal name, registered address, GSTIN and state. Your invoices print these.",
+        "Under Invoices and contact details, enter your legal name, registered address, GSTIN and state, plus the contact email, phone and grievance officer. Your invoices print these, and your Terms, Privacy and Contact pages show them.",
+        "Under Region, pick your time zone. Analytics days and the dates on orders and invoices follow it.",
         "Click Save settings. The cart, checkout and invoices use the new values straight away.",
       ] },
       { type: "p", text: "The default GST rate applies only to products without their own rate. An order keeps the rate it was charged at, so changing the default never changes past invoices." },
-      { type: "tip", text: "Set a shipping fee of 0 to make shipping free on every order. The minimum age can be raised, but never set below 18." },
+      { type: "p", text: "Spell the state the way customers type it in their address (Karnataka, not KA). A buyer in the same state pays CGST + SGST, anyone else IGST, and the names are compared as text." },
+      { type: "tip", text: "Set a shipping fee of 0 to make shipping free on every order. The minimum age can be raised, but never set below 18. Currency and language are set by your platform administrator." },
+      { type: "p", text: "Each save is recorded in the Audit log as STORE_SETTINGS_UPDATED, with the old and new values." },
     ],
-    related: ["coupons"],
+    related: ["coupons", "refunds", "analytics-sections", "audit-log"],
   },
   {
     slug: "coupons",
@@ -335,7 +373,7 @@ export const GUIDES: Guide[] = [
       { type: "steps", items: [
         "Go to Coupons.",
         "Type a Code of 3–32 letters, digits, _ or -, or click Generate for a random 8-character code.",
-        "Choose Flat (₹ off) or Percent (% off, with an optional maximum) and enter the amount.",
+        "Choose Flat (an amount off) or Percent (% off, with an optional maximum) and enter the amount. A flat coupon can't be larger than the cap in Store settings.",
         "Optionally set a minimum order, a start and end time, and limits on total uses and uses per customer.",
         "Optionally limit it to chosen categories or products (hold Ctrl or Cmd to pick several), or to a customer's first order only.",
         "Click Create coupon. Use the pause button on a row to stop and restart a code without deleting it.",
@@ -344,7 +382,31 @@ export const GUIDES: Guide[] = [
       { type: "p", text: "Customers enter the code in the Coupon code box in their cart, and the discount comes off the total before they pay." },
       { type: "tip", text: "Share the code in your emails or social posts. Delete it from the list to stop it working." },
     ],
-    related: ["orders"],
+    related: ["orders", "analytics-sections", "store-settings"],
+  },
+  {
+    slug: "audit-log",
+    group: "Start here",
+    title: "Checking who changed what in the Audit log",
+    summary: "Every change to your shop, sign-in and export, with who did it and when.",
+    openLabel: { to: "/admin/audit", label: "Open Audit log" },
+    body: [
+      { type: "p", text: "The Audit log records changes to products, categories, coupons, orders and customer accounts, your Store settings, sign-ins and password resets, consent changes, refunds and Analytics CSV downloads. Newest entries come first. Entries can't be edited or deleted, and each is kept for 365 days." },
+      { type: "steps", title: "Find an entry", items: [
+        "Go to Audit log.",
+        "Narrow it down with the filters: record type, action, result (Success or Failure) and a from and to date.",
+        "To see the history of one record, paste its id into Record id. For everything one person did, paste their account id into Actor id. Both ids are at the end of the address when you open the record.",
+        "Change Rows per page at the bottom and use the arrows to page through. The count shows how many entries match.",
+      ] },
+      { type: "steps", title: "Reading a row", items: [
+        "Who: the role (ADMIN, USER, ANONYMOUS, SYSTEM or PLATFORM_ADMIN) and the last 6 characters of the account id. SYSTEM is the store itself, for example ending a trial.",
+        "Record: the type and id of what changed. Hover to see the full id.",
+        "Changes: each field as old → new. Personal details such as an email or address show only as “email changed”, never the values.",
+      ] },
+      { type: "tip", text: "PLATFORM_ADMIN entries are changes your platform administrator made to your store, such as its domains, features, limits or status. They are shown to you so nothing changes without a record." },
+      { type: "warn", text: "The search box looks only at the page you are on. Use the filters to search the whole log." },
+    ],
+    related: ["tables", "store-settings", "customer-roles"],
   },
 ];
 
@@ -363,5 +425,7 @@ export const guideForPath = (pathname: string): string => {
   if (pathname === "/admin/transaction") return "orders";
   if (pathname.startsWith("/admin/transaction/")) return "fulfil-order";
   if (pathname.startsWith("/admin/app/coupon")) return "coupons";
+  if (pathname === "/admin/audit") return "audit-log";
+  if (pathname === "/admin/settings") return "store-settings";
   return "getting-started";
 };

@@ -28,7 +28,8 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | `storage`   | `FileStorage` (store image, delete)               | `infra.local` disk adapter |
 | `consent`   | `ConsentLedger` (record registration consent, check current acceptance, current policy version) | append-only `consents` log, policy versions from `app.legal.*`, `/legal` + `/consent` endpoints |
 | `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment, user and consent APIs. Blocks deletion of users with undelivered orders and anonymises addresses on `UserDeletedEvent` |
-| `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`) |
+| `audit`     | `AuditTrail` (record an event), `AuditEvent`, `AuditAction`, `FieldChange`, `Changes` | append-only `audit_log` with redaction by allowlist, `/admin/audit` and the read-only `/platform/audit` |
+| `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`), the `daily_sales` summary table and its nightly `DailySummaryJob` (ADR-024), live section reads and audited CSV exports (ADR-025) |
 
 Layer rules inside a module: `web → application → domain ← infra`. Domain types never import Spring Data
 or Mongo classes. Each `infra` adapter implements a `domain` port. Moving to Postgres, S3 or a separate
@@ -82,17 +83,28 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   between the header dropdown and the bottom sheet, which is a native `<dialog>` for focus trapping and Escape.
 - **Admin conventions:** `DataTable` puts search, inline filters and the primary action (e.g. "Add product") in
   one toolbar. Column `width` values are minimums (auto layout shares spare width; cells truncate with
-  ellipsis), pagination and page size sit at the bottom, and the table body scrolls instead of the page.
+  ellipsis), pagination and page size sit at the bottom, and the table body scrolls instead of the page. By default it pages
+  in the browser; a list too long to load at once passes `serverPaging` (page, page size, total and change
+  handlers), and the search box then filters only the rows on the current page (the Audit log does this).
   `DetailLayout` is the shell for product, user, order and new-product pages and puts Save / Update / Delete
   top-right; its cards fit their content.
 - **Help:** two separate surfaces. The store has a static, searchable FAQ at `/help` (`pages/help.tsx`, content in
   `help/articles.ts`, linked from the footer and account menu) with a support email taken from
-  `BUSINESS.email`. The admin panel has its own knowledge base at `/admin/help[/:slug]`
+  `BUSINESS.email` (filled from the store's storefront details by `tenant/tenant.ts`). The admin panel has its own knowledge base at `/admin/help[/:slug]`
   (`pages/admin/helpcenter.tsx`, content in `help/adminGuides.ts`). Every admin page shows a Help button in the
   header that opens the guide for that page (`guideForPath`); a new admin page needs a guide and a case there.
+  `help/adminGuides.test.ts` checks the mapping and that every related link points at a guide that exists.
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-20: ADR-025 **Dashboard sections read live; exports are audited.** Products, customers, coupons,
+  payments and tax (`/dashboard/{section}`) are drill-downs, so they aggregate `orders` (and `products`) live for
+  the range instead of widening the daily summary; cached per store, zone and range like the summary, cleared on
+  order changes. Low-stock lines come through `ProductCatalog.lowStock()` so the dashboard does not copy the
+  product rules. The category join (`$lookup` on `products`) matches `tenantId` itself, since `TenantMongo` only
+  scopes the collection being aggregated. GST is recomputed per order and rate with checkout's rounding and split
+  CGST/SGST/IGST like the invoice; it does not net off refunds (no credit notes yet). Every CSV download is an
+  `ANALYTICS_EXPORTED` audit entry because the customer table holds names and emails.
 - 2026-10-20: ADR-024 **Shop dashboard trends come from a daily summary table, with live numbers after it.**
   `DailySummaryJob` (nightly at `ANALYTICS_SUMMARY_CRON`, plus once after startup) writes `daily_sales`: one row
   per store per local day per currency, built from the same live aggregations the dashboard already used, so the

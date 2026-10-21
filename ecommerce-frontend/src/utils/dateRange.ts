@@ -54,3 +54,11 @@ export const presetRange = (preset: Preset, today = todayIn(regional.timeZone)):
       return { from: day(y, m, today.getDate() - 29), to };
   }
 };
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** A chart label for a bucket starting on `start` (YYYY-MM-DD): "5 Oct", or "Oct 2026" by month. */
+export const bucketLabel = (start: string, granularity: "day" | "week" | "month") => {
+  const [y, m, d] = start.split("-").map(Number);
+  return granularity === "month" ? `${MONTH_SHORT[m - 1]} ${y}` : `${d} ${MONTH_SHORT[m - 1]}`;
+};

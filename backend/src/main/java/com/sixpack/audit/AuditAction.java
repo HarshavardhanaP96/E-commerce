@@ -18,7 +18,9 @@ public enum AuditAction {
     TENANT_CREATED, TENANT_UPDATED, TENANT_STATUS_CHANGED,
     TENANT_EXPORTED, TENANT_PURGED,
     /** The store admin's own shop rules and storefront details. */
-    STORE_SETTINGS_UPDATED;
+    STORE_SETTINGS_UPDATED,
+    /** A dashboard table downloaded as CSV (the customer table holds personal data). */
+    ANALYTICS_EXPORTED;
 
     public static AuditAction parse(String value) {
         try {
