@@ -14,6 +14,7 @@ import {
   Filler,
 } from "chart.js";
 import { Bar, Doughnut, Line, Pie } from "react-chartjs-2";
+import { chartColors } from "./chartTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -28,18 +29,18 @@ ChartJS.register(
   Filler
 );
 
-ChartJS.defaults.font.family = "Inter, ui-sans-serif, system-ui, sans-serif";
+ChartJS.defaults.font.family = "Inter Variable, Inter, ui-sans-serif, system-ui, sans-serif";
 ChartJS.defaults.font.size = 13;
 ChartJS.defaults.font.weight = 500;
-ChartJS.defaults.color = "#334155"; // slate-700: ~10:1 on white (the old slate-500 read as washed out)
-ChartJS.defaults.borderColor = "#e2e8f0";
-ChartJS.defaults.plugins.tooltip.backgroundColor = "#0f172a";
+ChartJS.defaults.color = chartColors.ink;
+ChartJS.defaults.borderColor = chartColors.grid;
+ChartJS.defaults.plugins.tooltip.backgroundColor = chartColors.ink;
 ChartJS.defaults.plugins.tooltip.padding = 10;
 ChartJS.defaults.plugins.tooltip.cornerRadius = 6;
 ChartJS.defaults.plugins.tooltip.titleFont = { weight: 600 };
 ChartJS.defaults.plugins.tooltip.boxPadding = 4;
 ChartJS.defaults.plugins.tooltip.bodyFont = { size: 13 };
-ChartJS.defaults.plugins.legend.labels.color = "#0f172a";
+ChartJS.defaults.plugins.legend.labels.color = chartColors.ink;
 ChartJS.defaults.plugins.legend.labels.font = { size: 13, weight: 500 };
 ChartJS.defaults.plugins.legend.labels.usePointStyle = true;
 ChartJS.defaults.plugins.legend.labels.pointStyle = "circle";
@@ -49,12 +50,12 @@ const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFracti
 const valueAxis = {
   beginAtZero: true,
   border: { display: false },
-  grid: { color: "#e2e8f0" },
+  grid: { color: chartColors.grid },
   ticks: { callback: (v: string | number) => compact.format(Number(v)), maxTicksLimit: 6 },
 };
-const categoryAxis = { border: { display: false }, grid: { display: false }, ticks: { color: "#475569" } };
+const categoryAxis = { border: { display: false }, grid: { display: false }, ticks: { color: chartColors.muted } };
 
-const axisTitle = (text: string) => ({ display: true, text, color: "#475569", font: { size: 12, weight: 600 } });
+const axisTitle = (text: string) => ({ display: true, text, color: chartColors.muted, font: { size: 12, weight: 600 } });
 
 const months = ["January", "February", "March", "April", "May", "June", "July"];
 

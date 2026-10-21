@@ -873,7 +873,8 @@
 
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  // Revenue leads: a wider first column for the lead figure.
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   gap: $spacing-lg;
 }
 
@@ -891,8 +892,12 @@
   }
 
   > strong {
-    @include text(h1);
+    @include text(h2);
     @include tabular;
+  }
+
+  &--lead > strong {
+    @include text(h1);
   }
 
   > small {

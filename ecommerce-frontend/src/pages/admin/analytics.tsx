@@ -21,16 +21,18 @@ import { formatMoney, lastMonths, transformImage } from "../../utils/features";
 
 const COMPARE_LABEL = { previous: "vs previous period", year: "vs last year", none: "" } as const;
 
-const Widget = ({ label, value, change, against }: {
-  label: string; value: string; change?: number | null; against: string;
+/** One dashboard figure. `lead` makes it the largest on the row; the change reads as words too, not colour alone. */
+const Widget = ({ label, value, change, against, lead }: {
+  label: string; value: string; change?: number | null; against: string; lead?: boolean;
 }) => (
-  <article className="kpi">
+  <article className={`kpi${lead ? " kpi--lead" : ""}`}>
     <span>{label}</span>
     <strong>{value}</strong>
     {change != null && (
       <small className={change >= 0 ? "green" : "red"}>
-        {change >= 0 ? <LuTrendingUp /> : <LuTrendingDown />} {change > 0 ? "+" : ""}
-        {change}% <em>{against}</em>
+        {change >= 0 ? <LuTrendingUp aria-hidden /> : <LuTrendingDown aria-hidden />}
+        <span className="sr-only">{change >= 0 ? "Up" : "Down"}</span>
+        {change > 0 ? "+" : ""}{change}% <em>{against}</em>
       </small>
     )}
   </article>
@@ -162,7 +164,7 @@ const Analytics = () => {
 
         <section className="kpi-row">
           <Widget label={basis === "net" ? "Net revenue" : "Gross revenue"} value={formatMoney(now.revenue)}
-                  change={change?.revenue} against={against} />
+                  change={change?.revenue} against={against} lead />
           <Widget label="Orders" value={String(now.orders)} change={change?.orders} against={against} />
           <Widget label="Average order value" value={formatMoney(now.averageOrderValue)}
                   change={change?.averageOrderValue} against={against} />
@@ -259,7 +261,7 @@ const Analytics = () => {
           <div className="card chart-card chart-card--wide">
             <h4>Revenue (12 months)</h4>
             <LineChart data={l.revenue} label="Revenue" labels={twelve}
-                       backgroundColor={c.fill(c.accent)} borderColor={c.accent} />
+                       backgroundColor={c.fill(c.series[0])} borderColor={c.series[0]} />
           </div>
           <div className="card chart-card chart-card--wide">
             <h4>Discount given (12 months)</h4>
