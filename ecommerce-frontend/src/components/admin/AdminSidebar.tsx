@@ -13,7 +13,8 @@ import {
   LuUsers,
   LuX,
 } from "react-icons/lu";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { brand } from "../../tenant/tenant";
 
 const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/analytics", text: "Analytics", Icon: LuBarChart3 },
@@ -28,7 +29,7 @@ const NAV: { url: string; text: string; Icon: IconType }[] = [
 
 const SUPPORT: typeof NAV = [{ url: "/admin/help", text: "Help & guides", Icon: LuBookOpen }];
 
-/** Fixed sidebar on desktop; an off-canvas drawer below 1100px (see .admin-sidebar in app.scss). */
+/** Fixed sidebar on wide screens, an icon rail at 1101–1280px, an off-canvas drawer below (see .admin-sidebar in app.scss). */
 const AdminSidebar = () => {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
@@ -51,13 +52,18 @@ const AdminSidebar = () => {
           </button>
         </div>
 
+        <div className="admin-sidebar__store">
+          <strong>{brand.name}</strong>
+          <Link to="/">View store</Link>
+        </div>
+
         <h5>Manage</h5>
         <ul>
           {NAV.map(({ url, text, Icon }) => (
             <li key={url}>
-              <NavLink to={url}>
+              <NavLink to={url} title={text}>
                 <Icon aria-hidden />
-                {text}
+                <span className="admin-sidebar__label">{text}</span>
               </NavLink>
             </li>
           ))}
@@ -67,9 +73,9 @@ const AdminSidebar = () => {
         <ul>
           {SUPPORT.map(({ url, text, Icon }) => (
             <li key={url}>
-              <NavLink to={url}>
+              <NavLink to={url} title={text}>
                 <Icon aria-hidden />
-                {text}
+                <span className="admin-sidebar__label">{text}</span>
               </NavLink>
             </li>
           ))}
