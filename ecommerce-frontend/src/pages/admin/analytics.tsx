@@ -37,7 +37,7 @@ const Analytics = () => {
     <AdminLayout>
       <div className="analytics">
         <header className="analytics__toolbar">
-          <h2>Analytics</h2>
+          <h1>Analytics</h1>
           <div className="analytics__filters">
             <select value={preset} onChange={(e) => setParam(e.target.value === "custom"
                       ? { range: "custom", from: range.from, to: range.to }

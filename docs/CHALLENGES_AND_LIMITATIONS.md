@@ -21,8 +21,14 @@ limited on purpose, and what was hard.
 | P10 | An admin who has not yet accepted the admin agreement gets 403s from public endpoints. | Seen in the browser: `GET /product/latest` returned 403 on the home page right after an admin logged in, before they accepted. Most likely `AdminAgreementInterceptor`, not confirmed. | `AdminAgreementInterceptor` | Limit the agreement check to admin-only endpoints, or exempt public reads. |
 | P11 | The audit log's filter list lacks `TENANT_EXPORTED`, `TENANT_PURGED`, `ORDER_REFUNDED` and `EMAIL_VERIFIED`. | Those entries exist but cannot be picked in the Action filter. | `auditAPI.ts` `AUDIT_ACTIONS` | Add them, or serve the list from the backend so the two can't drift. |
 | P12 | Some backend messages still say ₹, even though each store has its own currency. The admin guides were reworded on 2026-10-20 and no longer name a currency. | Wrong wording for a non-INR store, e.g. "Minimum order value for this coupon is ₹500" or "Refund of ₹… failed". Form labels and money already follow the store's currency. | `Coupon.evaluate`, `OrderService.refund` | Format the amount with the store's currency (`StoreConfig`) in those messages. |
+| P13 | Two charts put two scales on one chart (dual axis): Revenue/Orders on the dashboard, and refunds in Payments. | Easy to misread: the lines' crossing points mean nothing, and the two scales invite false comparisons. | `analytics.tsx` (`dualAxis`), `AnalyticsSections.tsx` | Split each into two charts sharing the time axis, or index both to a common base. |
 
 ## 2. Limitations by design (accepted for now)
+
+**Look and feel**
+- **No dark mode** on the store or the admin panel; `color-scheme` is fixed to light. The token sets in `styles/_tokens.scss` are ready for a `[data-theme="dark"]` block, which needs its own contrast-tested values (`styles/tokens.test.ts`).
+- **Chart series 3–5 (aqua, yellow, pink) sit under 3:1 on white.** Charts keep legends and labels, so colour is never the only cue.
+- **A store's theme can only recolour its storefront.** The admin panel keeps its own colours by design (ADR-026).
 
 **Store settings**
 - **Currency and locale are set by the platform admin, not the store owner.** Changing them would mix currencies across existing orders (see P5).

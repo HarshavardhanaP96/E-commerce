@@ -107,6 +107,45 @@
   overflow: hidden;
 }
 
+// Shared top of admin pages (components/admin/PageHeader.tsx).
+.page-header {
+  flex: none;
+  @include flex(row, space-between, flex-end, $spacing-md);
+  flex-wrap: wrap;
+  margin-bottom: $spacing-lg;
+
+  h1 {
+    @include text(h2);
+  }
+
+  p {
+    margin-top: $spacing-xs;
+    @include text(body);
+    color: $color-text-secondary;
+    max-width: 60ch;
+  }
+
+  &__actions {
+    @include flex(row, flex-end, center, $spacing-sm);
+    flex-wrap: wrap;
+  }
+}
+
+.breadcrumb {
+  @include flex(row, flex-start, center, $spacing-xs);
+  @include text(body-sm);
+  color: $color-text-muted;
+
+  a {
+    color: $color-text-secondary;
+  }
+
+  a:hover {
+    color: $color-accent-text;
+    text-decoration: underline;
+  }
+}
+
 .card {
   background: $color-bg-secondary;
   border: 1px solid $color-border;
@@ -264,6 +303,22 @@
     border-bottom: none;
   }
 
+  // Numbers line up on the right, with equal-width digits (columns marked align: "right").
+  th.num,
+  td.num {
+    text-align: right;
+    @include tabular;
+  }
+
+  th.num span {
+    justify-content: flex-end;
+  }
+
+  // Every row tracks the pointer, so a wide row is easy to read across.
+  tbody tr:hover td {
+    background: $color-bg-primary;
+  }
+
   tr.clickable {
     cursor: pointer;
     transition: background $transition-fast;
@@ -277,6 +332,14 @@
     &:focus-visible {
       box-shadow: inset 2px 0 0 $color-accent-primary;
     }
+  }
+
+  &__empty p {
+    margin-bottom: $spacing-md;
+  }
+
+  &__empty .btn {
+    display: inline-flex;
   }
 
   &__empty {
@@ -361,6 +424,7 @@
   &__title {
     min-width: 0;
 
+    h1,
     h2 {
       @include text(h3);
       white-space: nowrap;
@@ -572,6 +636,7 @@
   &__head {
     @include flex(column, flex-start, stretch, $spacing-sm);
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -671,6 +736,7 @@
     @include flex(column, flex-start, stretch, $spacing-md);
     padding: $spacing-xl;
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -775,6 +841,7 @@
     flex-wrap: wrap;
     gap: $spacing-md;
 
+    h1,
     h2 {
       @include text(h2);
     }
@@ -806,7 +873,8 @@
 
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  // Revenue leads: a wider first column for the lead figure.
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   gap: $spacing-lg;
 }
 
@@ -824,8 +892,12 @@
   }
 
   > strong {
-    @include text(h1);
+    @include text(h2);
     @include tabular;
+  }
+
+  &--lead > strong {
+    @include text(h1);
   }
 
   > small {
@@ -1095,6 +1167,23 @@
     @include text(body-sm);
     color: $color-text-muted;
   }
+}
+
+// Help and error text under a field. Errors carry an icon and the field is marked invalid, so colour isn't the only cue.
+.field-help {
+  @include text(body-sm);
+  color: $color-text-muted;
+}
+
+.field-error {
+  @include flex(row, flex-start, center, 0.375rem);
+  @include text(body-sm);
+  font-weight: 600;
+  color: $color-error;
+}
+
+.admin-main [aria-invalid="true"] {
+  border-color: $color-error;
 }
 
 .form-grid label.check {
@@ -1572,6 +1661,7 @@
   }
 
   &__head {
+    h1,
     h2 {
       margin-bottom: 0.25rem;
     }

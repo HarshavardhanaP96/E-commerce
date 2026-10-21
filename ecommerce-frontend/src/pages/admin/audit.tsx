@@ -81,7 +81,7 @@ const AuditLog = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Audit log" description="Who changed what in your store, and when.">
       {failure && (
         <p className="red" role="alert">
           {failure}

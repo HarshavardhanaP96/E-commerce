@@ -19,6 +19,12 @@ export const BUSINESS = {
   grievanceEmail: "[grievance@your-domain]",
 };
 
+/** True when a business detail has been filled in (not empty, not one of the "[…]" placeholders above). */
+export const isFilledIn = (value: string | undefined | null) => {
+  const v = value?.trim() ?? "";
+  return v !== "" && !/^\[.*\]$/.test(v);
+};
+
 export type PolicySlug =
   | "terms"
   | "privacy"

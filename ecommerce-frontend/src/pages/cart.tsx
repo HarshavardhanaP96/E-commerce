@@ -11,6 +11,7 @@ import { CartItem } from "../types/types";
 import { formatMoney } from "../utils/features";
 import { cartKey } from "../utils/variants";
 import { policyPath } from "../legal/policies";
+import CheckoutSteps from "../components/checkoutSteps";
 
 const Cart = () => {
   const { cartItems, subtotal, tax, total, shippingCharges, discount, coupon } = useSelector(
@@ -61,6 +62,7 @@ const Cart = () => {
 
   return (
     <div className="cart">
+      {cartItems.length > 0 && <CheckoutSteps current="cart" />}
       <h1>
         Your cart{itemCount > 0 && <small>{itemCount} {itemCount === 1 ? "item" : "items"}</small>}
       </h1>

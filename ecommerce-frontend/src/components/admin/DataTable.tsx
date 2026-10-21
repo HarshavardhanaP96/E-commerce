@@ -13,6 +13,8 @@ type DataTableProps<T extends object> = {
   actions?: ReactNode;
   isLoading?: boolean;
   emptyText?: string;
+  /** Shown under the empty text, e.g. the page's "Add product" button. */
+  emptyAction?: ReactNode;
   onRowClick?: (row: T) => void;
   /** When this value changes the table returns to its first page (e.g. server-side filters/paging feeding new data). */
   resetKey?: string;
@@ -40,6 +42,7 @@ function DataTable<T extends object>({
   actions,
   isLoading,
   emptyText = "No records found",
+  emptyAction,
   onRowClick,
   resetKey,
   serverPaging,
@@ -130,6 +133,7 @@ function DataTable<T extends object>({
                   <th
                     {...column.getHeaderProps(column.getSortByToggleProps())}
                     key={column.id}
+                    className={column.align === "right" ? "num" : undefined}
                     style={column.width === 150 ? { minWidth: 200 } : { minWidth: column.width, width: column.width <= 96 ? 1 : undefined }}
                   >
                     <span>
@@ -150,7 +154,10 @@ function DataTable<T extends object>({
             )}
             {!isLoading && page.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="data-table__empty">{emptyText}</td>
+                <td colSpan={columns.length} className="data-table__empty">
+                  <p>{emptyText}</p>
+                  {emptyAction}
+                </td>
               </tr>
             )}
             {page.map((row: any) => {
@@ -168,6 +175,7 @@ function DataTable<T extends object>({
                     <td
                       {...cell.getCellProps()}
                       key={cell.column.id}
+                      className={cell.column.align === "right" ? "num" : undefined}
                       title={typeof cell.value === "string" || typeof cell.value === "number" ? String(cell.value) : undefined}
                     >
                       {cell.render("Cell")}

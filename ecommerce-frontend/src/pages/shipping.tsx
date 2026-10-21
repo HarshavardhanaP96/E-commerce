@@ -12,6 +12,7 @@ import { RootState } from "../redux/store";
 import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatMoney } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
+import CheckoutSteps from "../components/checkoutSteps";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
 
@@ -120,6 +121,8 @@ const Shipping = () => {
       <button className="back-btn" onClick={() => navigate("/cart")}>
         <LuArrowLeft /> Back to cart
       </button>
+
+      <CheckoutSteps current="address" />
 
       <form onSubmit={submitHandler}>
         <h1>Shipping address</h1>

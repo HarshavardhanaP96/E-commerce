@@ -212,7 +212,7 @@ const Payments = ({ range }: { range: DateRange }) => {
   const { data, isLoading, isError } = useGetPaymentsSectionQuery(range);
   if (!data) return <Status loading={isLoading} error={isError} />;
   const s = data.payments;
-  const palette = [c.series[0], c.series[1], c.series[3], c.series[4], c.info, c.warning];
+  const palette = [c.series[0], c.series[1], c.series[2], c.series[3], c.series[4], c.series[5]];
   return (
     <section className="analytics__grid">
       <Card title="Payment methods" table="payment-methods" range={range}>

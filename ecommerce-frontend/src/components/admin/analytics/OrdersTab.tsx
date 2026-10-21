@@ -56,7 +56,7 @@ const OrdersTab = ({ params }: { params: SectionParams }) => {
           <h4>Median hours from order to delivery</h4>
           <LineChart data={f.deliveryTrend.map((p) => p.medianHours ?? 0)} label="Hours"
                      labels={f.deliveryTrend.map((p) => bucketLabel(p.start, s.granularity))}
-                     backgroundColor={c.fill(c.accent)} borderColor={c.accent} />
+                     backgroundColor={c.fill(c.series[0])} borderColor={c.series[0]} />
         </div>
         <div className="card chart-card chart-card--wide orders-table">
           <h4>Stuck orders (processing for more than {s.stuckAfterDays} days)</h4>

@@ -26,7 +26,7 @@ const OverviewTab = ({ params }: { params: SectionParams }) => {
       <div className="analytics__actions"><CsvButton section="overview" params={params} /></div>
       <section className="kpi-row">
         <Kpi label={s.basis === "net" ? "Net revenue" : "Gross revenue"} value={formatMoney(now.revenue)}
-             change={s.change?.revenue} against={against} />
+             change={s.change?.revenue} against={against} lead />
         <Kpi label="Orders" value={String(now.orders)} change={s.change?.orders} against={against} />
         <Kpi label="Average order value" value={formatMoney(now.averageOrderValue)}
              change={s.change?.averageOrderValue} against={against} />
