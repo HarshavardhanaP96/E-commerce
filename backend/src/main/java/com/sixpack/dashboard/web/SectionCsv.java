@@ -1,7 +1,9 @@
 package com.sixpack.dashboard.web;
 
 import com.sixpack.dashboard.application.SectionsService;
+import com.sixpack.dashboard.domain.AudienceBands;
 import com.sixpack.dashboard.domain.Period;
+import com.sixpack.dashboard.domain.Sections;
 import com.sixpack.dashboard.domain.Trending;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -58,6 +60,19 @@ final class SectionCsv {
         TABLES.put("places", new Table(List.of("state", "city", "orders", "revenue"),
                 (s, p) -> s.customers(p, 0).places().stream()
                         .map(r -> row(text(r.state()), text(r.city()), r.orders(), r.revenue())).toList()));
+        TABLES.put("audience", new Table(List.of("gender", "age_band", "buyers", "orders", "revenue",
+                "share_percent"),
+                (s, p) -> {
+                    Sections.Audience a = s.customers(p, 0).audience();
+                    List<List<Object>> rows = new ArrayList<>();
+                    for (Sections.AudienceRow r : a.rows()) {
+                        for (int i = 0; i < a.bands().size(); i++) {
+                            rows.add(audience(r.gender(), a.bands().get(i), r.cells().get(i)));
+                        }
+                        rows.add(audience(r.gender(), AudienceBands.ALL, r.total()));
+                    }
+                    return rows;
+                }));
         TABLES.put("coupons", new Table(List.of("code", "uses", "discount", "revenue"),
                 (s, p) -> s.coupons(p).codes().stream()
                         .map(r -> row(text(r.code()), r.uses(), r.discount(), r.revenue())).toList()));
@@ -100,6 +115,11 @@ final class SectionCsv {
 
     private static List<Object> trend(String direction, Trending.Row r) {
         return row(direction, r.productId(), text(r.name()), r.units(), r.previousUnits(), r.change(), r.isNew());
+    }
+
+    /** A small cell's figures are null, so they stay blank. */
+    private static List<Object> audience(String gender, String band, Sections.AudienceCell c) {
+        return row(gender, band, c.buyers(), c.orders(), c.revenue(), c.share());
     }
 
     /** Allows nulls, unlike List.of. */

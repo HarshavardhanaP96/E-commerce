@@ -11,6 +11,7 @@ import com.sixpack.shared.tenant.TenantMongo;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,12 +29,13 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
-/** Aggregations for the dashboard sections over the raw `orders` and `products` collections. */
+/** Aggregations for the dashboard sections over the raw `orders`, `products` and `users` collections. */
 @Component
 class MongoSectionsReadAdapter implements SectionsReadPort {
 
     private static final String ORDERS = "orders";
     private static final String PRODUCTS = "products";
+    private static final String USERS = "users";
     private static final String REFUNDS = "payment.refunds";
 
     private final TenantMongo mongo;
@@ -168,6 +170,25 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                 stage("$sort", new Document("revenue", -1).append("_id", 1)))) {
             out.add(new CustomerTotals(String.valueOf(d.get("_id")), d.getString("name"), d.getString("email"),
                     (long) number(d.get("orders")), number(d.get("revenue"))));
+        }
+        return out;
+    }
+
+    @Override
+    public Map<String, Profile> profiles(Collection<String> userIds) {
+        List<ObjectId> ids = userIds.stream().filter(id -> id != null && ObjectId.isValid(id))
+                .distinct().map(ObjectId::new).toList();
+        Map<String, Profile> out = new HashMap<>();
+        if (ids.isEmpty()) {
+            return out;
+        }
+        Query query = Query.query(Criteria.where("_id").in(ids));
+        query.fields().include("gender", "dob");
+        for (Document d : mongo.find(query, Document.class, USERS)) {
+            // birth dates are saved as midnight UTC: the UTC calendar day is the one the shopper entered
+            LocalDate dob = d.get("dob") instanceof Date date ? date.toInstant().atZone(ZoneOffset.UTC).toLocalDate()
+                    : null;
+            out.put(id(d.get("_id")), new Profile(d.get("gender") instanceof String g ? g : null, dob));
         }
         return out;
     }

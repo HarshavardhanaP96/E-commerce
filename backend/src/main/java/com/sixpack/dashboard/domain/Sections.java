@@ -46,12 +46,44 @@ public final class Sections {
     }
 
     /**
+     * One gender × age band cell of the audience table, or a row's or column's total. When fewer than
+     * {@link AudienceBands#MIN_BUYERS} distinct buyers fall in it, {@code small} is true and every figure is null,
+     * so no small group (and no single person) can be picked out; an empty cell is small too.
+     *
+     * @param buyers distinct buyers with an order in the period
+     * @param share  percent of the period's revenue from buyers (all cells of the table add up to 100)
+     */
+    public record AudienceCell(Long buyers, Long orders, Double revenue, Double share, boolean small) {
+    }
+
+    /**
+     * @param gender female, male, unknown, or "all" for the total row
+     * @param cells  one per age band, in the order of {@link Audience#bands()}
+     * @param total  the whole row, across every band
+     */
+    public record AudienceRow(String gender, List<AudienceCell> cells, AudienceCell total) {
+    }
+
+    /**
+     * Sales by the buyer's gender and age band, for orders placed in the period by a signed-in buyer.
+     *
+     * <p>Shape: {@code rows} are female, male, unknown, then "all" (the column totals); each row's {@code cells}
+     * follow {@code bands} (18-24, 25-34, 35-44, 45-54, 55+, unknown) and its {@code total} is the row across every
+     * band, so the "all" row's total is the whole period. Age is in whole years on {@code asOf}, the period's last
+     * day in the store's time zone: a birthday inside the period can move a buyer up one band. No birth date, an
+     * age under 18 or a birth date after {@code asOf} is unknown; so is a buyer whose account is gone.
+     */
+    public record Audience(LocalDate asOf, List<String> bands, List<AudienceRow> rows) {
+    }
+
+    /**
      * @param newCustomers       buyers in the period whose first order with the store is in it
      * @param returningCustomers buyers in the period who had ordered before it
      * @param repeatRate         share of the period's buyers with two or more orders in it
+     * @param audience           sales by gender and age band
      */
     public record Customers(long customers, long newCustomers, long returningCustomers, double repeatRate,
-                            List<CustomerTotals> top, List<Place> places) {
+                            List<CustomerTotals> top, List<Place> places, Audience audience) {
     }
 
     public record CouponUse(String code, long uses, double discount, double revenue) {

@@ -2,6 +2,8 @@ package com.sixpack.dashboard.application;
 
 import static com.sixpack.shared.config.CacheConfig.DASHBOARD;
 
+import com.sixpack.dashboard.domain.AudienceBands;
+import com.sixpack.dashboard.domain.AudienceBands.Buyer;
 import com.sixpack.dashboard.domain.Granularity;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.dashboard.domain.Sections;
@@ -19,6 +21,7 @@ import com.sixpack.dashboard.domain.Sections.TaxRow;
 import com.sixpack.dashboard.domain.SectionsReadPort;
 import com.sixpack.dashboard.domain.SectionsReadPort.MethodTotals;
 import com.sixpack.dashboard.domain.SectionsReadPort.PairCount;
+import com.sixpack.dashboard.domain.SectionsReadPort.Profile;
 import com.sixpack.dashboard.domain.SectionsReadPort.RefundIssued;
 import com.sixpack.dashboard.domain.SectionsReadPort.TaxGroup;
 import com.sixpack.dashboard.domain.Trending;
@@ -153,11 +156,23 @@ public class SectionsService {
         Instant from = period.start(zone);
         Instant to = period.end(zone);
         List<CustomerTotals> buyers = read.customerTotals(from, to);
-        long returning = read.orderedBefore(buyers.stream().map(CustomerTotals::userId).toList(), from).size();
+        List<String> ids = buyers.stream().map(CustomerTotals::userId).toList();
+        long returning = read.orderedBefore(ids, from).size();
         long repeat = buyers.stream().filter(b -> b.orders() >= 2).count();
         return new Sections.Customers(buyers.size(), buyers.size() - returning, returning,
                 Sections.percent(repeat, buyers.size()), cut(buyers, limit),
-                cut(places(read.places(from, to)), limit == 0 ? 0 : PLACES_SHOWN));
+                cut(places(read.places(from, to)), limit == 0 ? 0 : PLACES_SHOWN),
+                audience(buyers, read.profiles(ids), period.to()));
+    }
+
+    /** Every buyer of the period, with the gender and birth date on their account (unknown once it is gone). */
+    private static Sections.Audience audience(List<CustomerTotals> buyers, Map<String, Profile> profiles,
+                                              LocalDate asOf) {
+        Profile none = new Profile(null, null);
+        return AudienceBands.table(buyers.stream().map(b -> {
+            Profile p = profiles.getOrDefault(b.userId(), none);
+            return new Buyer(b.userId(), p.gender(), p.dob(), b.orders(), b.revenue());
+        }).toList(), asOf);
     }
 
     @Cacheable(cacheNames = DASHBOARD, key = "'coupons:' + #root.target.zone() + #period")

@@ -46,6 +46,19 @@ public interface SectionsReadPort {
     /** Every buyer in the period, by revenue, highest first. */
     List<CustomerTotals> customerTotals(Instant from, Instant to);
 
+    /**
+     * @param gender as stored, null when not given
+     * @param dob    the birth date's calendar day, null when not given
+     */
+    record Profile(String gender, LocalDate dob) {
+    }
+
+    /**
+     * The gender and birth date of those of {@code userIds} that have an account in this store, by id; ids that are
+     * null or not ObjectIds are skipped. One {@code $in} read of {@code users}, never a join from orders.
+     */
+    Map<String, Profile> profiles(Collection<String> userIds);
+
     /** Which of {@code userIds} placed an order before {@code before}. */
     Set<String> orderedBefore(Collection<String> userIds, Instant before);
 

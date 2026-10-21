@@ -1,6 +1,7 @@
 package com.sixpack.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -229,6 +230,102 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.customers.places[1].state").value("Bangalore"));
     }
 
+    /**
+     * September 2026 (age on 30 Sep). Female 25-34: five buyers, one turning 25 on 30 Sep, one with two orders.
+     * Female 18-24: four buyers, one turning 25 on 1 Oct. Male, age unknown: five (no birth date, none at all, under
+     * 18, born in the future, "Male" as stored). Unknown gender: one aged 35-44, a legacy non-ObjectId user, an
+     * account that is gone and one that belongs to another shop. Every order is 100; another shop's sale is ignored.
+     */
+    private void seedSeptember() {
+        String at = "2026-09-10T06:00:00Z";
+        String f1 = user(tenant, "female", "2001-09-30");
+        bought(tenant, f1, at, 100);
+        bought(tenant, f1, "2026-09-30T12:00:00Z", 100);
+        for (int i = 0; i < 4; i++) {
+            bought(tenant, user(tenant, "female", "1995-05-05"), at, 100);
+        }
+        bought(tenant, user(tenant, "female", "2001-10-01"), at, 100);
+        for (int i = 0; i < 3; i++) {
+            bought(tenant, user(tenant, "female", "2004-02-02"), at, 100);
+        }
+        bought(tenant, user(tenant, "male", null), at, 100);
+        bought(tenant, user(tenant, "male", "2010-01-01"), at, 100);
+        bought(tenant, user(tenant, "male", "2030-01-01"), at, 100);
+        bought(tenant, user(tenant, "Male", null), at, 100);
+        String noDobField = new ObjectId().toHexString();
+        mongo.getCollection("users").insertOne(new Document("_id", new ObjectId(noDobField)).append("tenantId", tenant)
+                .append("email", noDobField + "@shop.test").append("gender", "male"));
+        bought(tenant, noDobField, at, 100);
+        bought(tenant, user(tenant, null, "1990-01-01"), at, 100);
+        bought(tenant, "legacy-7", at, 100);
+        bought(tenant, new ObjectId().toHexString(), at, 100);
+        bought(tenant, user("another-shop", "female", "1995-05-05"), at, 100);
+        bought("another-shop", user("another-shop", "female", "1995-05-05"), at, 9999);
+    }
+
+    private ResultActions september(String path) throws Exception {
+        return mvc.perform(get("/api/v1/dashboard/" + path).header("Authorization", bearer(admin))
+                .param("from", "2026-09-01").param("to", "2026-09-30"));
+    }
+
+    @Test
+    void customersShowTheAudienceByGenderAndAgeBand() throws Exception {
+        seedSeptember();
+        september("customers").andExpect(status().isOk())
+                .andExpect(jsonPath("$.customers.audience.asOf").value("2026-09-30"))
+                .andExpect(jsonPath("$.customers.audience.bands").value(org.hamcrest.Matchers.contains(
+                        "18-24", "25-34", "35-44", "45-54", "55+", "unknown")))
+                .andExpect(jsonPath("$.customers.audience.rows[*].gender").value(org.hamcrest.Matchers.contains(
+                        "female", "male", "unknown", "all")))
+                // female 25-34: five buyers, shown
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].small").value(false))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].buyers").value(5))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].orders").value(6))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].revenue").value(600.0))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[1].share").value(31.6))
+                // female 18-24: four buyers, small, no figures
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].buyers").value(nullValue()))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].orders").value(nullValue()))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].revenue").value(nullValue()))
+                .andExpect(jsonPath("$.customers.audience.rows[0].cells[0].share").value(nullValue()))
+                .andExpect(jsonPath("$.customers.audience.rows[0].total.buyers").value(9))
+                .andExpect(jsonPath("$.customers.audience.rows[0].total.share").value(52.6))
+                // male, age unknown: no birth date, under 18, born in the future
+                .andExpect(jsonPath("$.customers.audience.rows[1].cells[5].buyers").value(5))
+                .andExpect(jsonPath("$.customers.audience.rows[1].cells[5].share").value(26.3))
+                // unknown gender: four buyers in all, small
+                .andExpect(jsonPath("$.customers.audience.rows[2].total.small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[2].total.buyers").value(nullValue()))
+                // column totals and the whole period, without the other shop's sale
+                .andExpect(jsonPath("$.customers.audience.rows[3].cells[0].small").value(true))
+                .andExpect(jsonPath("$.customers.audience.rows[3].cells[5].buyers").value(8))
+                .andExpect(jsonPath("$.customers.audience.rows[3].total.buyers").value(18))
+                .andExpect(jsonPath("$.customers.audience.rows[3].total.orders").value(19))
+                .andExpect(jsonPath("$.customers.audience.rows[3].total.revenue").value(1900.0))
+                .andExpect(jsonPath("$.customers.audience.rows[3].total.share").value(100.0));
+    }
+
+    @Test
+    void theAudienceDownloadsAsCsvWithSmallCellsBlank() throws Exception {
+        seedSeptember();
+        String csv = september("export/audience").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        List<String> expected = new ArrayList<>(List.of("gender,age_band,buyers,orders,revenue,share_percent",
+                "female,18-24,,,,", "female,25-34,5,6,600,31.6", "female,35-44,,,,", "female,45-54,,,,",
+                "female,55+,,,,", "female,unknown,,,,", "female,all,9,10,1000,52.6",
+                "male,18-24,,,,", "male,25-34,,,,", "male,35-44,,,,", "male,45-54,,,,", "male,55+,,,,",
+                "male,unknown,5,5,500,26.3", "male,all,5,5,500,26.3"));
+        for (String band : new String[] {"18-24", "25-34", "35-44", "45-54", "55+", "unknown", "all"}) {
+            expected.add("unknown," + band + ",,,,");
+        }
+        expected.addAll(List.of("all,18-24,,,,", "all,25-34,5,6,600,31.6", "all,35-44,,,,", "all,45-54,,,,",
+                "all,55+,,,,", "all,unknown,8,8,800,42.1", "all,all,18,19,1900,100"));
+        assertThat(csv.substring(1).lines().toList()).containsExactlyElementsOf(expected);
+        assertThat(auditEntries("ANALYTICS_EXPORTED")).extracting(a -> a.getString("entityId"))
+                .containsExactly("audience");
+    }
+
     @Test
     void couponsShowsUsesDiscountCostAndRevenue() throws Exception {
         section("coupons").andExpect(status().isOk())
@@ -299,7 +396,7 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     @Test
     void everyTableHasAnExport() throws Exception {
         for (String table : new String[] {"top-products", "categories", "stock", "idle-products", "top-customers",
-                "places", "coupons", "payment-methods", "refunds", "tax", "trending", "bought-together"}) {
+                "places", "coupons", "payment-methods", "refunds", "tax", "trending", "bought-together", "audience"}) {
             mvc.perform(get("/api/v1/dashboard/export/" + table).header("Authorization", bearer(admin))
                             .param("from", "2026-10-01").param("to", "2026-10-31"))
                     .andExpect(status().isOk());
@@ -340,6 +437,22 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
         // no coupon: stored as null, as older data may have it, rather than left out
         order.append("couponCode", coupon);
         mongo.getCollection("orders").insertOne(order);
+    }
+
+    /** A shopper in {@code tenantId}; the birth date is stored as midnight UTC, as sign-up saves it. */
+    private String user(String tenantId, String gender, String dob) {
+        ObjectId id = new ObjectId();
+        mongo.getCollection("users").insertOne(new Document("_id", id).append("tenantId", tenantId)
+                .append("email", id.toHexString() + "@shop.test").append("role", "user").append("gender", gender)
+                .append("dob", dob == null ? null : Date.from(Instant.parse(dob + "T00:00:00Z"))));
+        return id.toHexString();
+    }
+
+    private void bought(String tenantId, String user, String at, double total) {
+        mongo.getCollection("orders").insertOne(new Document("_id", new ObjectId()).append("tenantId", tenantId)
+                .append("user", user).append("status", "Processing").append("total", total)
+                .append("orderItems", List.of(item(TEE, "Tee", total, 1, 18.0)))
+                .append("createdAt", Date.from(Instant.parse(at))));
     }
 
     /** A bare order in this store; {@code items} null leaves the field out, as some old orders have it. */
