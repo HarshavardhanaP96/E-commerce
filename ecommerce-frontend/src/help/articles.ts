@@ -57,7 +57,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "orders",
     question: "How do I use a coupon?",
     answer: [
-      "Enter the code in the Coupon code box in your cart. A coupon gives a flat discount, and the new total is shown before you pay. Coupons can't be exchanged for cash.",
+      "Enter the code in the Coupon code box in your cart. A coupon takes a fixed amount or a percentage off, and the new total is shown before you pay. Coupons can't be exchanged for cash.",
+      "Some codes need a minimum order, work only on certain products or categories, or only on your first order. If a code doesn't apply, the cart says why.",
     ],
   },
   {

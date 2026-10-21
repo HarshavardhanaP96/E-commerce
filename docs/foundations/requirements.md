@@ -76,7 +76,8 @@ default. Each is cheaper to change before a second real tenant exists.
   return a use (ADR-018).
 - **Product variants are on by default** (`PRODUCT_VARIANTS_ENABLED`); a platform admin can switch them off per store.
 - **No real mail provider:** verification and password-reset links are only logged (`LoggingMailSender`), so production cannot send them yet.
-- **Platform logins are not audited.** Platform actions on a store (create, edit, suspend, activate) are, in that
+- **Platform logins are not audited.** Platform actions on a store (create, edit, suspend, activate, cancel, export,
+  offboard, restore, purge) are, in that
   store's own log; a platform login belongs to no store, so it is only a log line.
 - **The tenant is chosen from the request host**, so the ingress must overwrite any client-supplied
   `X-Forwarded-Host`, and a second tenant needs `TENANT_DEFAULT_DOMAINS` set first.

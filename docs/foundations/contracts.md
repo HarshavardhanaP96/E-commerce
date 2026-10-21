@@ -14,7 +14,7 @@ The collection names and field names match the old Mongoose models, so existing 
 | `coupons` | `_id`, `coupon` (unique code), `amount` (flat ₹ discount; a percent for PERCENT), plus the optional rule fields `type, maxDiscount, minOrderValue, startsAt, expiresAt, usageLimit, usedCount, perUserLimit, active`, and `productIds[], categories[], firstOrderOnly` (scope; absent means everything) |
 | `payment_intents` (new) | `_id`, `userId`, `providerOrderId` (unique), `items[{productId, name, photo, price, quantity, variantId?, variantLabel?, options?}]`, `coupon`, `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: CREATED\|CONSUMED`, `createdAt` (TTL index: 24 h) |
 | `consents` (new, append-only) | `_id`, `userId`, `expireAt?` (set to now + 3 years when the account is erased; a TTL index then deletes the rows), `purpose: terms\|privacy\|marketing_email\|admin_aup`, `granted`, `policyVersion`, `source: register\|reprompt\|settings`, `ipHash` (salted SHA-256), `userAgent`, `createdAt`. Never updated or deleted: a withdrawal is a new row. A user's state is the newest row per purpose |
-| `audit_log` (new, append-only) | `_id`, `at` (TTL index, fixed at 365 d in `AuditDocument`), `tenantId?` (reserved), `actorId?`, `actorRole: ADMIN\|USER\|ANONYMOUS\|SYSTEM`, `action` (see below), `entityType?`, `entityId?`, `outcome: SUCCESS\|FAILURE`, `changes[{field, before?, after?, redacted}]` (personal fields have `redacted: true` and no values), `subjectHash?` (salted hash of an attempted login email), `requestId?`, `ipHash`, `userAgent`. Never updated or deleted by the app |
+| `audit_log` (new, append-only) | `_id`, `at` (TTL index, fixed at 365 d in `AuditDocument`), `tenantId` (the store whose log it is), `actorId?`, `actorRole: ADMIN\|USER\|ANONYMOUS\|SYSTEM\|PLATFORM_ADMIN`, `action` (see below), `entityType?`, `entityId?`, `outcome: SUCCESS\|FAILURE`, `changes[{field, before?, after?, redacted}]` (personal fields have `redacted: true` and no values), `subjectHash?` (salted hash of an attempted login email), `requestId?`, `ipHash`, `userAgent`. Never updated or deleted by the app |
 | `email_verification_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256, unique), `expiresAt` (TTL index, 24 h) |
 | `password_reset_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256), `expiresAt` (TTL index), `used` |
 | `daily_sales` (new, analytics step 2) | `_id`, `tenantId`, `day` (store-local `YYYY-MM-DD`), `currency`, `timeZone`, `orders`, `grossRevenue`, `refunds`, `netRevenue`, `discount`, `tax`, `units`, `newCustomers`, `computedAt`; unique (`tenantId`, `currency`, `day`). Counts and sums only, no customer data. Days with no orders and no refunds have no row |
@@ -147,7 +147,10 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 `action` is one of: `PRODUCT_CREATED/UPDATED/DELETED`, `CATEGORY_CREATED/UPDATED/DELETED`, `COUPON_CREATED/UPDATED/DELETED`,
 `ORDER_PLACED`, `ORDER_STATUS_CHANGED`, `ORDER_DELETED`, `ORDER_REFUNDED`, `USER_REGISTERED`, `USER_ROLE_CHANGED`, `USER_STATUS_CHANGED`,
 `USER_ERASED`, `ACCOUNT_DELETED_SELF`, `PROFILE_UPDATED`, `ADDRESS_ADDED/UPDATED/DELETED`, `LOGIN_SUCCEEDED`,
-`LOGIN_FAILED`, `LOGIN_BLOCKED_SUSPENDED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `EMAIL_VERIFIED`, `CONSENT_CHANGED`.
+`LOGIN_FAILED`, `LOGIN_BLOCKED_SUSPENDED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `EMAIL_VERIFIED`, `CONSENT_CHANGED`,
+`TENANT_CREATED`, `TENANT_UPDATED`, `TENANT_STATUS_CHANGED`, `TENANT_EXPORTED`, `TENANT_PURGED`, `STORE_SETTINGS_UPDATED`,
+`ANALYTICS_EXPORTED`. Only successful refunds are recorded as `ORDER_REFUNDED`; a failed one is kept on the order
+(`payment.failureReason`), not in the log.
 
 Product-variant writes (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED`, with `variantPrices`
 and `variantStocks` (maps keyed by SKU) in the change set. Registration consents are not duplicated into the audit
@@ -178,7 +181,7 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 | `GET /platform/tenants/{id}/export` | 🏛 | — | `application/zip` download `<slug>-export.zip`: `manifest.json` (tenant, `exportedAt`, `counts` per collection, `omitted`), `<collection>.json` (Mongo relaxed Extended JSON array) for every tenant collection except `password_reset_tokens` and `payment_intents`, `users` without `password`, and every uploaded file under its public path (`uploads/<tenantId>/…`). Audited as `TENANT_EXPORTED` |
 | `POST /platform/tenants/{id}/offboard` | 🏛 | — | `{success, message, tenant}` with `status: SCHEDULED_FOR_DELETION` and `deletionDueAt` (now + `TENANT_DELETION_GRACE`). The storefront answers 403 from then on. 400 for the default tenant, 409 if already scheduled or deleted |
 | `POST /platform/tenants/{id}/restore` | 🏛 | — | `{success, message, tenant}` back to `ACTIVE`. 409 unless scheduled for deletion. `suspend`/`activate` answer 409 for a scheduled or deleted store; `PUT` answers 409 for a deleted one |
-| `GET /platform/audit` | 🏛 | query: same filters as `GET /admin/audit`, plus `tenantId?` | `{success, entries:[{…entry, tenantId}], totalPage}`. Read-only, across every store's log |
+| `GET /platform/audit` | 🏛 | query: the filters of `GET /admin/audit` plus `tenantId?`, but no `limit` (always 100 per page) | `{success, entries:[{…entry, tenantId}], totalPage}` (no `total`). Read-only, across every store's log |
 
 🏛 = `PLATFORM_ADMIN`. Platform tokens are refused on every store endpoint (even public ones), and store tokens (admin or
 customer) are refused on `/platform/**`.
