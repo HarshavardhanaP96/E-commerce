@@ -2,6 +2,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { LuArrowDown, LuArrowUp, LuChevronLeft, LuChevronRight, LuSearch } from "react-icons/lu";
 import { Column, useGlobalFilter, usePagination, useSortBy, useTable } from "react-table";
+import { emptyMessage } from "../../utils/table";
 
 type DataTableProps<T extends object> = {
   columns: Column<T>[];
@@ -73,6 +74,9 @@ function DataTable<T extends object>({
   ) as any;
 
   useEffect(() => setGlobalFilter(search || undefined), [search, setGlobalFilter]);
+
+  // With server paging the table only holds one page, so "no records at all" can't be told apart: keep the page's text.
+  const empty = serverPaging ? { text: emptyText, nothingYet: true } : emptyMessage(data.length, emptyText);
 
   // gotoPage is a stable useCallback over the reducer dispatch; on page 0 it is a no-op (reducer returns the same state).
   useEffect(() => {
@@ -155,8 +159,8 @@ function DataTable<T extends object>({
             {!isLoading && page.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="data-table__empty">
-                  <p>{emptyText}</p>
-                  {emptyAction}
+                  <p>{empty.text}</p>
+                  {empty.nothingYet && emptyAction}
                 </td>
               </tr>
             )}

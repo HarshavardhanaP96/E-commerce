@@ -18,3 +18,10 @@ export const activeFilters = (s: FilterState, money: (n: number) => string) => {
   for (const [name, value] of Object.entries(s.picked)) out.push({ key: `option:${name}`, label: `${name}: ${value}` });
   return out;
 };
+
+/** What a typed max price commits to (on blur or Enter): kept inside 100–MAX_PRICE; empty or junk means no limit. */
+export const clampPrice = (text: string) => {
+  const n = Number(text.trim());
+  if (!text.trim() || !Number.isFinite(n)) return MAX_PRICE;
+  return Math.min(MAX_PRICE, Math.max(100, Math.round(n)));
+};

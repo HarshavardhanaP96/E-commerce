@@ -27,7 +27,9 @@ const common: Pair[] = [
   ["--on-accent", "--accent-strong", TEXT],
   ["--border-strong", "--surface", UI],
   ["--border-strong", "--bg", UI],
-  ["--accent", "--bg", UI], // focus outline colour
+  ["--focus", "--bg", UI], // focus outline / ring
+  ["--focus", "--surface", UI],
+  ["--accent-hover", "--bg", TEXT], // hovered link text
 ];
 
 describe("design tokens meet WCAG AA", () => {

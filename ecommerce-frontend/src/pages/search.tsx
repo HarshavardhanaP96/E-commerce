@@ -12,7 +12,8 @@ import { errorMessage } from "../redux/api/baseQuery";
 import { CartItem } from "../types/types";
 import { addToCart } from "../redux/reducer/cartReducer";
 import { formatMoney } from "../utils/features";
-import { MAX_PRICE, SORTS, activeFilters } from "../utils/filters";
+import { MAX_PRICE, SORTS, activeFilters, clampPrice } from "../utils/filters";
+import { closeWhenWide } from "../utils/media";
 import { useDispatch } from "react-redux";
 
 const Search = () => {
@@ -20,6 +21,14 @@ const Search = () => {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
+  // What's in the price box while typing; it commits (clamped) on blur or Enter, so "5000" can be typed digit by digit.
+  const [priceText, setPriceText] = useState(String(MAX_PRICE));
+  useEffect(() => setPriceText(String(maxPrice)), [maxPrice]);
+  const commitPrice = () => {
+    const next = clampPrice(priceText);
+    setMaxPrice(next);
+    setPriceText(String(next));
+  };
   const [params] = useSearchParams();
   const [category, setCategory] = useState(params.get("category") ?? "");
   const [page, setPage] = useState(1);
@@ -39,6 +48,10 @@ const Search = () => {
   const options = Object.entries(picked).map(([name, value]) => `${name}:${value}`);
   const optionsKey = options.join("|");
   useEffect(() => setPage(1), [search, sort, category, maxPrice, optionsKey]);
+
+  // The panel is phone-only: if the window widens past the breakpoint while it's open (a tablet rotated to
+  // landscape), close it, or the page stays inert behind a modal whose only button is hidden.
+  useEffect(() => closeWhenWide(window.matchMedia("(min-width: 861px)"), () => setFiltersOpen(false)), []);
 
   // showModal() gives focus trapping, Escape-to-close and an inert page behind the panel.
   useEffect(() => {
@@ -150,8 +163,10 @@ const Search = () => {
                 inputMode="numeric"
                 min={100}
                 max={MAX_PRICE}
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(Math.min(MAX_PRICE, Math.max(100, Number(e.target.value) || 100)))}
+                value={priceText}
+                onChange={(e) => setPriceText(e.target.value)}
+                onBlur={commitPrice}
+                onKeyDown={(e) => e.key === "Enter" && commitPrice()}
               />
             </div>
           </div>

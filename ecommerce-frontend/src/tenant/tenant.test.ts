@@ -44,10 +44,24 @@ describe("applyTheme", () => {
     for (const bad of ["color: red", "display", "<", "--Upper"]) expect(sheet()).not.toContain(bad);
   });
 
-  it("does not derive from an accent that is not #rrggbb", () => {
-    applyTheme({ "--accent": "rgb(10, 20, 30)" });
-    expect(sheet()).toContain("--accent: rgb(10, 20, 30);");
+  it("derives shades from short hex, rgb() and hsl() accents too", () => {
+    for (const accent of ["#fe3", "rgb(255, 235, 59)", "hsl(54, 100%, 62%)"]) {
+      applyTheme({ "--accent": accent });
+      expect(contrastRatio("#ffffff", token("--accent-strong")!)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("does not derive from a colour it can't read (a name)", () => {
+    applyTheme({ "--accent": "tomato" });
+    expect(sheet()).toContain("--accent: tomato;");
     expect(sheet()).not.toContain("--accent-strong");
+  });
+
+  it("derives a visible focus colour and a readable hover colour from a light accent", () => {
+    applyTheme({ "--accent": "#ffeb3b" });
+    expect(contrastRatio(token("--focus")!, "#f5f5f3")).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(token("--focus")!, "#ffffff")).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(token("--accent-hover")!, "#f5f5f3")).toBeGreaterThanOrEqual(4.5);
   });
 
   it("replaces the previous theme, and an empty theme removes it", () => {
