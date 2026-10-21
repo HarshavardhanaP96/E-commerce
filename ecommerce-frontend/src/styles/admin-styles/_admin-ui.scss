@@ -1169,6 +1169,23 @@
   }
 }
 
+// Help and error text under a field. Errors carry an icon and the field is marked invalid, so colour isn't the only cue.
+.field-help {
+  @include text(body-sm);
+  color: $color-text-muted;
+}
+
+.field-error {
+  @include flex(row, flex-start, center, 0.375rem);
+  @include text(body-sm);
+  font-weight: 600;
+  color: $color-error;
+}
+
+.admin-main [aria-invalid="true"] {
+  border-color: $color-error;
+}
+
 .form-grid label.check {
   flex-direction: row;
   align-items: center;
