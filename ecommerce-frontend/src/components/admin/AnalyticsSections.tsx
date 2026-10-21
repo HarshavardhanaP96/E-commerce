@@ -12,8 +12,11 @@ import {
 import { bucketLabel, DateRange } from "../../utils/dateRange";
 import { formatMoney } from "../../utils/features";
 import type { RangeSectionName } from "../../types/analytics";
-import type { TrendRow } from "../../types/sections";
-import { daysLeftLabel, downloadCsv, ExportTable, REMOVED_PRODUCT, trendChange } from "../../utils/sections";
+import type { Audience, AudienceCell, TrendRow } from "../../types/sections";
+import {
+  audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, downloadCsv, ExportTable, REMOVED_PRODUCT,
+  trendChange,
+} from "../../utils/sections";
 import { BarChart, DoughnutChart } from "./Charts";
 import { chartColors as c } from "./chartTheme";
 
@@ -88,6 +91,38 @@ const TrendList = ({ title, rows, empty, up }: { title: string; rows: TrendRow[]
     </div>
   );
 };
+
+const AudienceValue = ({ cell }: { cell: AudienceCell }) => {
+  const { value, detail } = audienceCellText(cell, formatMoney);
+  return detail === null ? <span className="audience-table__small">{value}</span> : (
+    <>
+      <b>{value}</b>
+      <small>{detail}</small>
+    </>
+  );
+};
+
+/** Gender × age band grid; groups of fewer than 5 buyers show no figures. */
+const AudienceTable = ({ audience }: { audience: Audience }) => (
+  <table className="mini-table audience-table">
+    <thead>
+      <tr>
+        <th scope="col">Gender</th>
+        {audience.bands.map((b) => <th key={b} scope="col">{audienceBandLabel(b)}</th>)}
+        <th scope="col">All ages</th>
+      </tr>
+    </thead>
+    <tbody>
+      {audience.rows.map((r) => (
+        <tr key={r.gender} className={r.gender === "all" ? "audience-table__total" : undefined}>
+          <th scope="row">{audienceGenderLabel(r.gender)}</th>
+          {r.cells.map((cell, i) => <td key={audience.bands[i]}><AudienceValue cell={cell} /></td>)}
+          <td><AudienceValue cell={r.total} /></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
 
 const Products = ({ range }: { range: DateRange }) => {
   const navigate = useNavigate();
@@ -207,6 +242,15 @@ const Customers = ({ range }: { range: DateRange }) => {
               </tbody>
             </table>
           )}
+        </Card>
+        <Card title="Audience" table="audience" range={range} wide>
+          <AudienceTable audience={s.audience} />
+          <p className="section-card__note">
+            Revenue from signed-in buyers by gender and age band, with its share of their revenue in this range.
+            Age is counted on {bucketLabel(s.audience.asOf, "day")} {s.audience.asOf.slice(0, 4)}, the range&apos;s
+            last day, so a birthday inside the range can move a buyer up one band. Groups of fewer than 5 buyers
+            are hidden so no one can be singled out.
+          </p>
         </Card>
         <Card title="Orders by place" table="places" range={range} wide>
           {s.places.length === 0 ? <Empty>No orders in this range.</Empty> : (

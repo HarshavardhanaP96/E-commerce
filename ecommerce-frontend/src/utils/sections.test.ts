@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { daysLeftLabel, exportFileName, exportPath, REMOVED_PRODUCT, trendChange } from "./sections";
+import {
+  audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, exportFileName, exportPath, REMOVED_PRODUCT,
+  SMALL_GROUP, trendChange,
+} from "./sections";
 
 describe("dashboard sections", () => {
   it("builds the export path with the range", () => {
@@ -34,5 +37,32 @@ describe("dashboard sections", () => {
 
   it("names the placeholder the server uses for removed products", () => {
     expect(REMOVED_PRODUCT).toBe("Removed product");
+  });
+
+  it("exports the audience table", () => {
+    expect(exportPath("audience", { from: "2026-09-01", to: "2026-09-30" }))
+      .toBe("/api/v1/dashboard/export/audience?from=2026-09-01&to=2026-09-30");
+  });
+
+  it("never shows a number for a group of fewer than 5 buyers", () => {
+    expect(SMALL_GROUP).toBe("fewer than 5 buyers");
+    expect(audienceCellText({ buyers: null, orders: null, revenue: null, share: null, small: true }, String))
+      .toEqual({ value: "fewer than 5 buyers", detail: null });
+  });
+
+  it("shows a cell's revenue, share and buyers", () => {
+    expect(audienceCellText({ buyers: 5, orders: 6, revenue: 600, share: 31.6, small: false }, (n) => `Rs ${n}`))
+      .toEqual({ value: "Rs 600", detail: "31.6% · 5 buyers · 6 orders" });
+    expect(audienceCellText({ buyers: 7, orders: 1, revenue: 0, share: 0, small: false }, String).detail)
+      .toBe("0% · 7 buyers · 1 order");
+  });
+
+  it("labels the audience rows and columns", () => {
+    expect(audienceGenderLabel("female")).toBe("Female");
+    expect(audienceGenderLabel("male")).toBe("Male");
+    expect(audienceGenderLabel("unknown")).toBe("Unknown");
+    expect(audienceGenderLabel("all")).toBe("All");
+    expect(audienceBandLabel("25-34")).toBe("25-34");
+    expect(audienceBandLabel("unknown")).toBe("Age unknown");
   });
 });

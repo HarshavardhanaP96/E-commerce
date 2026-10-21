@@ -21,7 +21,19 @@ export type CustomersSection = {
   repeatRate: number;
   top: { userId: string; name: string | null; email: string | null; orders: number; revenue: number }[];
   places: { state: string | null; city: string | null; orders: number; revenue: number }[];
+  audience: Audience;
 };
+
+/** Fewer than 5 buyers: `small` is true and every figure is null. `share` = percent of the range's buyer revenue. */
+export type AudienceCell = {
+  buyers: number | null; orders: number | null; revenue: number | null; share: number | null; small: boolean;
+};
+
+/** `gender` is female, male, unknown or "all" (the column totals); `cells` follow `Audience.bands`. */
+export type AudienceRow = { gender: string; cells: AudienceCell[]; total: AudienceCell };
+
+/** Sales by gender and age band; age in whole years on `asOf`, the range's last day. */
+export type Audience = { asOf: string; bands: string[]; rows: AudienceRow[] };
 
 export type CouponsSection = {
   ordersWithCoupon: number;

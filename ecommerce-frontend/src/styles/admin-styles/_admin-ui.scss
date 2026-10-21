@@ -1015,6 +1015,35 @@
   }
 }
 
+// gender × age band grid on the Customers tab: revenue over a muted detail line per cell
+.audience-table {
+  th[scope="row"] {
+    @include text(body-sm);
+    color: $color-text-primary;
+  }
+
+  td {
+    vertical-align: top;
+    min-width: 7rem;
+  }
+
+  td b,
+  td small {
+    display: block;
+  }
+
+  td small,
+  &__small {
+    @include text(caption);
+    color: $color-text-muted;
+  }
+
+  &__total th,
+  &__total td {
+    border-top: 2px solid $color-border;
+  }
+}
+
 // ---------- responsive ----------
 @media (max-width: 1100px) {
   .analytics__grid {
