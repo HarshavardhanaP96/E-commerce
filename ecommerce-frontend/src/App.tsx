@@ -13,6 +13,7 @@ import { userExist, userNotExist } from "./redux/reducer/userReducer";
 import { useLazyGetMyProfileQuery } from "./redux/api/userAPI";
 import { getToken } from "./redux/api/baseQuery";
 import { RootState } from "./redux/store";
+import { surfaceFor } from "./utils/routes";
 
 const Home = lazy(() => import("./pages/home"));
 const Search = lazy(() => import("./pages/search"));
@@ -59,7 +60,7 @@ const CustomerManagement = lazy(
 const SurfaceScope = () => {
   const { pathname } = useLocation();
   useEffect(() => {
-    document.documentElement.dataset.surface = pathname.startsWith("/admin") ? "admin" : "store";
+    document.documentElement.dataset.surface = surfaceFor(pathname);
   }, [pathname]);
   return null;
 };

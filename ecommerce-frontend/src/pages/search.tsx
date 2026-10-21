@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { LuChevronLeft, LuChevronRight, LuSearch, LuSearchX } from "react-icons/lu";
 import ProductCard from "../components/productCard";
 import {
@@ -18,7 +19,8 @@ const Search = () => {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
   const [maxPrice, setMaxPrice] = useState(100000);
-  const [category, setCategory] = useState("");
+  const [params] = useSearchParams();
+  const [category, setCategory] = useState(params.get("category") ?? "");
   const [page, setPage] = useState(1);
   // Picked option values, one per option name: { Size: "M", Colour: "Black" }.
   const [picked, setPicked] = useState<Record<string, string>>({});

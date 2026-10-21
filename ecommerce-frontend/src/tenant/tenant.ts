@@ -2,6 +2,7 @@ import { server } from "../redux/config";
 import { BUSINESS, refreshPolicies } from "../legal/policies";
 import { regional } from "../utils/money";
 import { commerce } from "../utils/pricing";
+import { readableOn } from "../utils/contrast";
 
 export type StorefrontConfig = {
   logoUrl?: string | null;
@@ -35,6 +36,39 @@ export const features: Record<string, boolean> = {};
 
 export const featureOn = (key: string) => features[key] ?? true;
 
+const THEME_KEY = /^--[a-z0-9-]{1,40}$/;
+const THEME_VALUE = /^[^;{}<>]{1,60}$/;
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Store themes recolour the storefront only; the admin keeps its own tokens (ADR-026). */
+export const STORE_THEME_SELECTOR = '[data-surface="store"]';
+
+/**
+ * Writes the store's design tokens into one <style id="tenant-theme">. Same specificity as the store
+ * defaults in _tokens.scss and later in the page, so it wins there and nowhere else. Keys and values are
+ * re-checked here (the API validates too). A light accent gets readable darker shades for badges and text.
+ */
+export const applyTheme = (theme: Record<string, string>) => {
+  const tokens = Object.entries(theme).filter(
+    ([key, value]) => THEME_KEY.test(key) && typeof value === "string" && THEME_VALUE.test(value)
+  );
+  const accent = theme["--accent"];
+  if (accent && HEX.test(accent)) {
+    const has = (key: string) => tokens.some(([k]) => k === key);
+    if (!has("--accent-strong")) tokens.push(["--accent-strong", readableOn(accent, "#ffffff", 4.5)]);
+    if (!has("--accent-text")) tokens.push(["--accent-text", readableOn(accent, "#f5f5f3", 4.5)]);
+  }
+
+  let style = document.getElementById("tenant-theme");
+  if (tokens.length === 0) return style?.remove();
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "tenant-theme";
+    document.head.appendChild(style);
+  }
+  style.textContent = `${STORE_THEME_SELECTOR} {\n${tokens.map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}`;
+};
+
 /** Applies the store's name, logo, design tokens and business details to the page. */
 export const applyTenantConfig = (config: TenantConfig) => {
   brand.name = config.name || brand.name;
@@ -45,9 +79,7 @@ export const applyTenantConfig = (config: TenantConfig) => {
   if (config.locale) regional.locale = config.locale;
   if (config.timeZone) regional.timeZone = config.timeZone;
   document.title = brand.name;
-  for (const [token, value] of Object.entries(config.theme ?? {})) {
-    document.documentElement.style.setProperty(token, value);
-  }
+  applyTheme(config.theme ?? {});
   const s = config.storefront ?? {};
   const details: Partial<typeof BUSINESS> = {
     legalName: s.legalName ?? undefined,

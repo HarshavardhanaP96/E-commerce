@@ -86,14 +86,13 @@ $type-steps: (
   }
 }
 
-// Small uppercase label above a group (sidebar sections, card titles, KPI labels).
+// Small label above a group (sidebar sections, filter names, KPI labels). Sentence case, never tracked.
 @mixin overline {
-  font-size: var(--fs-caption);
-  line-height: 1.4;
+  font-size: var(--fs-label);
+  line-height: 1.3;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: $color-text-muted;
+  letter-spacing: 0;
+  color: $color-text-secondary;
 }
 
 @mixin tabular {
