@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
 class OrderQueries {
 
     static final String ORDERS = "orders";
-    static final String PRODUCTS = "products";
     static final String USERS = "users";
     static final String CREATED_AT = "createdAt";
 

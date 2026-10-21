@@ -43,12 +43,10 @@ export type SalesSection = SectionWindow & {
   basis: "net" | "gross";
   series: SeriesPoint[];
   previousSeries?: SeriesPoint[] | null;
-  byCategory: { category: string; revenue: number; units: number; share: number; change?: number | null }[];
   breakdown?: {
     charged: number; discount: number; tax: number; shipping: number; refunds: number; net: number;
     couponOrders: number; couponOrderShare: number;
   } | null;
-  byPaymentMethod?: { method: string; orders: number; revenue: number; share: number }[] | null;
 };
 
 type Leg = { medianHours?: number | null; p90Hours?: number | null; count: number };
@@ -64,7 +62,7 @@ export type OrdersSection = SectionWindow & {
   stuck: { id: string; orderNumber?: string | null; placedAt: string; ageDays: number; total: number }[];
   stuckCount: number;
   stuckAfterDays: number;
-  size: { averageItems: number; bands: Record<string, number>; topCoupons: { code: string; orders: number; discount: number }[] };
+  size: { averageItems: number; bands: Record<string, number> };
   refunds?: { orders: number; amount: number; rate: number } | null;
   truncated: boolean;
 };

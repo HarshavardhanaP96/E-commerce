@@ -74,8 +74,7 @@ class OrdersSectionIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.section.fulfilment.withoutHistory").value(1))
                 .andExpect(jsonPath("$.section.size.averageItems").value(2.75))
                 .andExpect(jsonPath("$.section.size.bands['6+']").value(1))
-                .andExpect(jsonPath("$.section.size.topCoupons[0].code").value("DIWALI10"))
-                .andExpect(jsonPath("$.section.size.topCoupons[0].orders").value(2))
+                .andExpect(jsonPath("$.section.size.topCoupons").doesNotExist()) // the Coupons tab shows them
                 .andExpect(jsonPath("$.section.refunds.orders").value(1))
                 .andExpect(jsonPath("$.section.refunds.amount").value(100.0))
                 .andExpect(jsonPath("$.section.refunds.rate").value(25.0))

@@ -58,7 +58,10 @@ class SalesSectionIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.section.breakdown.refunds").value(200.0))
                 .andExpect(jsonPath("$.section.breakdown.net").value(1350.0))
                 .andExpect(jsonPath("$.section.breakdown.couponOrders").value(1))
-                .andExpect(jsonPath("$.section.breakdown.couponOrderShare").value(33.3));
+                .andExpect(jsonPath("$.section.breakdown.couponOrderShare").value(33.3))
+                // the Products and Payments tabs show these
+                .andExpect(jsonPath("$.section.byCategory").doesNotExist())
+                .andExpect(jsonPath("$.section.byPaymentMethod").doesNotExist());
     }
 
     @Test
@@ -69,44 +72,20 @@ class SalesSectionIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void revenueByCategoryIncludingDeletedProducts() throws Exception {
-        mvc.perform(sales())
-                .andExpect(jsonPath("$.section.byCategory[0].category").value("footwear"))
-                .andExpect(jsonPath("$.section.byCategory[0].revenue").value(1000.0))
-                .andExpect(jsonPath("$.section.byCategory[0].share").value(66.7))
-                .andExpect(jsonPath("$.section.byCategory[0].change").value(100))
-                .andExpect(jsonPath("$.section.byCategory[1].category").value("bags"))
-                .andExpect(jsonPath("$.section.byCategory[2].category").value("uncategorised"))
-                .andExpect(jsonPath("$.section.byCategory[2].revenue").value(200.0));
-    }
-
-    @Test
-    void paymentMethodsWithLegacyOrdersAsUnknown() throws Exception {
-        mvc.perform(sales())
-                .andExpect(jsonPath("$.section.byPaymentMethod.length()").value(3))
-                .andExpect(jsonPath("$.section.byPaymentMethod[0].method").value("card"))
-                .andExpect(jsonPath("$.section.byPaymentMethod[1].method").value("unknown"))
-                .andExpect(jsonPath("$.section.byPaymentMethod[2].share").value(33.3));
-    }
-
-    @Test
     void comparisonTrendIsReturnedBesideTheCurrentOne() throws Exception {
         mvc.perform(sales())
                 .andExpect(jsonPath("$.section.series.length()").value(31))
                 .andExpect(jsonPath("$.section.previousSeries.length()").value(31))
                 .andExpect(jsonPath("$.section.previousSeries[15].revenue").value(500.0));
         mvc.perform(sales().param("compare", "none"))
-                .andExpect(jsonPath("$.section.previousSeries").doesNotExist())
-                .andExpect(jsonPath("$.section.byCategory[0].change").doesNotExist());
+                .andExpect(jsonPath("$.section.previousSeries").doesNotExist());
     }
 
     @Test
     void categoryFilterKeepsOnlyItemFigures() throws Exception {
         mvc.perform(sales().param("category", "footwear"))
-                .andExpect(jsonPath("$.section.breakdown").doesNotExist())
-                .andExpect(jsonPath("$.section.byPaymentMethod").doesNotExist())
-                .andExpect(jsonPath("$.section.byCategory.length()").value(1))
-                .andExpect(jsonPath("$.section.byCategory[0].share").value(100.0));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.section.breakdown").doesNotExist());
     }
 
     @Test

@@ -86,17 +86,6 @@ const OrdersTab = ({ params }: { params: SectionParams }) => {
             })}
           </ul>
         </div>
-        <div className="card chart-card orders-table">
-          <h4>Most used coupons</h4>
-          {s.size.topCoupons.length === 0 ? <p className="data-table__empty">No coupons used.</p> : (
-            <table className="mini-table">
-              <thead><tr><th>Code</th><th>Orders</th><th>Discount</th></tr></thead>
-              <tbody>{s.size.topCoupons.map((cp) => (
-                <tr key={cp.code}><td>{cp.code}</td><td>{cp.orders}</td><td>{formatMoney(cp.discount)}</td></tr>
-              ))}</tbody>
-            </table>
-          )}
-        </div>
       </section>
     </>
   );

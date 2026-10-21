@@ -1,6 +1,7 @@
 package com.sixpack.it;
 
 import static com.sixpack.it.AnalyticsSeed.item;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -10,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -83,6 +86,17 @@ class OverviewSectionIntegrationTest extends IntegrationTest {
                         containsString("filename=\"overview-2026-10-01_2026-10-31.csv\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.startsWith(
                         "start,revenue,orders\r\n2026-10-01,0,0\r\n")));
+
+        List<Document> audits = auditEntries("ANALYTICS_EXPORTED");
+        assertThat(audits).hasSize(1);
+        assertThat(audits.get(0).getString("entityType")).isEqualTo("report");
+        assertThat(audits.get(0).getString("entityId")).isEqualTo("overview");
+    }
+
+    @Test
+    void readingTheSectionIsNotAudited() throws Exception {
+        mvc.perform(overview()).andExpect(status().isOk());
+        assertThat(auditEntries("ANALYTICS_EXPORTED")).isEmpty();
     }
 
     @Test

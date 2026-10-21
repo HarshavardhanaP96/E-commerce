@@ -15,18 +15,18 @@ class OrdersSectionTest {
     private static final Period OCT = Period.of(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
 
     private static OrderFacts order(String status, int items, String placed, String shipped, String delivered,
-                                    String coupon, double discount, boolean refunded) {
+                                    double discount, boolean refunded) {
         return new OrderFacts("id-" + placed, "ORD-" + placed, Instant.parse(placed), status, items, 100, discount,
-                "upi", coupon, shipped == null ? null : Instant.parse(shipped),
+                "upi", shipped == null ? null : Instant.parse(shipped),
                 delivered == null ? null : Instant.parse(delivered), refunded);
     }
 
     private static final List<OrderFacts> FACTS = List.of(
             order("Delivered", 3, "2026-10-02T04:30:00Z", "2026-10-03T04:30:00Z", "2026-10-05T04:30:00Z",
-                    "diwali10", 50, false),
-            order("Shipped", 1, "2026-10-04T04:30:00Z", "2026-10-06T04:30:00Z", null, null, 0, true),
-            order("Delivered", 1, "2026-10-06T04:30:00Z", null, null, null, 0, false),
-            order("Processing", 6, "2026-10-20T04:30:00Z", null, null, "DIWALI10", 60, false));
+                    50, false),
+            order("Shipped", 1, "2026-10-04T04:30:00Z", "2026-10-06T04:30:00Z", null, 0, true),
+            order("Delivered", 1, "2026-10-06T04:30:00Z", null, null, 0, false),
+            order("Processing", 6, "2026-10-20T04:30:00Z", null, null, 60, false));
 
     @Test
     void countsByStatusWithEveryKnownStatusPresent() {
@@ -50,12 +50,11 @@ class OrdersSectionTest {
     }
 
     @Test
-    void orderSizeBandsAndCouponsIgnoringCase() {
-        OrdersSection.Size s = OrdersSection.size(FACTS, 10);
+    void orderSizeBandsAndAverageItems() {
+        OrdersSection.Size s = OrdersSection.size(FACTS);
         assertThat(s.averageItems()).isEqualTo(2.75);
         assertThat(s.bands()).containsExactly(java.util.Map.entry("1", 2L), java.util.Map.entry("2-3", 1L),
                 java.util.Map.entry("4-5", 0L), java.util.Map.entry("6+", 1L));
-        assertThat(s.topCoupons()).containsExactly(new OrdersSection.CouponUse("DIWALI10", 2, 110));
     }
 
     @Test
@@ -75,7 +74,7 @@ class OrdersSectionTest {
 
     @Test
     void emptyPeriodHasNoNaN() {
-        assertThat(OrdersSection.size(List.of(), 10).averageItems()).isZero();
+        assertThat(OrdersSection.size(List.of()).averageItems()).isZero();
         assertThat(OrdersSection.refunds(List.of(), 0).rate()).isZero();
         OrdersSection.Fulfilment f = OrdersSection.fulfilment(List.of(), OCT, Granularity.DAY, IST);
         assertThat(f.placedToDelivered().medianHours()).isNull();

@@ -14,7 +14,7 @@ public interface OrderReads {
      * @param refunded    at least one refund that did not fail
      */
     record OrderFacts(String id, String orderNumber, Instant placedAt, String status, int items, double total,
-                      double discount, String paymentMethod, String couponCode, Instant shippedAt,
+                      double discount, String paymentMethod, Instant shippedAt,
                       Instant deliveredAt, boolean refunded) {
     }
 
