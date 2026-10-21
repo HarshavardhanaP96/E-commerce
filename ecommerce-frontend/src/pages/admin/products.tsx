@@ -19,11 +19,12 @@ const columns: Column<Product>[] = [
   } as Column<Product>,
   { Header: "Name", accessor: "name" },
   { Header: "Category", accessor: "category", width: 160 },
-  { Header: "Price", accessor: "price", width: 130, Cell: ({ value }: CellProps<Product>) => formatMoney(value) } as Column<Product>,
+  { Header: "Price", accessor: "price", width: 130, align: "right", Cell: ({ value }: CellProps<Product>) => formatMoney(value) } as Column<Product>,
   {
     Header: "Stock",
     accessor: "stock",
     width: 140,
+    align: "right",
     Cell: ({ value, row }: CellProps<Product>) => {
       const p = row.original;
       const at = p.lowStockAt ?? 5;
@@ -77,6 +78,12 @@ const Products = () => {
               <LuPlus /> Add product
             </Link>
           </>
+        }
+        emptyText="No products yet."
+        emptyAction={
+          <Link to="/admin/product/new" className="btn btn--primary">
+            <LuPlus /> Add product
+          </Link>
         }
       />
     </AdminLayout>

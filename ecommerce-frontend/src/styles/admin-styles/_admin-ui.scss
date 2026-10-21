@@ -303,6 +303,22 @@
     border-bottom: none;
   }
 
+  // Numbers line up on the right, with equal-width digits (columns marked align: "right").
+  th.num,
+  td.num {
+    text-align: right;
+    @include tabular;
+  }
+
+  th.num span {
+    justify-content: flex-end;
+  }
+
+  // Every row tracks the pointer, so a wide row is easy to read across.
+  tbody tr:hover td {
+    background: $color-bg-primary;
+  }
+
   tr.clickable {
     cursor: pointer;
     transition: background $transition-fast;
@@ -316,6 +332,14 @@
     &:focus-visible {
       box-shadow: inset 2px 0 0 $color-accent-primary;
     }
+  }
+
+  &__empty p {
+    margin-bottom: $spacing-md;
+  }
+
+  &__empty .btn {
+    display: inline-flex;
   }
 
   &__empty {

@@ -88,7 +88,7 @@ const Coupon = () => {
     { Header: "Code", accessor: "coupon" },
     { Header: "Discount", accessor: "amount", width: 190, Cell: ({ row }: CellProps<CouponType>) => describe(row.original) } as Column<CouponType>,
     { Header: "Applies to", id: "scope", width: 210, disableSortBy: true, Cell: ({ row }: CellProps<CouponType>) => scopeText(row.original) } as Column<CouponType>,
-    { Header: "Min order", accessor: "minOrderValue", width: 110, Cell: ({ value }: CellProps<CouponType>) => (value ? formatMoney(value) : "—") } as Column<CouponType>,
+    { Header: "Min order", accessor: "minOrderValue", width: 110, align: "right", Cell: ({ value }: CellProps<CouponType>) => (value ? formatMoney(value) : "—") } as Column<CouponType>,
     {
       Header: "Valid",
       id: "valid",
@@ -103,6 +103,7 @@ const Coupon = () => {
       Header: "Used",
       accessor: "usedCount",
       width: 100,
+      align: "right",
       Cell: ({ row }: CellProps<CouponType>) =>
         row.original.usageLimit ? `${row.original.usedCount} / ${row.original.usageLimit}` : String(row.original.usedCount),
     } as Column<CouponType>,
