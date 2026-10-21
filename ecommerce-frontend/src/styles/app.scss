@@ -210,8 +210,8 @@ img {
     height: 1.1rem;
     padding: 0 0.3rem;
     border-radius: $radius-full;
-    background: $color-accent-primary;
-    color: #fff;
+    background: var(--accent-strong);
+    color: var(--on-accent);
     font-size: 0.6875rem;
     font-weight: 700;
     line-height: 1.1rem;
@@ -524,8 +524,8 @@ img {
     height: 1.1rem;
     padding: 0 0.3rem;
     border-radius: $radius-full;
-    background: $color-accent-primary;
-    color: #fff;
+    background: var(--accent-strong);
+    color: var(--on-accent);
     font-size: 0.6875rem;
     font-weight: 700;
     line-height: 1.1rem;
