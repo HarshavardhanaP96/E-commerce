@@ -25,7 +25,8 @@ export type CustomersSection = {
 };
 
 /**
- * `small` = hidden, every figure null: fewer than 5 buyers, or a cell the totals would give such a group away from.
+ * `small` = hidden, every figure null: fewer than 5 buyers, or a cell (of any size) the totals would give such a
+ * group away from.
  * The grand total is never hidden. `share` = percent of the range's buyer revenue.
  */
 export type AudienceCell = {

@@ -15,17 +15,18 @@ export const trendChange = ({ change, isNew }: { change: number | null; isNew: b
   isNew || change === null ? "New" : `${change > 0 ? "+" : ""}${change}%`;
 
 /**
- * What a hidden audience cell shows instead of its figures (the server sends none): a group of fewer than 5 buyers,
- * or a cell hidden so the totals cannot give such a group away.
+ * What every hidden audience cell shows instead of its figures (the server sends none). Neutral on purpose: a cell
+ * may be a group of fewer than 5 buyers or a bigger one hidden so the totals cannot give such a group away, and
+ * telling them apart would itself give something away.
  */
-export const SMALL_GROUP = "fewer than 5 buyers";
+export const HIDDEN_CELL = "hidden for privacy";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** An audience cell's main figure (revenue) and its detail line, or the small-group text and no detail. */
+/** An audience cell's main figure (revenue) and its detail line, or the hidden label and no detail. */
 export const audienceCellText = (cell: AudienceCell, money: (amount: number) => string) =>
   cell.small || cell.revenue === null
-    ? { value: SMALL_GROUP, detail: null }
+    ? { value: HIDDEN_CELL, detail: null }
     : {
       value: money(cell.revenue),
       detail: `${cell.share}% · ${plural(cell.buyers ?? 0, "buyer")} · ${plural(cell.orders ?? 0, "order")}`,

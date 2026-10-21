@@ -102,7 +102,7 @@ const AudienceValue = ({ cell }: { cell: AudienceCell }) => {
   );
 };
 
-/** Gender × age band grid; groups of fewer than 5 buyers show no figures. */
+/** Gender × age band grid; hidden cells (small groups and the cells that would give them away) show no figures. */
 const AudienceTable = ({ audience }: { audience: Audience }) => (
   <table className="mini-table audience-table">
     <thead>
@@ -248,9 +248,8 @@ const Customers = ({ range }: { range: DateRange }) => {
           <p className="section-card__note">
             Revenue from signed-in buyers by gender and age band, with its share of their revenue in this range.
             Age is counted on {bucketLabel(s.audience.asOf, "day")} {s.audience.asOf.slice(0, 4)}, the range&apos;s
-            last day, so a birthday inside the range can move a buyer up one band. Groups of fewer than 5 buyers
-            are hidden so no one can be singled out, and so is any cell the totals would let you work one out from:
-            &ldquo;fewer than 5 buyers&rdquo; can mark either.
+            last day, so a birthday inside the range can move a buyer up one band. Cells with fewer than 5 buyers,
+            and some cells next to them, are hidden so that no small group can be worked out from the totals.
           </p>
         </Card>
         <Card title="Orders by place" table="places" range={range} wide>

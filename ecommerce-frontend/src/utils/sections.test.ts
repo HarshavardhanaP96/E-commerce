@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, exportFileName, exportPath, REMOVED_PRODUCT,
-  SMALL_GROUP, trendChange,
+  HIDDEN_CELL, trendChange,
 } from "./sections";
 
 describe("dashboard sections", () => {
@@ -44,10 +44,11 @@ describe("dashboard sections", () => {
       .toBe("/api/v1/dashboard/export/audience?from=2026-09-01&to=2026-09-30");
   });
 
-  it("never shows a number for a group of fewer than 5 buyers", () => {
-    expect(SMALL_GROUP).toBe("fewer than 5 buyers");
+  it("labels every hidden cell neutrally and never shows a number for it", () => {
+    // hidden cells may be small groups or cells hidden to protect them: the label must fit both
+    expect(HIDDEN_CELL).toBe("hidden for privacy");
     expect(audienceCellText({ buyers: null, orders: null, revenue: null, share: null, small: true }, String))
-      .toEqual({ value: "fewer than 5 buyers", detail: null });
+      .toEqual({ value: "hidden for privacy", detail: null });
   });
 
   it("shows a cell's revenue, share and buyers", () => {
