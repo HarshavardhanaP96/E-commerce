@@ -6,6 +6,7 @@ import {
 import { DashboardScope, SummaryParams } from "../../types/types";
 import type { CouponsSection, CustomersSection, PaymentsSection, ProductsSection, TaxSection } from "../../types/sections";
 import type { DateRange } from "../../utils/dateRange";
+import type { AudienceFilter } from "../../utils/sections";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
 
@@ -41,8 +42,8 @@ export const dashboardAPI = createApi({
     getLocationSection: builder.query<SectionResponse<LocationSection>, LocationParams>({
       query: (params) => ({ url: "location", params: clean(params) }),
     }),
-    getProductsSection: builder.query<{ products: ProductsSection }, DateRange>({
-      query: (params) => ({ url: "products", params }),
+    getProductsSection: builder.query<{ products: ProductsSection }, DateRange & AudienceFilter>({
+      query: (params) => ({ url: "products", params: clean(params) }),
     }),
     getCustomersSection: builder.query<{ customers: CustomersSection }, DateRange>({
       query: (params) => ({ url: "customers", params }),

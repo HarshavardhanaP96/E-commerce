@@ -13,6 +13,9 @@ export type SectionParams = {
   basis: "net" | "gross";
   category?: string;
   limit?: number;
+  /** Sales only: the audience segment (see utils/sections AUDIENCE_GENDERS / AUDIENCE_BANDS). */
+  gender?: string;
+  ageBand?: string;
 };
 
 export type SectionWindow = {
@@ -47,6 +50,10 @@ export type SalesSection = SectionWindow & {
     charged: number; discount: number; tax: number; shipping: number; refunds: number; net: number;
     couponOrders: number; couponOrderShare: number;
   } | null;
+  /** Narrowed to a segment the range's audience table hides: no figures (empty series). */
+  small: boolean;
+  /** The comparison period's audience table hides the segment: no previousSeries. */
+  previousSmall: boolean;
 };
 
 type Leg = { medianHours?: number | null; p90Hours?: number | null; count: number };

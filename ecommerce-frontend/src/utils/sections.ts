@@ -38,24 +38,43 @@ export const audienceGenderLabel = (gender: string) => GENDER_LABELS[gender] ?? 
 
 export const audienceBandLabel = (band: string) => (band === "unknown" ? "Age unknown" : band);
 
-export const exportPath = (table: ExportTable, range: DateRange) =>
-  `/api/v1/dashboard/export/${table}?${new URLSearchParams({ from: range.from, to: range.to })}`;
+/** The segments Sales and Products can be narrowed to (the server's values, in the audience table's order). */
+export const AUDIENCE_GENDERS = ["female", "male", "unknown"] as const;
+export const AUDIENCE_BANDS = ["18-24", "25-34", "35-44", "45-54", "55+", "unknown"] as const;
 
-export const exportFileName = (table: ExportTable, range: DateRange) => `${table}_${range.from}_${range.to}.csv`;
+/** An audience segment; a missing field means any. */
+export type AudienceFilter = { gender?: string; ageBand?: string };
+
+/** "Female, 25-34", "Gender unknown", "Age unknown"; empty for everyone. */
+export const audienceName = ({ gender, ageBand }: AudienceFilter) => [
+  gender && (gender === "unknown" ? "Gender unknown" : audienceGenderLabel(gender)),
+  ageBand && audienceBandLabel(ageBand),
+].filter(Boolean).join(", ");
+
+/** Only the Products tables read the segment; the server ignores it on the others. */
+export const exportPath = (table: ExportTable, range: DateRange, audience: AudienceFilter = {}) => {
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  if (audience.gender) q.set("gender", audience.gender);
+  if (audience.ageBand) q.set("ageBand", audience.ageBand);
+  return `/api/v1/dashboard/export/${table}?${q}`;
+};
+
+export const exportFileName = (table: ExportTable, range: DateRange, audience: AudienceFilter = {}) =>
+  `${[table, audience.gender, audience.ageBand].filter(Boolean).join("-")}_${range.from}_${range.to}.csv`;
 
 export const daysLeftLabel = (days: number | null) =>
   days === null ? "No sales in range" : days === 0 ? "Out of stock" : `${days} ${days === 1 ? "day" : "days"}`;
 
 /** Downloads one table as CSV with the admin's token (a plain link would not carry it). */
-export const downloadCsv = async (table: ExportTable, range: DateRange) => {
-  const res = await fetch(`${server}${exportPath(table, range)}`, {
+export const downloadCsv = async (table: ExportTable, range: DateRange, audience: AudienceFilter = {}) => {
+  const res = await fetch(`${server}${exportPath(table, range, audience)}`, {
     headers: { Authorization: `Bearer ${getToken() ?? ""}` },
   });
   if (!res.ok) throw new Error(String(res.status));
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
-  a.download = exportFileName(table, range);
+  a.download = exportFileName(table, range, audience);
   a.click();
   URL.revokeObjectURL(url);
 };

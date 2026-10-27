@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, exportFileName, exportPath, REMOVED_PRODUCT,
-  HIDDEN_CELL, trendChange,
+  AUDIENCE_BANDS, AUDIENCE_GENDERS, audienceBandLabel, audienceCellText, audienceGenderLabel, audienceName, daysLeftLabel,
+  exportFileName, exportPath, REMOVED_PRODUCT, HIDDEN_CELL, trendChange,
 } from "./sections";
 
 describe("dashboard sections", () => {
@@ -65,5 +65,26 @@ describe("dashboard sections", () => {
     expect(audienceGenderLabel("all")).toBe("All");
     expect(audienceBandLabel("25-34")).toBe("25-34");
     expect(audienceBandLabel("unknown")).toBe("Age unknown");
+  });
+
+  it("exports a Products table for an audience segment, and leaves out what is not set", () => {
+    expect(exportPath("top-products", { from: "2026-10-01", to: "2026-10-31" }, { gender: "female", ageBand: "55+" }))
+      .toBe("/api/v1/dashboard/export/top-products?from=2026-10-01&to=2026-10-31&gender=female&ageBand=55%2B");
+    expect(exportPath("categories", { from: "2026-10-01", to: "2026-10-31" }, { ageBand: "25-34" }))
+      .toBe("/api/v1/dashboard/export/categories?from=2026-10-01&to=2026-10-31&ageBand=25-34");
+    expect(exportFileName("top-products", { from: "2026-10-01", to: "2026-10-31" }, { gender: "male", ageBand: "25-34" }))
+      .toBe("top-products-male-25-34_2026-10-01_2026-10-31.csv");
+  });
+
+  it("names an audience segment for the notes", () => {
+    expect(audienceName({ gender: "female", ageBand: "25-34" })).toBe("Female, 25-34");
+    expect(audienceName({ gender: "unknown" })).toBe("Gender unknown");
+    expect(audienceName({ ageBand: "unknown" })).toBe("Age unknown");
+    expect(audienceName({})).toBe("");
+  });
+
+  it("offers the server's segments in the audience table's order", () => {
+    expect(AUDIENCE_GENDERS).toEqual(["female", "male", "unknown"]);
+    expect(AUDIENCE_BANDS).toEqual(["18-24", "25-34", "35-44", "45-54", "55+", "unknown"]);
   });
 });

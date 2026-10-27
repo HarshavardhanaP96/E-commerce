@@ -1,4 +1,5 @@
 import { RangeSectionName, SectionName, SeriesPoint } from "../../../types/analytics";
+import { AUDIENCE_BANDS, AUDIENCE_GENDERS, AudienceFilter } from "../../../utils/sections";
 
 export { bucketLabel } from "../../../utils/dateRange";
 
@@ -21,6 +22,25 @@ const RANGE_ONLY: readonly SectionName[] = ["products", "customers", "coupons", 
 
 /** Step 3's tabs read only the date range, so the compare, basis and category filters are hidden on them. */
 export const isRangeOnly = (tab: SectionName): tab is RangeSectionName => RANGE_ONLY.includes(tab);
+
+/** Only Sales and Products can be narrowed to a gender and age band. */
+export const usesAudience = (tab: SectionName) => tab === "sales" || tab === "products";
+
+/** The segment in the URL; a value the server would reject (a hand-edited link) is dropped. */
+export const audienceFrom = (params: URLSearchParams): AudienceFilter => {
+  const gender = params.get("gender") ?? "";
+  const ageBand = params.get("ageBand") ?? "";
+  return {
+    ...((AUDIENCE_GENDERS as readonly string[]).includes(gender) ? { gender } : {}),
+    ...((AUDIENCE_BANDS as readonly string[]).includes(ageBand) ? { ageBand } : {}),
+  };
+};
+
+/** URL changes for opening a tab: drill-downs reset, and the segment goes where it would do nothing. */
+export const switchTab = (tab: SectionName): Record<string, string> => ({
+  tab: tab === "overview" ? "" : tab, country: "", state: "", pinPrefix: "",
+  ...(usesAudience(tab) ? {} : { gender: "", ageBand: "" }),
+});
 
 /** The URL parameter that drills into a Location row, or null when the row cannot be opened. */
 export const drillTo = (level: string, key: string): Record<string, string> | null => {

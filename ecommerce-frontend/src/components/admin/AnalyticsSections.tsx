@@ -14,22 +14,23 @@ import { formatMoney } from "../../utils/features";
 import type { RangeSectionName } from "../../types/analytics";
 import type { Audience, AudienceCell, TrendRow } from "../../types/sections";
 import {
-  audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, downloadCsv, ExportTable, REMOVED_PRODUCT,
-  trendChange,
+  AudienceFilter, audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, downloadCsv, ExportTable,
+  HIDDEN_CELL, REMOVED_PRODUCT, trendChange,
 } from "../../utils/sections";
+import { AudienceNote } from "./analytics/Shared";
 import { BarChart, DoughnutChart } from "./Charts";
 import { chartColors as c } from "./chartTheme";
 
 /** One card with a title, an optional CSV download for its table, and the table or chart. */
-const Card = ({ title, table, range, wide, children }: {
-  title: string; table?: ExportTable; range: DateRange; wide?: boolean; children: ReactNode;
+const Card = ({ title, table, range, audience, wide, children }: {
+  title: string; table?: ExportTable; range: DateRange; audience?: AudienceFilter; wide?: boolean; children: ReactNode;
 }) => {
   const [busy, setBusy] = useState(false);
   const download = async () => {
     if (!table) return;
     setBusy(true);
     try {
-      await downloadCsv(table, range);
+      await downloadCsv(table, range, audience);
     } catch {
       toast.error("Could not download the CSV");
     } finally {
@@ -124,14 +125,19 @@ const AudienceTable = ({ audience }: { audience: Audience }) => (
   </table>
 );
 
-const Products = ({ range }: { range: DateRange }) => {
+const Products = ({ range, audience }: { range: DateRange; audience: AudienceFilter }) => {
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useGetProductsSectionQuery(range);
+  const { data, isLoading, isError } = useGetProductsSectionQuery({ ...range, ...audience });
   if (!data) return <Status loading={isLoading} error={isError} />;
   const p = data.products;
+  const note = <AudienceNote audience={audience} hidden={p.small} previousHidden={p.previousSmall}
+                             comparison="period before" />;
+  if (p.small) return note;
   return (
+    <>
+    {note}
     <section className="analytics__grid">
-      <Card title="Top sellers" table="top-products" range={range} wide>
+      <Card title="Top sellers" table="top-products" range={range} audience={audience} wide>
         {p.top.length === 0 ? <Empty>No sales in this range.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Units</th><th>Orders</th><th>Revenue</th></tr></thead>
@@ -145,7 +151,7 @@ const Products = ({ range }: { range: DateRange }) => {
           </table>
         )}
       </Card>
-      <Card title="Revenue by category" table="categories" range={range}>
+      <Card title="Revenue by category" table="categories" range={range} audience={audience}>
         {p.categories.length === 0 ? <Empty>No sales in this range.</Empty> : (
           <ul className="category-bars">
             {p.categories.map((r) => (
@@ -158,7 +164,7 @@ const Products = ({ range }: { range: DateRange }) => {
           </ul>
         )}
       </Card>
-      <Card title="Not sold in this range" table="idle-products" range={range}>
+      <Card title="Not sold in this range" table="idle-products" range={range} audience={audience}>
         {p.idle.length === 0 ? <Empty>Every product on sale sold at least once.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Stock</th></tr></thead>
@@ -172,17 +178,19 @@ const Products = ({ range }: { range: DateRange }) => {
           </table>
         )}
       </Card>
-      <Card title="Rising and falling" table="trending" range={range} wide>
-        <div className="section-card__split">
-          <TrendList title="Rising" rows={p.trending.rising} up empty="No product sold more than before." />
-          <TrendList title="Falling" rows={p.trending.falling} up={false} empty="No product sold less than before." />
-        </div>
+      <Card title="Rising and falling" table="trending" range={range} audience={audience} wide>
+        {p.trending ? (
+          <div className="section-card__split">
+            <TrendList title="Rising" rows={p.trending.rising} up empty="No product sold more than before." />
+            <TrendList title="Falling" rows={p.trending.falling} up={false} empty="No product sold less than before." />
+          </div>
+        ) : <Empty>The period before is {HIDDEN_CELL} for this group, so there is nothing to compare with.</Empty>}
         <p className="section-card__note">
           Units sold against the same number of days just before this range. Products need 3 or more units in one
           of the two.
         </p>
       </Card>
-      <Card title="Often bought together" table="bought-together" range={range}>
+      <Card title="Often bought together" table="bought-together" range={range} audience={audience}>
         {p.boughtTogether.length === 0 ? <Empty>No two products were ordered together 3 or more times.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Products</th><th>Orders</th></tr></thead>
@@ -194,8 +202,10 @@ const Products = ({ range }: { range: DateRange }) => {
           </table>
         )}
       </Card>
-      <Card title="Low stock: days left at this range's selling rate" table="stock" range={range} wide>
-        {p.stock.length === 0 ? <Empty>Everything is above its low-stock level.</Empty> : (
+      <Card title="Low stock: days left at this range's selling rate" table={p.stock ? "stock" : undefined}
+            range={range} wide>
+        {!p.stock ? <Empty>Stock cover uses the whole store&apos;s selling rate: choose all genders and ages to see it.</Empty>
+          : p.stock.length === 0 ? <Empty>Everything is above its low-stock level.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Stock</th><th>Sold in range</th><th>Days left</th></tr></thead>
             <tbody>
@@ -212,10 +222,11 @@ const Products = ({ range }: { range: DateRange }) => {
         )}
       </Card>
     </section>
+    </>
   );
 };
 
-const Customers = ({ range }: { range: DateRange }) => {
+const Customers =({ range }: { range: DateRange }) => {
   const { data, isLoading, isError } = useGetCustomersSectionQuery(range);
   if (!data) return <Status loading={isLoading} error={isError} />;
   const s = data.customers;
@@ -368,9 +379,11 @@ const Tax = ({ range }: { range: DateRange }) => {
 };
 
 /** The body of one of step 3's tabs (Products, Customers, Coupons, Payments, Tax). */
-const AnalyticsSection = ({ tab, range }: { tab: RangeSectionName; range: DateRange }) => {
+const AnalyticsSection = ({ tab, range, audience }: {
+  tab: RangeSectionName; range: DateRange; audience: AudienceFilter;
+}) => {
   switch (tab) {
-    case "products": return <Products range={range} />;
+    case "products": return <Products range={range} audience={audience} />;
     case "customers": return <Customers range={range} />;
     case "coupons": return <Coupons range={range} />;
     case "payments": return <Payments range={range} />;

@@ -5,11 +5,16 @@ import LocationTab from "../../components/admin/analytics/LocationTab";
 import OrdersTab from "../../components/admin/analytics/OrdersTab";
 import OverviewTab from "../../components/admin/analytics/OverviewTab";
 import SalesTab from "../../components/admin/analytics/SalesTab";
-import { isRangeOnly, TABS, tabFrom } from "../../components/admin/analytics/sections";
+import {
+  audienceFrom, isRangeOnly, switchTab, TABS, tabFrom, usesAudience,
+} from "../../components/admin/analytics/sections";
 import { useCategoriesQuery } from "../../redux/api/productAPI";
 import { SectionParams } from "../../types/analytics";
 import { SummaryParams } from "../../types/types";
 import { PRESETS, Preset, presetRange } from "../../utils/dateRange";
+import {
+  AUDIENCE_BANDS, AUDIENCE_GENDERS, audienceBandLabel, audienceName,
+} from "../../utils/sections";
 
 const Analytics = () => {
   const [params, setParams] = useSearchParams();
@@ -31,8 +36,10 @@ const Analytics = () => {
   const tab = tabFrom(params.get("tab"));
   // Step 3's tabs read only the date range; the other filters would do nothing there.
   const rangeOnly = isRangeOnly(tab);
+  // only Sales and Products read the segment; a link carrying it to another tab must not narrow anything
+  const audience = usesAudience(tab) ? audienceFrom(params) : {};
   const section: SectionParams = { from: range.from, to: range.to, compare: compare ?? "previous",
-                                   basis: basis ?? "net", category: category || undefined };
+                                   basis: basis ?? "net", category: category || undefined, ...audience };
 
   return (
     <AdminLayout>
@@ -76,13 +83,27 @@ const Analytics = () => {
                 </select>
               </>
             )}
+            {usesAudience(tab) && (
+              <>
+                <select value={audience.gender ?? ""} onChange={(e) => setParam({ gender: e.target.value })}
+                        aria-label="Audience gender">
+                  <option value="">All genders</option>
+                  {AUDIENCE_GENDERS.map((g) => <option key={g} value={g}>{audienceName({ gender: g })}</option>)}
+                </select>
+                <select value={audience.ageBand ?? ""} onChange={(e) => setParam({ ageBand: e.target.value })}
+                        aria-label="Audience age band">
+                  <option value="">All ages</option>
+                  {AUDIENCE_BANDS.map((b) => <option key={b} value={b}>{audienceBandLabel(b)}</option>)}
+                </select>
+              </>
+            )}
           </div>
           <nav className="tabs analytics__tabs" role="tablist" aria-label="Analytics sections"
                ref={(el) => el?.querySelector(".is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" })}>
             {TABS.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
                       className={tab === t.id ? "is-active" : undefined}
-                      onClick={() => setParam({ tab: t.id === "overview" ? "" : t.id, country: "", state: "", pinPrefix: "" })}>
+                      onClick={() => setParam(switchTab(t.id))}>
                 {t.label}
               </button>
             ))}
@@ -98,7 +119,7 @@ const Analytics = () => {
           {tab === "sales" && <SalesTab params={section} />}
           {tab === "orders" && <OrdersTab params={section} />}
           {tab === "location" && <LocationTab params={section} />}
-          {rangeOnly && <AnalyticsSection tab={tab} range={range} />}
+          {rangeOnly && <AnalyticsSection tab={tab} range={range} audience={audience} />}
         </div>
       </div>
     </AdminLayout>

@@ -2,12 +2,17 @@
 export type ProductsSection = {
   top: { productId: string; name: string; units: number; revenue: number; orders: number }[];
   categories: { category: string; revenue: number; units: number; share: number }[];
-  stock: { productId: string; name: string; variantId: string | null; label: string | null; stock: number;
-    threshold: number; unitsSold: number; daysLeft: number | null }[];
+  /** Absent when narrowed to an audience segment (stock cover is the whole store's selling rate). */
+  stock?: { productId: string; name: string; variantId: string | null; label: string | null; stock: number;
+    threshold: number; unitsSold: number; daysLeft: number | null }[] | null;
   idle: { productId: string; name: string; stock: number }[];
-  /** Against the same number of days before the range; `change` is null when `isNew`. */
-  trending: { rising: TrendRow[]; falling: TrendRow[] };
+  /** Against the same number of days before the range; `change` is null when `isNew`. Absent when hidden. */
+  trending?: { rising: TrendRow[]; falling: TrendRow[] } | null;
   boughtTogether: { productA: string; nameA: string; productB: string; nameB: string; orders: number }[];
+  /** Narrowed to a segment the range's audience table hides: every list is empty. */
+  small: boolean;
+  /** The previous period's audience table hides the segment: no trending. */
+  previousSmall: boolean;
 };
 
 export type TrendRow = {

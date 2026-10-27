@@ -1,9 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
-  alignPrevious, bucketLabel, csvPath, drillTo, fileNameFrom, formatHours, heatLevel, isRangeOnly, TABS, tabFrom,
+  alignPrevious, audienceFrom, bucketLabel, csvPath, drillTo, fileNameFrom, formatHours, heatLevel, isRangeOnly,
+  switchTab, TABS, tabFrom, usesAudience,
 } from "./sections";
 
 describe("analytics sections", () => {
+  it("offers the audience filters on Sales and Products only", () => {
+    expect(TABS.filter((t) => usesAudience(t.id)).map((t) => t.id)).toEqual(["sales", "products"]);
+  });
+
+  it("reads the audience segment from the URL and drops values the server would reject", () => {
+    expect(audienceFrom(new URLSearchParams("gender=female&ageBand=55%2B"))).toEqual({ gender: "female", ageBand: "55+" });
+    expect(audienceFrom(new URLSearchParams("gender=other&ageBand=55"))).toEqual({});
+    expect(audienceFrom(new URLSearchParams("tab=sales"))).toEqual({});
+  });
+
+  it("clears the audience segment when switching to a tab that does not use it", () => {
+    expect(switchTab("customers"))
+      .toEqual({ tab: "customers", country: "", state: "", pinPrefix: "", gender: "", ageBand: "" });
+    expect(switchTab("overview"))
+      .toEqual({ tab: "", country: "", state: "", pinPrefix: "", gender: "", ageBand: "" });
+    // Sales and Products keep it
+    expect(switchTab("products")).toEqual({ tab: "products", country: "", state: "", pinPrefix: "" });
+    expect(switchTab("sales")).toEqual({ tab: "sales", country: "", state: "", pinPrefix: "" });
+  });
+
   it("reads the tab from the URL and falls back to overview", () => {
     expect(tabFrom("sales")).toBe("sales");
     expect(tabFrom("products")).toBe("products");
