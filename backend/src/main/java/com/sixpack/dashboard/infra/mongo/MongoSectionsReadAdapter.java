@@ -280,13 +280,16 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                 stage("$group", new Document("_id", new Document("order", "$_id")
                         .append("month", localDate("$createdAt", zone, "%Y-%m"))
                         .append("rate", "$orderItems.taxRate")
-                        .append("state", new Document("$ifNull", List.of("$billingInfo.state", "$shippingInfo.state"))))
+                        .append("state", new Document("$ifNull", List.of("$billingInfo.state", "$shippingInfo.state")))
+                        .append("country",
+                                new Document("$ifNull", List.of("$billingInfo.country", "$shippingInfo.country"))))
                         .append("taxable", new Document("$sum", lineValue()))),
                 stage("$sort", new Document("_id.month", 1)))) {
             Document key = d.get("_id", Document.class);
             Object rate = key.get("rate");
             out.add(new TaxGroup(String.valueOf(key.get("order")), key.getString("month"),
-                    rate == null ? null : number(rate), key.getString("state"), number(d.get("taxable"))));
+                    rate == null ? null : number(rate), key.getString("state"), key.getString("country"),
+                    number(d.get("taxable"))));
         }
         return out;
     }

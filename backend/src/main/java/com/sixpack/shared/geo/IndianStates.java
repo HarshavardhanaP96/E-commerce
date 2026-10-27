@@ -83,6 +83,25 @@ public final class IndianStates {
         return country != null && INDIA.contains(key(country));
     }
 
+    /**
+     * Whether two addresses are in the same state. Both in India: the same Indian state however spelled ("KA",
+     * "karnataka "). Otherwise, or when either is not on the list, the trimmed text must match ignoring case: a code
+     * like "TN" means something else abroad (Tennessee). Null or blank is never the same.
+     */
+    public static boolean same(String stateA, String countryA, String stateB, String countryB) {
+        if (stateA == null || stateB == null || stateA.isBlank() || stateB.isBlank()) {
+            return false;
+        }
+        if (isIndia(countryA) && isIndia(countryB)) {
+            Optional<State> a = normalise(stateA);
+            Optional<State> b = normalise(stateB);
+            if (a.isPresent() && b.isPresent()) {
+                return a.get().equals(b.get());
+            }
+        }
+        return stateA.trim().toLowerCase(Locale.ROOT).equals(stateB.trim().toLowerCase(Locale.ROOT));
+    }
+
     private static void state(String code, String name, String... aliases) {
         add(new State(code, name, false), aliases);
     }

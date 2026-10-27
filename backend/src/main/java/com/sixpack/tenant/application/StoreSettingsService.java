@@ -6,6 +6,7 @@ import com.sixpack.audit.AuditTrail;
 import com.sixpack.audit.Changes;
 import com.sixpack.audit.Changes.FieldPolicy;
 import com.sixpack.shared.ApiException;
+import com.sixpack.shared.geo.IndianStates;
 import com.sixpack.shared.tenant.StoreConfig;
 import com.sixpack.shared.tenant.StoreSettings;
 import com.sixpack.shared.tenant.StorefrontSettings;
@@ -105,10 +106,9 @@ public class StoreSettingsService {
         if (gstin != null && !GSTIN.matcher(gstin).matches()) {
             throw ApiException.badRequest("invoice.gstin: not a valid 15-character GSTIN");
         }
-        if (i.state() != null && i.state().length() > 60) {
-            throw ApiException.badRequest("invoice.state: at most 60 characters");
-        }
-        return new StoreSettings.Invoice(gstin, i.state());
+        String state = i.state() == null ? null : IndianStates.normalise(i.state()).map(IndianStates.State::name)
+                .orElseThrow(() -> ApiException.badRequest("invoice.state: not an Indian state or union territory"));
+        return new StoreSettings.Invoice(gstin, state);
     }
 
     private static StoreSettings.Regional validRegional(StoreSettings.Regional r) {

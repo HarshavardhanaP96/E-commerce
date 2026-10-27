@@ -256,7 +256,7 @@ public class SectionsService {
             double[] row = rows.computeIfAbsent(group.month() + "|" + String.format(Locale.ROOT, "%08.3f", rate),
                     k -> new double[5]);
             row[0] += paise / 100.0;
-            if (sameState(sellerState, group.state())) {
+            if (IndianStates.same(sellerState, "India", group.state(), group.country())) { // the store is Indian
                 row[1] += tax / 2;
                 row[2] += tax / 2;
             } else {
@@ -297,11 +297,6 @@ public class SectionsService {
 
     private static String lower(String s) {
         return s == null ? "" : s.toLowerCase(Locale.ROOT);
-    }
-
-    private static boolean sameState(String a, String b) {
-        return a != null && b != null && !a.isBlank()
-                && a.trim().toLowerCase(Locale.ROOT).equals(b.trim().toLowerCase(Locale.ROOT));
     }
 
     private static <T> List<T> cut(List<T> rows, int limit) {

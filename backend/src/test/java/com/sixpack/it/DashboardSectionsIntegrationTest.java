@@ -373,6 +373,25 @@ class DashboardSectionsIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void taxMatchesTheSellersStateHoweverAnIndianBuyerSpelledIt() throws Exception {
+        order(tenant, "u3", "Meera", "meera@shop.test", "2026-11-03T06:00:00Z", 118, 0, 18, null, "upi",
+                "KA", "Bengaluru", null, List.of(item(TEE, "Tee", 100, 1, 18.0)));
+        // "KA" abroad is not Karnataka: outside India the state is only compared as text
+        order(tenant, "u4", "Sam", "sam@shop.test", "2026-11-04T06:00:00Z", 118, 0, 18, null, "card",
+                "KA", "Springfield", null, List.of(item(TEE, "Tee", 100, 1, 18.0)));
+        mongo.getCollection("orders").updateOne(new Document("customer.email", "sam@shop.test"),
+                new Document("$set", new Document("shippingInfo.country", "United States")));
+
+        mvc.perform(get("/api/v1/dashboard/tax").header("Authorization", bearer(admin))
+                        .param("from", "2026-11-01").param("to", "2026-11-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tax.rows.length()").value(1))
+                .andExpect(jsonPath("$.tax.rows[0].cgst").value(9.0))
+                .andExpect(jsonPath("$.tax.rows[0].sgst").value(9.0))
+                .andExpect(jsonPath("$.tax.rows[0].igst").value(18.0));
+    }
+
+    @Test
     void eachTableDownloadsAsCsvAndTheDownloadIsAudited() throws Exception {
         String csv = mvc.perform(get("/api/v1/dashboard/export/top-products").header("Authorization", bearer(admin))
                         .param("from", "2026-10-01").param("to", "2026-10-31"))

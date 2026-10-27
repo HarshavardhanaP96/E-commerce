@@ -206,6 +206,14 @@ class StoreSettingsIntegrationTest extends TenantIntegrationTest {
     }
 
     @Test
+    void theInvoiceStateIsStoredUnderItsOfficialName() throws Exception {
+        saveSettings(acme, adminA, Map.of("invoice", Map.of("state", "ka"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.invoice.state").value("Karnataka"));
+        saveSettings(acme, adminA, Map.of("invoice", Map.of("state", "Atlantis"))).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("invoice.state: not an Indian state or union territory"));
+    }
+
+    @Test
     void anInvoiceNamesTheStoreThatSoldTheGoodsNeverThePlatformsSeller() throws Exception {
         saveSettings(acme, adminA, Map.of(
                 "storefront", Map.of("legalName", "Acme Traders LLP", "address", "7 Residency Road, Bengaluru",

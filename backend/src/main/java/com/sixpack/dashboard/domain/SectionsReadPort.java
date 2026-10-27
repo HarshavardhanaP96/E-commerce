@@ -90,9 +90,10 @@ public interface SectionsReadPort {
      * One order's items at one GST rate.
      *
      * @param rate  null on order lines saved before each line carried its rate
-     * @param state the billing state, else the delivery state
+     * @param state   the billing state, else the delivery state
+     * @param country the country of that same address
      */
-    record TaxGroup(String orderId, String month, Double rate, String state, double taxableValue) {
+    record TaxGroup(String orderId, String month, Double rate, String state, String country, double taxableValue) {
     }
 
     /** Per order and rate, by local month (YYYY-MM) in {@code zone}. */

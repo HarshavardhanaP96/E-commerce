@@ -9,6 +9,8 @@ import com.sixpack.order.domain.Order;
 import com.sixpack.order.domain.OrderStatus;
 import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
+import com.sixpack.shared.ApiException;
+import com.sixpack.shared.geo.IndianStates;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.user.UserDirectory;
@@ -131,8 +133,8 @@ class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, Object> confirm(@Valid @RequestBody ConfirmRequest request, @AuthenticationPrincipal Jwt jwt) {
         String orderId = checkout.confirm(AuthUser.from(jwt).id(), request.providerOrderId(), request.paymentId(),
-                request.signature(), new ConfirmDetails(toDomain(request.shippingInfo()),
-                        toDomain(request.billingInfo()), blankToNull(request.notes())));
+                request.signature(), new ConfirmDetails(toDomain(request.shippingInfo(), "shippingInfo"),
+                        toDomain(request.billingInfo(), "billingInfo"), blankToNull(request.notes())));
         return ApiResponse.of("message", "Order placed successfully", "orderId", orderId);
     }
 
@@ -181,11 +183,16 @@ class OrderController {
         return ApiResponse.message("Order deleted successfully");
     }
 
-    private static ShippingInfo toDomain(ShippingRequest s) {
+    private static ShippingInfo toDomain(ShippingRequest s, String field) {
         if (s == null) {
             return null;
         }
-        return new ShippingInfo(s.address().trim(), s.city().trim(), s.state().trim(), s.country().trim(),
+        String state = s.state().trim();
+        if (IndianStates.isIndia(s.country())) {
+            state = IndianStates.normalise(state).map(IndianStates.State::name).orElseThrow(() ->
+                    ApiException.badRequest(field + ".state: not an Indian state or union territory"));
+        }
+        return new ShippingInfo(s.address().trim(), s.city().trim(), state, s.country().trim(),
                 s.pinCode(), blankToNull(s.name()), blankToNull(s.phone()));
     }
 
