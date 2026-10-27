@@ -15,7 +15,8 @@ import java.util.Set;
  */
 public final class IndianStates {
 
-    public record State(String code, String name, boolean unionTerritory) {
+    /** {@code aliases}: the other spellings and older codes accepted for it, beyond case, spaces and punctuation. */
+    public record State(String code, String name, boolean unionTerritory, List<String> aliases) {
     }
 
     private static final List<State> ALL;
@@ -103,18 +104,18 @@ public final class IndianStates {
     }
 
     private static void state(String code, String name, String... aliases) {
-        add(new State(code, name, false), aliases);
+        add(new State(code, name, false, List.of(aliases)));
     }
 
     private static void territory(String code, String name, String... aliases) {
-        add(new State(code, name, true), aliases);
+        add(new State(code, name, true, List.of(aliases)));
     }
 
-    private static void add(State s, String... aliases) {
+    private static void add(State s) {
         BY_CODE.put(s.code(), s);
         BY_KEY.put(key(s.code()), s);
         BY_KEY.put(key(s.name()), s);
-        for (String alias : aliases) {
+        for (String alias : s.aliases()) {
             BY_KEY.put(key(alias), s);
         }
     }

@@ -136,7 +136,7 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
 | `GET /legal/versions` | 🔓 | — | `{success, versions:{terms, privacy, admin_aup}}` |
-| `GET /reference/indian-states` | 🔓 | — | `{success, states:[{code, name, unionTerritory}]}`: the 36 states and union territories, by name, for the checkout and store-settings dropdowns |
+| `GET /reference/indian-states` | 🔓 | — | `{success, states:[{code, name, unionTerritory, aliases}]}` (`aliases`: the older codes and spellings also accepted, e.g. Odisha `["OR", "Orissa"]`): the 36 states and union territories, by name, for the checkout and store-settings dropdowns |
 | `GET /consent/me` | 👤 | — | `{success, consents:{<purpose>:{granted, version, at}}, pending:[purpose], history:[{purpose, granted, version, source, at}]}`. `pending` lists the required policies not yet accepted at the current version; the SPA blocks with a prompt while it's non-empty |
 | `POST /consent` | 👤 | `{purpose, granted, source: reprompt\|settings}` | same as `GET /consent/me`. 400 for withdrawing terms or privacy (delete the account instead), for a non-admin granting `admin_aup`, and for withdrawing `admin_aup` |
 

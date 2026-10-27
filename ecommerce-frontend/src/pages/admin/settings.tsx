@@ -5,7 +5,7 @@ import { errorMessage } from "../../redux/api/baseQuery";
 import { useIndianStatesQuery } from "../../redux/api/referenceAPI";
 import { useSaveStoreSettingsMutation, useStoreSettingsQuery } from "../../redux/api/storeAPI";
 import { loadTenantConfig } from "../../tenant/tenant";
-import { matchState } from "../../utils/indianStates";
+import { savedStateChoice } from "../../utils/indianStates";
 import { currencySymbol, formatMoney } from "../../utils/money";
 import { emptyForm, fromSettings, StoreSettingsForm, toPayload } from "./storeSettingsForm";
 
@@ -26,6 +26,7 @@ const StoreSettings = () => {
   const [form, setForm] = useState<StoreSettingsForm>(emptyForm);
   const { data: stateList } = useIndianStatesQuery();
   const states = stateList?.states ?? [];
+  const stateChoice = savedStateChoice(form.state, states);
 
   useEffect(() => {
     if (data) setForm(fromSettings(data.settings));
@@ -116,8 +117,9 @@ const StoreSettings = () => {
               {textField("gstin", "GSTIN", { maxLength: 15 })}
               <label>
                 State of registration
-                <select value={matchState(form.state, states)} onChange={set("state")}>
+                <select value={stateChoice.value} onChange={set("state")}>
                   <option value="">Not set</option>
+                  {stateChoice.extra && <option value={stateChoice.extra.value}>{stateChoice.extra.label}</option>}
                   {states.map((s) => <option key={s.code} value={s.name}>{s.name}</option>)}
                 </select>
               </label>

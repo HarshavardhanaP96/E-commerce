@@ -1,6 +1,7 @@
 package com.sixpack.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,7 +33,10 @@ class IndianStateCheckoutIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/v1/reference/indian-states"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.states.length()").value(36))
-                .andExpect(jsonPath("$.states[0].code").value("AN"));
+                .andExpect(jsonPath("$.states[0].code").value("AN"))
+                .andExpect(jsonPath("$.states[0].name").value("Andaman and Nicobar Islands"))
+                .andExpect(jsonPath("$.states[0].unionTerritory").value(true))
+                .andExpect(jsonPath("$.states[?(@.code == 'OD')].aliases[*]", hasItems("OR", "Orissa")));
     }
 
     @Test

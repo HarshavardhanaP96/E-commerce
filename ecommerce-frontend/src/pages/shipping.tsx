@@ -86,6 +86,12 @@ const Shipping = () => {
 
   const submitHandler = async (e: FormEvent) => {
     e.preventDefault();
+    // Without the list an Indian state is free text, which the server may refuse only after payment.
+    const indian = shippingInfo.country === "India" || (!sameBilling && billing.country === "India");
+    if (indian && states.length === 0) {
+      toast.error("Couldn't load the list of states, please retry");
+      return;
+    }
     setBusy(true);
     dispatch(saveShippingInfo(shippingInfo));
     try {

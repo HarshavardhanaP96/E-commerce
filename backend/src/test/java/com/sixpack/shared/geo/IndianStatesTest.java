@@ -41,6 +41,12 @@ class IndianStatesTest {
         assertThat(IndianStates.byCode("ZZ")).isEmpty();
     }
 
+    @Test
+    void eachStateListsTheOtherSpellingsItAccepts() {
+        assertThat(IndianStates.byCode("OD").orElseThrow().aliases()).containsExactly("OR", "Orissa");
+        assertThat(IndianStates.byCode("KA").orElseThrow().aliases()).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"India", "india ", "IN", "IND", "Bharat"})
     void indiaSpelledAnyCommonWay(String country) {
