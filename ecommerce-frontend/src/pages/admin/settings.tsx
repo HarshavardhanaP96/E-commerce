@@ -2,8 +2,10 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { errorMessage } from "../../redux/api/baseQuery";
+import { useIndianStatesQuery } from "../../redux/api/referenceAPI";
 import { useSaveStoreSettingsMutation, useStoreSettingsQuery } from "../../redux/api/storeAPI";
 import { loadTenantConfig } from "../../tenant/tenant";
+import { matchState } from "../../utils/indianStates";
 import { currencySymbol, formatMoney } from "../../utils/money";
 import { emptyForm, fromSettings, StoreSettingsForm, toPayload } from "./storeSettingsForm";
 
@@ -22,6 +24,8 @@ const StoreSettings = () => {
   const { data, isLoading, isError, error } = useStoreSettingsQuery();
   const [save, { isLoading: saving }] = useSaveStoreSettingsMutation();
   const [form, setForm] = useState<StoreSettingsForm>(emptyForm);
+  const { data: stateList } = useIndianStatesQuery();
+  const states = stateList?.states ?? [];
 
   useEffect(() => {
     if (data) setForm(fromSettings(data.settings));
@@ -110,9 +114,15 @@ const StoreSettings = () => {
               {textField("legalName", "Legal name", { span: true })}
               {textField("address", "Registered address", { span: true })}
               {textField("gstin", "GSTIN", { maxLength: 15 })}
-              {textField("state", "State of registration", { maxLength: 60 })}
+              <label>
+                State of registration
+                <select value={matchState(form.state, states)} onChange={set("state")}>
+                  <option value="">Not set</option>
+                  {states.map((s) => <option key={s.code} value={s.name}>{s.name}</option>)}
+                </select>
+              </label>
               <p className="span-2 store-settings__hint">
-                The state decides CGST + SGST (buyer in the same state) or IGST. Spell it as customers do, e.g. Karnataka.
+                The state decides CGST + SGST (buyer in the same state) or IGST.
               </p>
               {textField("email", "Contact email", { type: "email" })}
               {textField("phone", "Contact phone", { type: "tel" })}

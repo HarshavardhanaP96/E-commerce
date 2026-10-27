@@ -6,15 +6,30 @@ import { Link, useNavigate } from "react-router-dom";
 import { policyPath } from "../legal/policies";
 import { errorMessage } from "../redux/api/baseQuery";
 import { useCheckoutMutation, useConfirmOrderMutation } from "../redux/api/orderAPI";
+import { IndianState, useIndianStatesQuery } from "../redux/api/referenceAPI";
 import { useGetMyAddressesQuery } from "../redux/api/userAPI";
 import { resetCart, saveShippingInfo } from "../redux/reducer/cartReducer";
 import { RootState } from "../redux/store";
 import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatMoney } from "../utils/features";
+import { matchState } from "../utils/indianStates";
 import { payWithRazorpay } from "../utils/razorpay";
 import CheckoutSteps from "../components/checkoutSteps";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
+
+const StateField = ({ value, country, states, onChange, autoComplete }: {
+  value: string; country: string; states: IndianState[]; autoComplete?: string;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+}) =>
+  country === "India" && states.length > 0 ? (
+    <select name="state" value={matchState(value, states)} onChange={onChange} required autoComplete={autoComplete}>
+      <option value="">Choose a state</option>
+      {states.map((s) => <option key={s.code} value={s.name}>{s.name}</option>)}
+    </select>
+  ) : (
+    <input type="text" name="state" value={value} onChange={onChange} maxLength={80} required autoComplete={autoComplete} />
+  );
 
 const Shipping = () => {
   const navigate = useNavigate();
@@ -36,6 +51,8 @@ const Shipping = () => {
   const { data: book } = useGetMyAddressesQuery();
   const [picked, setPicked] = useState<string>("");
   const savedAddresses = book?.addresses ?? [];
+  const { data: stateList } = useIndianStatesQuery();
+  const states = stateList?.states ?? [];
 
   const applySaved = (a: SavedAddress) => {
     setPicked(a.id);
@@ -171,8 +188,8 @@ const Shipping = () => {
         </label>
         <label>
           State
-          <input type="text" name="state" value={shippingInfo.state}
-                 onChange={changeHandler} maxLength={80} required autoComplete="address-level1" />
+          <StateField value={shippingInfo.state} country={shippingInfo.country} states={states}
+                      onChange={changeHandler} autoComplete="address-level1" />
         </label>
         <label>
           Country
@@ -204,7 +221,7 @@ const Shipping = () => {
             </label>
             <label>
               State
-              <input type="text" name="state" value={billing.state} onChange={changeBilling} maxLength={80} required />
+              <StateField value={billing.state} country={billing.country} states={states} onChange={changeBilling} />
             </label>
             <label>
               Country
