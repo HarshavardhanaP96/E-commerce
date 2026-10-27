@@ -932,8 +932,9 @@
     margin-bottom: $spacing-md;
   }
 
+  // a split of lists keeps its height so the card scrolls; shrunk, it overflowed onto the note below it
   > canvas,
-  > div:not(.category-bars) {
+  > div:not(.category-bars, .section-card__split) {
     flex: 1;
     min-height: 0;
   }
