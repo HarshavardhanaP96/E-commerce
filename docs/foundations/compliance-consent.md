@@ -51,7 +51,8 @@ state that purpose in P2 and take consent for it.
 
 | Data | Purpose | Who sees the result | Safeguard |
 |---|---|---|---|
-| `dob` | Age check at registration (C2) | Nobody (yes/no only) | Server-side check |
+| `dob` | Age check at registration (C2) | The check itself only gives yes/no | Server-side check |
+| `dob`, `gender` | Account administration: the store's admins see gender in the customers list (Gender column and filter) and gender, full date of birth and age on the customer record (Customer management) | The store's admins | Admin-only routes. These are per-person views, not statistics, so the 5-buyer rule does not apply |
 | `dob` | Anonymous store statistics: the dashboard's customers-by-age chart, and the age band (18-24 … 55+, worked out at the end of the chosen period) in the Customers → Audience table and the Sales and Products gender/age-band filters (added 2026-10-27) | The store's admins, on screen and in the CSV exports | Audience figures: any group with fewer than 5 distinct buyers in the date range is hidden, plus any other cell or total that would let it be worked out (`AudienceBands.MIN_BUYERS`, `AudienceSuppression`); no per-person rows. A filtered Sales/Products tab is hidden as a whole under the same rule |
 | `gender` (optional) | Anonymous store statistics: the dashboard's gender ratio, and the same Audience table and filters | Same | Same |
 
