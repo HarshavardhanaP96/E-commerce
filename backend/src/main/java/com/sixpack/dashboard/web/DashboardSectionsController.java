@@ -5,6 +5,7 @@ import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
 import com.sixpack.dashboard.application.SectionsService;
 import com.sixpack.dashboard.application.SummaryService;
+import com.sixpack.dashboard.domain.AudienceSegment;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.web.ApiResponse;
@@ -47,8 +48,11 @@ class DashboardSectionsController {
 
     @GetMapping("/products")
     Map<String, Object> products(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ApiResponse.of("products", sections.products(period(from, to), TOP));
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                 @RequestParam(required = false) @Size(max = 10) String gender,
+                                 @RequestParam(required = false) @Size(max = 10) String ageBand) {
+        AudienceSegment segment = SectionRequest.segment(gender, ageBand);
+        return ApiResponse.of("products", sections.products(period(from, to), TOP, segment));
     }
 
     @GetMapping("/customers")
@@ -78,14 +82,17 @@ class DashboardSectionsController {
     @GetMapping(value = "/export/{table}", produces = "text/csv")
     ResponseEntity<String> export(@PathVariable @Size(max = 32) String table,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                  @RequestParam(required = false) @Size(max = 10) String gender,
+                                  @RequestParam(required = false) @Size(max = 10) String ageBand) {
         if (!SectionCsv.exists(table)) {
             throw ApiException.notFound("No such report: " + table);
         }
+        AudienceSegment segment = SectionRequest.segment(gender, ageBand);
         Period period = period(from, to);
-        String csv = SectionCsv.write(table, sections, period);
+        String csv = SectionCsv.write(table, sections, period, segment);
         audit.record(AuditEvent.of(AuditAction.ANALYTICS_EXPORTED).on("report", table));
-        String file = table + "_" + period.from() + "_" + period.to() + ".csv";
+        String file = table + segment.fileTag() + "_" + period.from() + "_" + period.to() + ".csv";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file + "\"")
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))

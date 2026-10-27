@@ -45,9 +45,9 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     @Override
-    public List<ProductSales> productSales(Instant from, Instant to) {
+    public List<ProductSales> productSales(Instant from, Instant to, Collection<String> buyers) {
         List<ProductSales> out = new ArrayList<>();
-        for (Document d : aggregate(placed(from, to),
+        for (Document d : aggregate(placed(from, to, buyers),
                 stage("$sort", new Document("createdAt", 1)), // so $last is the latest order line's name
                 unwindItems(),
                 stage("$group", new Document("_id", "$orderItems.productId")
@@ -63,14 +63,15 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     @Override
-    public List<PairCount> boughtTogether(Instant from, Instant to, int minOrders, int limit, int maxDistinct) {
+    public List<PairCount> boughtTogether(Instant from, Instant to, Collection<String> buyers, int minOrders,
+                                          int limit, int maxDistinct) {
         Document size = new Document("$size", "$p");
         // orders without items give an empty set, not null; lines without a product id are dropped
         Document products = new Document("$filter", new Document("input", new Document("$setUnion", List.of(
                 new Document("$ifNull", List.of("$orderItems.productId", List.of())), List.of())))
                 .append("cond", new Document("$ne", Arrays.asList("$$this", null))));
         List<PairCount> out = new ArrayList<>();
-        for (Document d : aggregate(placed(from, to),
+        for (Document d : aggregate(placed(from, to, buyers),
                 stage("$project", new Document("p", products)),
                 stage("$match", new Document("$expr", new Document("$and", List.of(
                         new Document("$gte", List.of(size, 2)), new Document("$lte", List.of(size, maxDistinct)))))),
@@ -122,7 +123,7 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     @Override
-    public Map<String, double[]> categorySales(Instant from, Instant to) {
+    public Map<String, double[]> categorySales(Instant from, Instant to, Collection<String> buyers) {
         // the lookup is matched on tenantId as well: TenantMongo scopes only the collection being aggregated
         Document lookup = new Document("from", PRODUCTS)
                 .append("let", new Document("pid", "$orderItems.productId").append("t", "$tenantId"))
@@ -132,7 +133,7 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                         new Document("$project", new Document("category", 1))))
                 .append("as", "product");
         Map<String, double[]> out = new LinkedHashMap<>();
-        for (Document d : aggregate(placed(from, to), unwindItems(), stage("$lookup", lookup),
+        for (Document d : aggregate(placed(from, to, buyers), unwindItems(), stage("$lookup", lookup),
                 stage("$group", new Document("_id", new Document("$ifNull", List.of(
                                 new Document("$first", "$product.category"), "uncategorised")))
                         .append("revenue", new Document("$sum", lineValue()))
@@ -295,7 +296,13 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     private static AggregationOperation placed(Instant from, Instant to) {
-        return match(Criteria.where("createdAt").gte(Date.from(from)).lt(Date.from(to)));
+        return placed(from, to, null);
+    }
+
+    /** @param buyers null for every order, else only orders by these users (an audience segment) */
+    private static AggregationOperation placed(Instant from, Instant to, Collection<String> buyers) {
+        Criteria c = Criteria.where("createdAt").gte(Date.from(from)).lt(Date.from(to));
+        return match(buyers == null ? c : c.and("user").in(buyers));
     }
 
     private static AggregationOperation placedWithUser(Instant from, Instant to) {

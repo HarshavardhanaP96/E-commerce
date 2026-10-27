@@ -31,11 +31,24 @@ public final class Sections {
     }
 
     /**
-     * @param trending       against the previous period of the same length
+     * Narrowed to an audience segment, every list counts only the segment's orders, and {@code stock} is null (stock
+     * cover is the whole store's selling rate).
+     *
+     * @param stock          null when narrowed to a segment
+     * @param trending       against the previous period of the same length; null when {@code small} or
+     *                       {@code previousSmall}
      * @param boughtTogether pairs in at least 3 orders, most first, top 10
+     * @param small          the period's audience table hides the segment: every list is empty
+     * @param previousSmall  the previous period's audience table hides the segment, so there is no trending
      */
     public record Products(List<ProductSales> top, List<CategoryShare> categories, List<StockLeft> stock,
-                           List<IdleProduct> idle, Trending trending, List<Pair> boughtTogether) {
+                           List<IdleProduct> idle, Trending trending, List<Pair> boughtTogether, boolean small,
+                           boolean previousSmall) {
+
+        /** A segment the period's audience table hides. */
+        public static Products hidden() {
+            return new Products(List.of(), List.of(), null, List.of(), null, List.of(), true, false);
+        }
     }
 
     /** @param name, email the customer's details on their latest order in the period (null once erased) */

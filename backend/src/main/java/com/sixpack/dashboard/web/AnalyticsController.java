@@ -8,6 +8,7 @@ import com.sixpack.dashboard.application.OrdersService;
 import com.sixpack.dashboard.application.OverviewService;
 import com.sixpack.dashboard.application.SalesService;
 import com.sixpack.dashboard.application.StoreTime;
+import com.sixpack.dashboard.domain.AudienceSegment;
 import com.sixpack.dashboard.domain.LocationSection;
 import com.sixpack.dashboard.domain.Section;
 import com.sixpack.dashboard.domain.SectionQuery;
@@ -61,8 +62,11 @@ class AnalyticsController {
     }
 
     @GetMapping("/sales")
-    ResponseEntity<?> sales(@Valid SectionRequest req) {
-        return respond("sales", req, sales::section);
+    ResponseEntity<?> sales(@Valid SectionRequest req,
+                            @RequestParam(required = false) @Size(max = 10) String gender,
+                            @RequestParam(required = false) @Size(max = 10) String ageBand) {
+        AudienceSegment segment = SectionRequest.segment(gender, ageBand);
+        return respond("sales", segment.fileTag(), req, q -> sales.section(q, segment));
     }
 
     @GetMapping("/orders")
@@ -80,6 +84,12 @@ class AnalyticsController {
     }
 
     private ResponseEntity<?> respond(String name, SectionRequest req, Function<SectionQuery, ? extends Section> load) {
+        return respond(name, "", req, load);
+    }
+
+    /** @param fileTag added to the CSV file name after {@code name}, e.g. the audience segment */
+    private ResponseEntity<?> respond(String name, String fileTag, SectionRequest req,
+                                      Function<SectionQuery, ? extends Section> load) {
         boolean csv;
         Section section;
         try {
@@ -93,7 +103,7 @@ class AnalyticsController {
         }
         String body = CsvWriter.write(section.csvHeader(), section.csvRows());
         audit.record(AuditEvent.of(AuditAction.ANALYTICS_EXPORTED).on("report", name));
-        String file = name + "-" + section.window().from() + "_" + section.window().to() + ".csv";
+        String file = name + fileTag + "-" + section.window().from() + "_" + section.window().to() + ".csv";
         return ResponseEntity.ok().contentType(CSV)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(file).build().toString())
                 .body(body);

@@ -101,7 +101,7 @@ public class SummaryService {
         Map<LocalDate, DayTotals> orders = new TreeMap<>();
         Map<LocalDate, Double> refunds = itemScoped ? null : new TreeMap<>();
         LocalDate liveFrom = from;
-        boolean wholeStore = !itemScoped && scope.userId() == null;
+        boolean wholeStore = !itemScoped && scope.userId() == null && scope.buyers() == null;
         Optional<SummaryState> state = wholeStore ? summaries.state() : Optional.empty();
         if (state.isPresent() && state.get().timeZone().equals(zone.getId()) && !state.get().through().isBefore(from)) {
             LocalDate coveredTo = state.get().through().isBefore(to) ? state.get().through() : to;

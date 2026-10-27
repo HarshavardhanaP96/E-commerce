@@ -10,10 +10,19 @@ import java.util.List;
  * on the Products and Payments tabs. {@code breakdown} is null when the view is narrowed to a category, since it
  * belongs to whole orders.
  *
- * @param previousSeries the comparison period's trend, null when the comparison is off
+ * @param previousSeries the comparison period's trend, null when the comparison is off or {@code previousSmall}
+ * @param small          narrowed to an audience segment that this period's audience table hides: no figures at all
+ *                       (empty series, no breakdown, no comparison)
+ * @param previousSmall  the comparison period's audience table hides the segment, so the comparison is dropped
  */
 public record SalesSection(@JsonUnwrapped Window window, String basis, List<Series.Point> series,
-                           List<Series.Point> previousSeries, Breakdown breakdown) implements Section {
+                           List<Series.Point> previousSeries, Breakdown breakdown, boolean small,
+                           boolean previousSmall) implements Section {
+
+    /** A segment the period's audience table hides. */
+    public static SalesSection hidden(Window window, String basis) {
+        return new SalesSection(window, basis, List.of(), null, null, true, false);
+    }
 
     /** @param charged what customers paid (order totals) before refunds; {@code net} = charged − refunds */
     public record Breakdown(double charged, double discount, double tax, double shipping, double refunds, double net,

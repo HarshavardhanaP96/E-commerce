@@ -12,11 +12,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Raw figures behind the dashboard sections for the current store, for orders placed in [from, to). */
+/**
+ * Raw figures behind the dashboard sections for the current store, for orders placed in [from, to). Where a read
+ * takes {@code buyers}, null means every order and otherwise only orders whose {@code user} is one of them.
+ */
 public interface SectionsReadPort {
 
     /** Every product sold, by revenue, highest first; the name is the one on the latest order line. */
-    List<ProductSales> productSales(Instant from, Instant to);
+    List<ProductSales> productSales(Instant from, Instant to, Collection<String> buyers);
 
     record PairCount(String productA, String productB, long orders) {
     }
@@ -26,7 +29,8 @@ public interface SectionsReadPort {
      * productA sorts before productB. Orders with more than {@code maxDistinct} distinct products are skipped, and
      * lines without a product id never pair.
      */
-    List<PairCount> boughtTogether(Instant from, Instant to, int minOrders, int limit, int maxDistinct);
+    List<PairCount> boughtTogether(Instant from, Instant to, Collection<String> buyers, int minOrders, int limit,
+                                   int maxDistinct);
 
     /** Catalogue names of the products that still exist; ids that are null or not ObjectIds are skipped. */
     Map<String, String> productNames(Collection<String> productIds);
@@ -35,7 +39,7 @@ public interface SectionsReadPort {
     Map<String, Double> unitsByLine(Instant from, Instant to);
 
     /** Revenue and units per product category (looked up on the product; "uncategorised" when missing). */
-    Map<String, double[]> categorySales(Instant from, Instant to);
+    Map<String, double[]> categorySales(Instant from, Instant to, Collection<String> buyers);
 
     record OnSale(String productId, String name, int stock) {
     }

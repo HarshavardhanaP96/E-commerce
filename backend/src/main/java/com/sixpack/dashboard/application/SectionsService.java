@@ -3,7 +3,7 @@ package com.sixpack.dashboard.application;
 import static com.sixpack.shared.config.CacheConfig.DASHBOARD;
 
 import com.sixpack.dashboard.domain.AudienceBands;
-import com.sixpack.dashboard.domain.AudienceBands.Buyer;
+import com.sixpack.dashboard.domain.AudienceSegment;
 import com.sixpack.dashboard.domain.Granularity;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.dashboard.domain.Sections;
@@ -21,7 +21,6 @@ import com.sixpack.dashboard.domain.Sections.TaxRow;
 import com.sixpack.dashboard.domain.SectionsReadPort;
 import com.sixpack.dashboard.domain.SectionsReadPort.MethodTotals;
 import com.sixpack.dashboard.domain.SectionsReadPort.PairCount;
-import com.sixpack.dashboard.domain.SectionsReadPort.Profile;
 import com.sixpack.dashboard.domain.SectionsReadPort.RefundIssued;
 import com.sixpack.dashboard.domain.SectionsReadPort.TaxGroup;
 import com.sixpack.dashboard.domain.Trending;
@@ -69,30 +68,76 @@ public class SectionsService {
     private final ProductCatalog catalog;
     private final StoreConfig store;
 
-    SectionsService(SectionsReadPort read, ProductCatalog catalog, StoreConfig store) {
+    private final AudienceSegments segments;
+
+    SectionsService(SectionsReadPort read, ProductCatalog catalog, StoreConfig store, AudienceSegments segments) {
         this.read = read;
         this.catalog = catalog;
         this.store = store;
+        this.segments = segments;
     }
 
     public ZoneId zone() {
         return ZoneId.of(store.effective().timeZone());
     }
 
-    @Cacheable(cacheNames = DASHBOARD, key = "'products:' + #root.target.zone() + #period + #limit")
-    public Sections.Products products(Period period, int limit) {
+    /**
+     * @param segment {@link AudienceSegment#ALL} for every order; otherwise only the segment's buyers count, nothing
+     *                is shown when the period's audience table hides the segment, and trending is dropped when the
+     *                previous period's table hides it (ages on each period's last day)
+     */
+    @Cacheable(cacheNames = DASHBOARD, key = "'products:' + #root.target.zone() + #period + #limit + #segment")
+    public Sections.Products products(Period period, int limit, AudienceSegment segment) {
         ZoneId zone = zone();
         Instant from = period.start(zone);
         Instant to = period.end(zone);
-        List<ProductSales> sales = read.productSales(from, to);
+        Set<String> buyers = null;
+        if (!segment.isAll()) {
+            AudienceSegment.Match m = segments.match(segment, period, zone);
+            if (m.hidden()) {
+                return Sections.Products.hidden();
+            }
+            buyers = m.buyers();
+        }
+        List<ProductSales> sales = read.productSales(from, to, buyers);
 
-        Map<String, double[]> byCategory = read.categorySales(from, to);
+        Map<String, double[]> byCategory = read.categorySales(from, to, buyers);
         double total = byCategory.values().stream().mapToDouble(v -> v[0]).sum();
         List<CategoryShare> categories = byCategory.entrySet().stream()
                 .map(e -> new CategoryShare(e.getKey(), e.getValue()[0], e.getValue()[1],
                         Sections.percent(e.getValue()[0], total)))
                 .toList();
 
+        List<StockLeft> stock = segment.isAll() ? stock(period, from, to) : null;
+
+        Set<String> sold = sales.stream().map(ProductSales::productId).collect(Collectors.toSet());
+        List<IdleProduct> idle = read.onSale(to).stream().filter(p -> !sold.contains(p.productId()))
+                .map(p -> new IdleProduct(p.productId(), p.name(), p.stock())).toList();
+
+        Period previous = period.previous();
+        List<ProductSales> before = List.of();
+        boolean previousSmall = false;
+        if (segment.isAll()) {
+            before = read.productSales(previous.start(zone), previous.end(zone), null);
+        } else {
+            AudienceSegment.Match m = segments.match(segment, previous, zone);
+            previousSmall = m.hidden();
+            if (!previousSmall) {
+                before = read.productSales(previous.start(zone), previous.end(zone), m.buyers());
+            }
+        }
+        List<PairCount> pairs = read.boughtTogether(from, to, buyers, PAIR_MIN_ORDERS, PAIRS_SHOWN,
+                PAIR_MAX_DISTINCT);
+        Map<String, String> names = names(sales, before, pairs);
+        Trending trending = previousSmall ? null : Trending.of(named(sales, names), named(before, names), limit);
+        List<Pair> together = pairs.stream().map(pc -> new Pair(pc.productA(), names.get(pc.productA()),
+                pc.productB(), names.get(pc.productB()), pc.orders())).toList();
+        return new Sections.Products(cut(sales, limit), categories, stock, idle, trending, together, false,
+                previousSmall);
+    }
+
+    /** Low and out-of-stock lines with days left at the whole store's selling rate in the period. */
+    private List<StockLeft> stock(Period period, Instant from, Instant to) {
         Map<String, Double> units = read.unitsByLine(from, to);
         List<StockLeft> stock = new ArrayList<>();
         for (LowStockLine line : catalog.lowStock()) {
@@ -103,19 +148,7 @@ public class SectionsService {
             stock.add(new StockLeft(line.productId(), line.name(), line.variantId(), line.label(), line.stock(),
                     line.threshold(), sold, daysLeft));
         }
-
-        Set<String> sold = sales.stream().map(ProductSales::productId).collect(Collectors.toSet());
-        List<IdleProduct> idle = read.onSale(to).stream().filter(p -> !sold.contains(p.productId()))
-                .map(p -> new IdleProduct(p.productId(), p.name(), p.stock())).toList();
-
-        Period previous = period.previous();
-        List<ProductSales> before = read.productSales(previous.start(zone), previous.end(zone));
-        List<PairCount> pairs = read.boughtTogether(from, to, PAIR_MIN_ORDERS, PAIRS_SHOWN, PAIR_MAX_DISTINCT);
-        Map<String, String> names = names(sales, before, pairs);
-        Trending trending = Trending.of(named(sales, names), named(before, names), limit);
-        List<Pair> together = pairs.stream().map(pc -> new Pair(pc.productA(), names.get(pc.productA()),
-                pc.productB(), names.get(pc.productB()), pc.orders())).toList();
-        return new Sections.Products(cut(sales, limit), categories, stock, idle, trending, together);
+        return stock;
     }
 
     /**
@@ -162,17 +195,7 @@ public class SectionsService {
         return new Sections.Customers(buyers.size(), buyers.size() - returning, returning,
                 Sections.percent(repeat, buyers.size()), cut(buyers, limit),
                 cut(places(read.places(from, to)), limit == 0 ? 0 : PLACES_SHOWN),
-                audience(buyers, read.profiles(ids), period.to()));
-    }
-
-    /** Every buyer of the period, with the gender and birth date on their account (unknown once it is gone). */
-    private static Sections.Audience audience(List<CustomerTotals> buyers, Map<String, Profile> profiles,
-                                              LocalDate asOf) {
-        Profile none = new Profile(null, null);
-        return AudienceBands.table(buyers.stream().map(b -> {
-            Profile p = profiles.getOrDefault(b.userId(), none);
-            return new Buyer(b.userId(), p.gender(), p.dob(), b.orders(), b.revenue());
-        }).toList(), asOf);
+                AudienceBands.table(segments.buyers(buyers), period.to()));
     }
 
     @Cacheable(cacheNames = DASHBOARD, key = "'coupons:' + #root.target.zone() + #period")

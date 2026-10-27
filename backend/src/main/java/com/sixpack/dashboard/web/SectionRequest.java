@@ -1,11 +1,13 @@
 package com.sixpack.dashboard.web;
 
+import com.sixpack.dashboard.domain.AudienceSegment;
 import com.sixpack.dashboard.domain.Basis;
 import com.sixpack.dashboard.domain.Compare;
 import com.sixpack.dashboard.domain.Granularity;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.dashboard.domain.Scope;
 import com.sixpack.dashboard.domain.SectionQuery;
+import com.sixpack.shared.ApiException;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Locale;
@@ -48,6 +50,15 @@ record SectionRequest(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate f
             return Enum.valueOf(type, value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(type.getSimpleName().toLowerCase(Locale.ROOT) + ": unknown value");
+        }
+    }
+
+    /** The {@code gender} and {@code ageBand} parameters of Sales, Products and their exports; a bad value is a 400. */
+    static AudienceSegment segment(String gender, String ageBand) {
+        try {
+            return AudienceSegment.of(gender, ageBand);
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest(e.getMessage());
         }
     }
 }

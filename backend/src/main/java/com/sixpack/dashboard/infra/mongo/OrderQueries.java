@@ -107,8 +107,12 @@ class OrderQueries {
                 }
             }
             case ORDERS -> {
-                if (scope.userId() != null) {
+                if (scope.userId() != null && (scope.buyers() == null || scope.buyers().contains(scope.userId()))) {
                     c.and("user").is(scope.userId());
+                } else if (scope.userId() != null) {
+                    c.and("user").in(List.of()); // that user is not among the buyers: nothing matches
+                } else if (scope.buyers() != null) {
+                    c.and("user").in(scope.buyers());
                 }
                 if (scope.productId() != null) {
                     c.and("orderItems.productId").is(id(scope.productId()));
