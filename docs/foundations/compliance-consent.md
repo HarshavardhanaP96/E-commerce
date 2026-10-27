@@ -47,6 +47,18 @@ English or in any of the 22 Eighth Schedule languages, on request.
 for the age check (§3, C2). Gender is only used by the admin dashboard charts, so **make it optional**, or else
 state that purpose in P2 and take consent for it.
 
+**Processing purposes for DOB and gender (stated in P2, "What we collect and why"):**
+
+| Data | Purpose | Who sees the result | Safeguard |
+|---|---|---|---|
+| `dob` | Age check at registration (C2) | Nobody (yes/no only) | Server-side check |
+| `dob` | Anonymous store statistics: the dashboard's customers-by-age chart, and the age band (18-24 … 55+, worked out at the end of the chosen period) in the Customers → Audience table and the Sales and Products gender/age-band filters (added 2026-10-27) | The store's admins, on screen and in the CSV exports | Audience figures: any group with fewer than 5 distinct buyers in the date range is hidden, plus any other cell or total that would let it be worked out (`AudienceBands.MIN_BUYERS`, `AudienceSuppression`); no per-person rows. A filtered Sales/Products tab is hidden as a whole under the same rule |
+| `gender` (optional) | Anonymous store statistics: the dashboard's gender ratio, and the same Audience table and filters | Same | Same |
+
+The audience figures are a fixed rule, not a store setting. Lists that do name customers (top customers, customer
+management) are separate admin features and are not part of these statistics. Adding the age-band and audience-sales
+purpose is a **new purpose** under §6; whether to bump `LEGAL_PRIVACY_VERSION` (re-prompting every user) is an open decision, see Open questions.
+
 ## 3. When to prompt: consent and notice points
 
 | # | Moment / trigger | What to show | Mechanism | Marker | Blocks the action? | Record it? |
@@ -225,3 +237,4 @@ The Admin Acceptable Use Agreement tells admins that their activity is recorded.
 - Will we ship or sell to EU/UK customers? If yes, move to Option B or C and add GDPR wording to P2.
 - Should under-18s be blocked outright (recommended) or allowed with verifiable parental consent (much more work)?
 - Will we send promotional email or SMS? This decides whether C3 / P7 is needed.
+- The 2026-10-27 Privacy Policy text adds the age-band / audience-sales statistics purpose. Under §6 a new purpose is a major change: bump `LEGAL_PRIVACY_VERSION` (and per-store `legal.privacyVersion` where a store sets one) so every user re-accepts, or treat it as covered by the existing "anonymous store statistics" wording? Not bumped yet.

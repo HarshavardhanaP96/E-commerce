@@ -103,14 +103,15 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
   privacy: {
     slug: "privacy",
     title: "Privacy Policy",
-    updated: "2026-10-16",
+    updated: "2026-10-27",
     intro: `This notice explains what personal data ${b.legalName} collects, why, and the rights you have under the Digital Personal Data Protection Act, 2023. This notice is available in English or, on request, in any language listed in the Eighth Schedule to the Constitution.`,
     sections: [
       {
         heading: "What we collect and why",
         body: [
-          "Account: your name, email, password (stored only as a one-way hash) and date of birth. We use these to run your account, and your date of birth to confirm you are 18 or older.",
+          "Account: your name, email, password (stored only as a one-way hash) and date of birth. We use these to run your account. We use your date of birth to confirm you are 18 or older, and to place you in an age band (such as 25–34) for anonymous store statistics.",
           "Optional: your gender, used only for anonymous store statistics, and a profile photo shown on your account.",
+          "Anonymous store statistics: these are shown only to the store's admins. They show how many customers there are of each gender and age group, and sales figures (buyers, orders and revenue) by gender and age band, which they can also download as a CSV file. Your age band is based on your age on the last day of the dates being looked at. The sales figures by gender and age band never list individual people, and in them any group with fewer than 5 different buyers in the chosen dates is hidden, and some other figures may be hidden too so that a hidden group can't be worked out from the totals.",
           "Orders: delivery address, items, amounts and payment reference numbers, used to deliver your order, handle returns and keep tax records.",
           "Technical: your IP address, browser type and server logs, used for security, fraud prevention and fixing problems. When you accept a policy we keep a hashed (not readable) version of your IP and your browser type as proof.",
           "Marketing emails: sent only if you opt in. You can opt out at any time.",
