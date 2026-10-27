@@ -29,7 +29,7 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | `consent`   | `ConsentLedger` (record registration consent, check current acceptance, current policy version) | append-only `consents` log, policy versions from `app.legal.*`, `/legal` + `/consent` endpoints |
 | `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment, user and consent APIs. Blocks deletion of users with undelivered orders and anonymises addresses on `UserDeletedEvent` |
 | `audit`     | `AuditTrail` (record an event), `AuditEvent`, `AuditAction`, `FieldChange`, `Changes` | append-only `audit_log` with redaction by allowlist, `/admin/audit` and the read-only `/platform/audit` |
-| `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`), the `daily_sales` summary table and its nightly `DailySummaryJob` (ADR-024), live section reads and audited CSV exports (ADR-025) |
+| `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`), the `daily_sales` summary table and its nightly `DailySummaryJob` (ADR-024), live section reads and audited CSV exports (ADR-025), the Overview, Sales, Orders and Location tabs and the audience table (ADR-027) |
 
 Layer rules inside a module: `web → application → domain ← infra`. Domain types never import Spring Data
 or Mongo classes. Each `infra` adapter implements a `domain` port. Moving to Postgres, S3 or a separate
@@ -97,6 +97,28 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-27: ADR-027 **Analytics adds Overview, Sales, Orders and Location tabs beside step 3's sections, and an
+  audience table with a privacy threshold.** The page has nine tabs; each loads only when opened. The four added tabs
+  each have one route under `/api/v1/dashboard/` (`AnalyticsController`), one read port with its own Mongo adapter
+  (`OverviewReads`, `SalesReads`, `OrderReads`, `LocationReads`, sharing `OrderQueries`) and a cached service, and take
+  the summary's compare, basis and category filters; step 3's tabs stay range-only. `?format=csv` exports a tab's main
+  table and is audited as `ANALYTICS_EXPORTED`, like ADR-025's exports. Overview reads `SummaryService` (ADR-024); the
+  others read orders live and can move onto summary rows behind the same ports. Location normalises Indian states with
+  `shared.geo.IndianStates` at read time (no migration); checkout and the store's state of registration now pick from
+  that list (`GET /reference/indian-states`) and store the official name, and same-state tax compares states only for
+  Indian addresses (US "TN" is not Tamil Nadu). "Stuck" orders use a new store setting, `commerce.stuckOrderDays`
+  (1–60, default 3; ADR-023). Products gains rising/falling and bought-together lists. **Audience:** Customers shows
+  signed-in buyers by gender × age band (age on the range's last day), and Sales and Products take `gender`/`ageBand`
+  filters. Any cell or total with fewer than 5 distinct buyers is hidden, plus complementary suppression
+  (`AudienceSuppression`): further cells are hidden so that no group of 1–4 buyers can be derived from any combination
+  of the table's published sums; the grand total is always shown. A filtered Sales or Products result is shown only
+  when the matching item of that period's table is shown. 5 is a fixed rule, not a setting. Residual risks, accepted:
+  two overlapping date ranges can be differenced to isolate late orders or a buyer whose birthday moved them a band;
+  hidden cells have narrow bounds, not exact values; per-product, per-day and per-category rows inside a shown segment
+  can be one buyer; the top-customers CSV and the customer record already show individuals to admins, so the threshold
+  protects shared statistics, not data from the admin. Rejected: duplicating step 3's tabs (two Products/Customers
+  views), primary-only suppression (small cells recoverable by subtraction), one combined endpoint (every tab paid for
+  on every visit) and gender/age pie charts.
 - 2026-10-21: ADR-026 **A store's theme recolours its storefront only.** `applyTenantConfig` writes the
   theme into one `<style id="tenant-theme">` scoped to `[data-surface="store"]` instead of `<html>` inline
   style, which overrode the admin tokens too. `data-surface` is set in `main.tsx` before the first render.

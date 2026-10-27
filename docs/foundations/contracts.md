@@ -171,8 +171,8 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
 | `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}, features:{variants}, commerce:{shippingFee, freeShippingAbove, defaultTaxRate, minimumAge}, timeZone}}`. `features`, `commerce` and `timeZone` are the effective values (the store's own, else the platform default) |
-| `GET /store/settings` | 🛡 | — | `{success, settings:{commerce:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge}, catalog:{pageSize, lowStockThreshold}, invoice:{gstin, state}, regional:{timeZone}, storefront:{…}}, effective:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge, pageSize, lowStockThreshold, timeZone}, defaults:{same keys}}`. `defaults` is what each rule returns to when cleared. `settings` holds only the store's own values (null = platform default `app.store.defaults.*`) |
-| `PUT /store/settings` | 🛡 | any of `commerce, catalog, invoice, regional, storefront`; a group sent replaces the store's previous one, a group left out is kept, a null field returns to the platform default | same as GET. 400 out of range (shipping 0–1,000,000, free-shipping level 0–10,000,000, GST 0–100, coupon cap 1–10,000,000, minimum age 18–100, page size 1–100, low-stock 0–1,000,000), unknown time zone, malformed GSTIN, `invoice.state` not an Indian state or union territory (stored under its official name), invalid storefront email/URL. Audited as `STORE_SETTINGS_UPDATED` in the store's log |
+| `GET /store/settings` | 🛡 | — | `{success, settings:{commerce:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge, stuckOrderDays}, catalog:{pageSize, lowStockThreshold}, invoice:{gstin, state}, regional:{timeZone}, storefront:{…}}, effective:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge, pageSize, lowStockThreshold, timeZone, stuckOrderDays}, defaults:{same keys}}`. `defaults` is what each rule returns to when cleared. `settings` holds only the store's own values (null = platform default `app.store.defaults.*`) |
+| `PUT /store/settings` | 🛡 | any of `commerce, catalog, invoice, regional, storefront`; a group sent replaces the store's previous one, a group left out is kept, a null field returns to the platform default | same as GET. 400 out of range (shipping 0–1,000,000, free-shipping level 0–10,000,000, GST 0–100, coupon cap 1–10,000,000, minimum age 18–100, stuck-order days 1–60 (platform default `STORE_STUCK_ORDER_DAYS`, 3; Analytics → Orders flags orders still Processing after it), page size 1–100, low-stock 0–1,000,000), unknown time zone, malformed GSTIN, `invoice.state` not an Indian state or union territory (stored under its official name), invalid storefront email/URL. Audited as `STORE_SETTINGS_UPDATED` in the store's log |
 | `POST /platform/login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token}`. Platform credentials only; the token has role `PLATFORM_ADMIN` and no tenant |
 | `GET /platform/tenants`, `GET /platform/tenants/{id}` | 🏛 | — | `{success, tenants}` / `{success, tenant}` |
 | `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, features?, limits?, trial?, admin?:{name,email,password}}`. With `trial: true` the store starts as `TRIAL` with `trialEndsAt` = now + `TENANT_TRIAL_LENGTH` (14 days) | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
@@ -215,6 +215,51 @@ Month arrays run oldest to newest and end with the current month. Buckets accoun
   - With `productId` or `category`, only the matching items count: revenue = their price × quantity, units = their
     quantities, orders = the orders containing them. `refunds`, `discount` and `tax` are then absent, since they
     belong to the whole order. The series takes refunds off the bucket they were issued in (net basis only).
+
+Analytics tabs (ADR-027): `GET /overview`, `/sales`, `/orders`, `/location`. Each takes `from`, `to`, `compare`,
+`granularity`, `basis` and `category` with the rules of `/summary` (`productId` and `userId` are not read), plus
+`limit` (ranked lists, 1–50, default 10) and `format` (`json` default, or `csv`); a bad value is a 400 (`format: unknown
+value`, `limit: must be between 1 and 50`). JSON is `{success, section:{from, to, compareFrom, compareTo, timezone,
+granularity, …}}` (`compareFrom`/`compareTo` null with `compare=none`). Overview's headline figures and series come
+from `/summary`'s daily table; everything else reads orders live. Cached per store, zone and query, cleared on order
+changes, like the summary. `format=csv` returns the tab's main table as `text/csv` (UTF-8, CRLF, text cells
+starting with `= + - @` prefixed with `'`), `Content-Disposition: attachment; filename="<tab>-<from>_<to>.csv"`, and is
+audited as `ANALYTICS_EXPORTED` (`entityType` `report`, `entityId` the tab name), like `GET /export/{table}`.
+- `GET /overview` → `basis, current, previous?, change?, series` as `/summary` (`change` = its `changePercent`;
+  `previous`/`change` null without a comparison) + `byWeekday[7]{weekday, orders, revenue}` (1 = Monday; revenue before
+  refunds), `byHour[24]` (orders per local hour) and `heat[7][24]` (orders per weekday row and hour). CSV: the series
+  (`start, revenue, orders`).
+- `GET /sales` (also takes the audience filter below) → `basis, series, previousSeries?, breakdown?{charged, discount,
+  tax, shipping, refunds, net, couponOrders, couponOrderShare}, small, previousSmall`. `series` follows `basis` like the
+  summary series; `previousSeries` is the comparison period's (null when off or `previousSmall`). `breakdown` covers
+  whole orders placed in the range: `charged` = their totals, `refunds` = issued in the range, `net` = charged −
+  refunds; null under a `category`. Revenue by category and payment method are on Products and Payments. CSV: `start,
+  revenue, orders, previousRevenue`; with a segment the file is `sales-<gender>-<band>-<from>_<to>.csv`.
+- `GET /orders` → `series, previousSeries?` (gross, revenue and orders per bucket), `byStatus` (lower-case status →
+  count; `processing`, `shipped`, `delivered` always present), `fulfilment{placedToShipped, shippedToDelivered,
+  placedToDelivered: {medianHours?, p90Hours?, count}, withoutHistory, deliveryTrend:[{start, medianHours?}]}`, `stuck:
+  [{id, orderNumber, placedAt, ageDays, total}]`, `stuckCount`, `stuckAfterDays`, `size{averageItems, bands{1, 2-3, 4-5,
+  6+}}`, `refunds?{orders, amount, rate}`, `truncated`. Timings use the first `Shipped` and `Delivered` entries of
+  `statusHistory`; `withoutHistory` = shipped or delivered orders with neither, left out. Stuck = still `Processing` and
+  placed more than the store's `commerce.stuckOrderDays` (default 3) days ago, at any date (not tied to the range),
+  oldest first, at most `limit`. `refunds`: `orders` and `rate` (percent of orders placed in the range that have a
+  refund not `failed`) count orders placed in the range, `amount` = refunds issued in the range; null under a
+  `category`. Under a `category`, status, timings and size count the whole orders containing it. Figures cover at most
+  the newest 50,000 orders of the range (`truncated: true` beyond). CSV: one row per order, newest first (`orderNumber,
+  placedAt, status, items, total, discount, paymentMethod, hoursToShip, hoursToDeliver`), at most 10,000 rows, then a
+  note row when cut.
+- `GET /location?country=&state=&pinPrefix=` → `level` (`country`, then `state` once `country` is set, `pin_prefix`
+  once `state` is set, `pin` once `pinPrefix` is set), `country` (label), `state`, `pinPrefix`, `rows:[{key, label,
+  orders, revenue, averageOrderValue, share, change?, small}]`, `unrecognised?{orders, samples:[{raw, orders}]}`,
+  `topProducts:[{productId, name, units, revenue}]`. By delivery address (`shippingInfo`). `state` is a code from
+  `GET /reference/indian-states` and needs an Indian `country`; `pinPrefix` is 3 digits and needs `state`; otherwise
+  400. Only India drills below country (another `country` value currently answers India's states: known problem P14
+  in `docs/CHALLENGES_AND_LIMITATIONS.md`; the page only offers India). Countries are grouped case-insensitively (India's spellings as one), states normalised with `IndianStates` at
+  read time (no migration), PINs by their first 3 digits (`invalid` / `unknown` when not 3 or 6 digits / missing).
+  `share` = percent of the level's orders; `change` = percent change in orders against the comparison, null for
+  `small` rows (fewer than 3 orders). `unrecognised` (state level only) = orders whose state is not on the list, with
+  the 10 commonest raw values. `topProducts` = the 5 best sellers below country level (empty at country level). CSV:
+  `level, key, label, orders, revenue, averageOrderValue, share`, never below `pin_prefix` (no 6-digit PIN in a file).
 
 Sections (analytics step 3). Each takes `?from=&to=` with the same rules as `/summary` (no scope filters, no
 comparison) and reads live data. Revenue here is the gross value of orders placed in the range: order `total`s, or

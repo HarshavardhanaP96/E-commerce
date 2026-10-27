@@ -1,7 +1,8 @@
 # Challenges, limitations and known problems
 
-As of 2026-10-20, on `dev`. Covers the per-store settings (ADR-023), analytics steps 1–3 (ADR-024, ADR-025) and the
-integration work that brought the feature branches together on `dev`. The short, standing list of accepted limits
+As of 2026-10-20, on `dev`, updated 2026-10-27 for the analytics sections work on `feat/analytics` (ADR-027: the
+Overview, Sales, Orders and Location tabs, the audience table and filters, Indian state lists). Covers the per-store
+settings (ADR-023), analytics steps 1–3 (ADR-024, ADR-025) and the integration work that brought the feature branches together on `dev`. The short, standing list of accepted limits
 stays in `docs/foundations/requirements.md` ("Known limits"); this file is the longer record of what is wrong, what is
 limited on purpose, and what was hard.
 
@@ -21,7 +22,9 @@ limited on purpose, and what was hard.
 | P10 | An admin who has not yet accepted the admin agreement gets 403s from public endpoints. | Seen in the browser: `GET /product/latest` returned 403 on the home page right after an admin logged in, before they accepted. Most likely `AdminAgreementInterceptor`, not confirmed. | `AdminAgreementInterceptor` | Limit the agreement check to admin-only endpoints, or exempt public reads. |
 | P11 | The audit log's filter list lacks `TENANT_EXPORTED`, `TENANT_PURGED`, `ORDER_REFUNDED` and `EMAIL_VERIFIED`. | Those entries exist but cannot be picked in the Action filter. | `auditAPI.ts` `AUDIT_ACTIONS` | Add them, or serve the list from the backend so the two can't drift. |
 | P12 | Some backend messages still say ₹, even though each store has its own currency. The admin guides were reworded on 2026-10-20 and no longer name a currency. | Wrong wording for a non-INR store, e.g. "Minimum order value for this coupon is ₹500" or "Refund of ₹… failed". Form labels and money already follow the store's currency. | `Coupon.evaluate`, `OrderService.refund` | Format the amount with the store's currency (`StoreConfig`) in those messages. |
-| P13 | Two charts put two scales on one chart (dual axis): Revenue/Orders on the dashboard, and refunds in Payments. | Easy to misread: the lines' crossing points mean nothing, and the two scales invite false comparisons. | `analytics.tsx` (`dualAxis`), `AnalyticsSections.tsx` | Split each into two charts sharing the time axis, or index both to a common base. |
+| P13 | Two charts put two scales on one chart (dual axis): Revenue/Orders on the dashboard, and refunds in Payments. | Easy to misread: the lines' crossing points mean nothing, and the two scales invite false comparisons. | `OverviewTab.tsx` (`dualAxis`), `AnalyticsSections.tsx` | Split each into two charts sharing the time axis, or index both to a common base. |
+| P14 | `GET /dashboard/location?country=<anything but India>` answers India's states. | The page only drills into India, so nobody sees it there; a hand-made API call or link gets India's figures labelled with the other country. | `LocationSection.Filter`, `LocationService` | Reject `country` values other than India with a 400 (`country: only India has states`), or match the requested country. |
+| P15 | Saved addresses (address book) still accept a free-text state, and older saved addresses and store settings keep their typed state. | Checkout and the store's state of registration now pick from the list and store the official name, but old values are not migrated. They are normalised when read, shown as "Unrecognised" on Location and in the settings when they match nothing, and fixable by editing. | Address book, `IndianStates.normalise` | Use the state dropdown in the address book too, and offer a one-off clean-up of unrecognised values. |
 
 ## 2. Limitations by design (accepted for now)
 
@@ -40,19 +43,24 @@ limited on purpose, and what was hard.
 **Analytics**
 - **Time zone changes:** after a store changes its zone, whole-store figures are read live until the next nightly run rebuilds the table (up to a day). They are correct, just slower.
 - **"Today" is always live.** The table covers up to yesterday, and product, category and customer views never use it.
-- **Revenue on the section tabs is gross:** the value of orders placed. Net revenue (after refunds) exists only on the Overview cards and trend.
+- **Revenue on step 3's tabs (Products, Customers, Coupons, Payments, Tax) is gross:** the value of orders placed. Net revenue (after refunds) is on Overview and Sales.
 - **Category share uses each product's current category,** not its category at the time of sale.
 - **Days of stock left uses the chosen range's selling rate.** A short or unusual range (a sale week) skews it.
 - **"Not sold in this range" includes products added part-way through the range.** It leaves out products created after the range ended.
 - **Customer names and emails come from the order snapshot,** so a customer shows the details on their latest order in the range. Erased accounts show as "Erased account".
 - **Order lines saved before each line carried its tax rate count at 18%,** in the tax report and on invoices.
 - **Top lists show 20 rows (places: 50).** The CSV has every row.
-- **The plan's Orders section isn't built yet:** status breakdown, payment failure rate, days to ship. The super admin view (steps 4–5) and visits/conversion (step 6) aren't built either.
+- **The Orders tab has no payment failure rate** (see P9). The super admin view (steps 4–5) and visits/conversion (step 6) aren't built either.
+- **Cached Orders answers hold their order rows.** Each cached `/dashboard/orders` entry keeps up to 50,000 order rows (for the CSV), and the cache is sized by entry count, not memory. Fine for today's stores; on very large stores, stop caching the rows or size the cache by weight.
+- **Orders' refund figures use two time bases:** the refund amount counts refunds issued in the range, the refund rate counts orders placed in the range that have a refund. A refund for last month's order adds to this month's amount but not its rate.
+- **Under a category filter, Orders' status, timings and items per order count whole orders** containing that category, not just its items.
+- **Filtered audience requests send the segment's buyer ids as a `$in` list.** A gender or age filter on Sales or Products first works out the range's buyers in that segment, then matches their orders by id. A large shop with a long range sends a long list; there is no cap yet.
+- **Audience figures have residual risks** (ADR-027): two overlapping date ranges can be differenced; hidden cells have narrow bounds; per-product, per-day and per-category rows inside a shown segment can be one buyer.
 
 **Development environment**
 - **The local docker stack does not rebuild after a merge.** Run `docker compose up -d --build backend frontend` in `../6Pack-dev`.
 - **Nothing is pushed.** No pull requests are open and CI has not run on these branches; `dev` is a local integration branch.
-- **ADR numbers repeat on `dev`** (ADR-019 twice, ADR-020 three times, ADR-021 twice), because each feature branch numbered its own. ADR-022 to ADR-025 are unique.
+- **ADR numbers repeat on `dev`** (ADR-019 twice, ADR-020 three times, ADR-021 twice), because each feature branch numbered its own. ADR-022 to ADR-027 are unique.
 
 ## 3. Challenges met while building, and how they were handled
 
@@ -74,6 +82,6 @@ limited on purpose, and what was hard.
 
 ## 4. Where to look
 
-- Decisions: `docs/foundations/architecture.md`, ADR-023 to ADR-025.
+- Decisions: `docs/foundations/architecture.md`, ADR-023 to ADR-025 and ADR-027.
 - API and metric definitions: `docs/foundations/contracts.md` ("Dashboard").
 - Plan and remaining steps: the "6Pack analytics plan" doc.

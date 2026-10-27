@@ -51,6 +51,13 @@ logs a warning and sends nothing. Until a real `MailSender` adapter is added:
 
 - [ ] Read [`foundations/test-rollout.md`](../foundations/test-rollout.md): data changes in this release and the rollback notes.
 - [ ] The branch's deploy to `test-env` finished green.
+- [ ] **Privacy Policy version for the analytics audience release.** The 2026-10-27 Privacy Policy text adds a new
+      purpose (gender and age-band audience statistics), a major change under
+      [`foundations/compliance-consent.md`](../foundations/compliance-consent.md) §6. At least 7 days before it takes
+      effect, email every user a notice of the change. Then raise `LEGAL_PRIVACY_VERSION` to `2026-10-27` in each
+      overlay, and every store's own `tenant.legal.privacyVersion` where one is set (platform admin, `PUT
+      /platform/tenants/{id}` with `legal`). Everyone is re-prompted to accept on their next visit (C4), and marketing-email consent
+      follows the privacy version, so opt-ins given under the old version stop counting until the user opts in again.
 - [ ] Smoke test on test: register, verify email (link in the backend log), browse, checkout with Razorpay test keys,
       refund from the admin order page, open the invoice, admin dashboard.
 
