@@ -25,8 +25,9 @@ services:
       - path: .env
         required: false
     environment:
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET - run via 'secrun projects/6pack/root -- docker compose up', or cp .env.example .env}
-      # Passed through from the shell (secrun) or .env; keep in sync with .env.example.
+      # Passed through from the shell (secrun projects/6pack/root -- ...) or .env; keep in sync with .env.example.
+      # No ${VAR:?} check here so ps/logs/down work without secrun; the backend itself refuses to start without JWT_SECRET.
+      JWT_SECRET:
       PAYMENT_PROVIDER:
       RAZORPAY_KEY_ID:
       RAZORPAY_KEY_SECRET:
