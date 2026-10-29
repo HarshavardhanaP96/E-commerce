@@ -25,7 +25,22 @@ services:
       - path: .env
         required: false
     environment:
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (cp .env.example .env)}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET - run via 'secrun projects/6pack/root -- docker compose up', or cp .env.example .env}
+      # Passed through from the shell (secrun) or .env; keep in sync with .env.example.
+      PAYMENT_PROVIDER:
+      RAZORPAY_KEY_ID:
+      RAZORPAY_KEY_SECRET:
+      ADMIN_EMAIL:
+      ADMIN_PASSWORD:
+      LEGAL_TERMS_VERSION:
+      LEGAL_PRIVACY_VERSION:
+      LEGAL_ADMIN_AUP_VERSION:
+      CONSENT_IP_SALT:
+      CLIENT_URL:
+      PRODUCT_PER_PAGE:
+      MAIL_LOG_LINKS:
+      TRACING_EXPORT_ENABLED:
+      TRACING_SAMPLING_PROBABILITY:
       MONGO_URI: mongodb://mongo:27017/Ecommerce_2024
       FRONTEND_URL: http://localhost:${FRONTEND_PORT:-8081}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
