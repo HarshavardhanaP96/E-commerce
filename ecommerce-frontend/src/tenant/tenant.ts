@@ -3,6 +3,7 @@ import { BUSINESS, refreshPolicies } from "../legal/policies";
 import { regional } from "../utils/money";
 import { commerce } from "../utils/pricing";
 import { readableOn } from "../utils/contrast";
+import { MarketingTags, configureTracking } from "../utils/tracking";
 
 export type StorefrontConfig = {
   logoUrl?: string | null;
@@ -26,6 +27,8 @@ export type TenantConfig = {
   /** The store's shop rules in force (its own setting, else the platform default). */
   commerce?: Partial<typeof commerce>;
   timeZone?: string;
+  /** Present only when the store's marketing feature is on and it saved at least one tag ID. */
+  marketing?: { tags: MarketingTags };
 };
 
 /** The store this browser tab is showing. Set once, before the app renders. */
@@ -93,6 +96,7 @@ export const applyTenantConfig = (config: TenantConfig) => {
     if (value) (BUSINESS as Record<string, string>)[key] = value;
   }
   refreshPolicies(brand.name);
+  configureTracking(config.marketing?.tags);
 };
 
 /** Fetches the config for this domain. Failing quietly keeps the built-in look rather than a blank page. */

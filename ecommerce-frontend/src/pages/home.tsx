@@ -10,6 +10,7 @@ import { useDispatch } from "react-redux";
 import { addToCart } from "../redux/reducer/cartReducer";
 import { transformImage } from "../utils/features";
 import { fillSpan } from "../utils/grid";
+import { cartLine, track } from "../utils/tracking";
 
 const Home = () => {
   const { data, isLoading, isError } = useLatestProductsQuery();
@@ -20,6 +21,7 @@ const Home = () => {
   const addToCartHandler = (cartItem: CartItem) => {
     if (cartItem.stock < 1) return toast.error("Out of stock");
     dispatch(addToCart(cartItem));
+    track("add_to_cart", { items: [cartLine(cartItem)], value: cartItem.price * cartItem.quantity });
     toast.success("Added to cart");
   };
 

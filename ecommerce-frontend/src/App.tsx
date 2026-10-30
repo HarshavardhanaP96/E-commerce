@@ -15,6 +15,7 @@ import { useLazyGetMyProfileQuery } from "./redux/api/userAPI";
 import { getToken } from "./redux/api/baseQuery";
 import { RootState } from "./redux/store";
 import { surfaceFor } from "./utils/routes";
+import { routeChanged } from "./utils/tracking";
 
 const Home = lazy(() => import("./pages/home"));
 const Search = lazy(() => import("./pages/search"));
@@ -62,6 +63,7 @@ const SurfaceScope = () => {
   const { pathname } = useLocation();
   useEffect(() => {
     document.documentElement.dataset.surface = surfaceFor(pathname);
+    routeChanged();
   }, [pathname]);
   return null;
 };
