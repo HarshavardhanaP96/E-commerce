@@ -19,6 +19,8 @@ public enum AuditAction {
     TENANT_EXPORTED, TENANT_PURGED,
     /** The store admin's own shop rules and storefront details. */
     STORE_SETTINGS_UPDATED,
+    /** A store's marketing tag IDs saved or cleared, and a provider disconnected (Admin → Marketing). */
+    INTEGRATION_UPDATED, INTEGRATION_DISCONNECTED,
     /** A dashboard table downloaded as CSV (the customer table holds personal data). */
     ANALYTICS_EXPORTED;
 

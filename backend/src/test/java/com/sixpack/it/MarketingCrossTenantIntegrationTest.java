@@ -2,6 +2,8 @@ package com.sixpack.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.sixpack.marketing.domain.BrowserTags;
 import com.sixpack.marketing.domain.Integration;
@@ -89,5 +91,44 @@ class MarketingCrossTenantIntegrationTest extends MarketingIntegrationTest {
         assertThatThrownBy(() -> TenantContext.runAs(null,
                 () -> integrations.save(new Integration(Provider.GOOGLE, ACME, AT))))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void oneStoresAdminCannotSeeAnotherStoresIds() throws Exception {
+        String acmeAdmin = adminTokenFor(acme);
+        String globexAdmin = adminTokenFor(globex);
+        save(acme, acmeAdmin, "google", browser("ga4MeasurementId", "G-ACME1234")).andExpect(status().isOk());
+
+        String body = list(globex, globexAdmin).andExpect(status().isOk())
+                .andExpect(jsonPath("$.integrations[0].status").value("NOT_CONNECTED"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("G-ACME1234");
+    }
+
+    @Test
+    void oneStoresAdminCannotChangeOrDisconnectAnotherStoresIds() throws Exception {
+        String acmeAdmin = adminTokenFor(acme);
+        String globexAdmin = adminTokenFor(globex);
+        save(acme, acmeAdmin, "google", browser("ga4MeasurementId", "G-ACME1234")).andExpect(status().isOk());
+
+        save(globex, globexAdmin, "google", browser("ga4MeasurementId", "G-GLOBEX12")).andExpect(status().isOk());
+        disconnect(globex, globexAdmin, "google").andExpect(status().isOk());
+
+        list(acme, acmeAdmin)
+                .andExpect(jsonPath("$.integrations[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.integrations[0].browser.ga4MeasurementId").value("G-ACME1234"));
+        assertThat(rows(acme)).hasSize(1);
+        assertThat(rows(globex)).isEmpty();
+    }
+
+    @Test
+    void aTokenFromOneStoreIsRejectedOnAnotherStoresHost() throws Exception {
+        String acmeAdmin = adminTokenFor(acme);
+
+        list(globex, acmeAdmin).andExpect(status().isUnauthorized());
+        save(globex, acmeAdmin, "google", browser("ga4MeasurementId", "G-ACME1234"))
+                .andExpect(status().isUnauthorized());
+        disconnect(globex, acmeAdmin, "google").andExpect(status().isUnauthorized());
+        assertThat(rows(globex)).isEmpty();
     }
 }
