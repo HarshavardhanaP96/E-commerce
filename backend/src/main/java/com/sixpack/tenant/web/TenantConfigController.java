@@ -1,5 +1,7 @@
 package com.sixpack.tenant.web;
 
+import com.sixpack.shared.tenant.Feature;
+import com.sixpack.shared.tenant.MarketingTags;
 import com.sixpack.shared.tenant.StoreConfig;
 import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.shared.tenant.TenantFeatures;
@@ -20,11 +22,14 @@ class TenantConfigController {
     private final TenantRegistry registry;
     private final TenantFeatures features;
     private final StoreConfig store;
+    private final MarketingTags marketing;
 
-    TenantConfigController(TenantRegistry registry, TenantFeatures features, StoreConfig store) {
+    TenantConfigController(TenantRegistry registry, TenantFeatures features, StoreConfig store,
+                           MarketingTags marketing) {
         this.registry = registry;
         this.features = features;
         this.store = store;
+        this.marketing = marketing;
     }
 
     @GetMapping("/config")
@@ -47,6 +52,13 @@ class TenantConfigController {
         commerce.put("minimumAge", rules.minimumAge());
         view.put("commerce", commerce);
         view.put("timeZone", rules.timeZone());
+        // The switch is checked outside the cached tags, so turning it off takes effect at once.
+        if (features.enabled(Feature.MARKETING)) {
+            MarketingTags.Tags tags = marketing.current();
+            if (tags.hasAny()) {
+                view.put("marketing", Map.of("tags", tags));
+            }
+        }
         return ApiResponse.of("tenant", view);
     }
 }
