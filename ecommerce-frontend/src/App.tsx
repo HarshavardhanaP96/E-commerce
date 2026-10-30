@@ -6,6 +6,7 @@ import Header from "./components/header";
 import BottomNav from "./components/bottomNav";
 import Footer from "./components/footer";
 import ConsentPrompt from "./components/consentPrompt";
+import CookieBanner from "./components/CookieBanner";
 import VerifyEmailBanner from "./components/verifyEmailBanner";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
@@ -189,6 +190,7 @@ const App = () => {
       </Suspense>
       </div>
       {user && <ConsentPrompt key={user._id} userId={user._id} />}
+      <CookieBanner />
       <Footer />
       <BottomNav />
     </Router>
