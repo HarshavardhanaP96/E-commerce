@@ -1,6 +1,8 @@
 # Marketing integrations (Google, Meta, …) — system design
 
-Status: **draft for review, 2026-10-30.** Not built. Builds on `dev` at `f3db546` (tenancy, store settings, consent gate).
+Status: **Phase 0–1 in progress on `feat/marketing`, 2026-10-30.** Phases 2–5 not built. Builds on `dev` at `f3db546`
+(tenancy, store settings, consent gate). Decision: ADR-028 in `docs/foundations/architecture.md`; the phase 0–1 API
+is fixed in `docs/foundations/contracts.md` (Marketing), which wins where this draft differs.
 Implementation plan: `docs/superpowers/plans/2026-10-30-marketing-integrations.md`.
 
 ## 1. Goal
@@ -49,6 +51,10 @@ one validated string). Reason: it is the only option that gives a shop owner a g
 data inside the isolation the platform already enforces.
 
 ## 4. Architecture
+
+Interactive diagram, all phases, phase 0–1 parts tagged "now":
+[marketing-integrations.html](../../../.archify/architecture-marketing-integrations-20261030-221254/marketing-integrations.html)
+(source `candidate.json` in the same folder).
 
 ```
  Storefront (tenant domain)                       Admin SPA (tenant domain)
@@ -135,6 +141,11 @@ public interface MarketingDestination {
 
 ### 5.1 `marketing_integrations` (level T+)
 
+This section and §7 describe the finished design across all phases. Phase 1 builds a subset: stored statuses
+`NOT_CONNECTED | ACTIVE` only, providers lower-case on the wire (`google`, `meta`; the stored enum may be upper-case),
+no feed URL or delivery log in `GET /admin/marketing`, and only the `INTEGRATION_UPDATED` / `INTEGRATION_DISCONNECTED`
+audit events. The Phase 1 contract is in `docs/foundations/contracts.md`.
+
 ```json
 {
   "_id": "…", "tenantId": "t_123", "provider": "META",
@@ -170,7 +181,8 @@ is not possible. So: envelope-style encryption in Mongo.
 - No key configured → the server-side and OAuth capabilities are unavailable (fail closed); browser tags and feed
   still work.
 
-This needs an ADR (next free number on `dev`; ADR-027 is taken on `feat/analytics`, so **ADR-028**).
+This needs its own ADR, written in phase 3 with the next free number then. ADR-028 is the module decision (option A);
+ADR-027 is taken on `feat/analytics`.
 
 ### 5.4 `marketing_outbox` (level T)
 

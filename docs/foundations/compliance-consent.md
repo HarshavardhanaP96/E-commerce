@@ -31,7 +31,7 @@ Have a lawyer review the policy text before going live.
 | P3 | **Cancellation & Refund Policy** | 🔴 | `/legal/refunds` | Notice: shown before payment | Footer, cart, checkout |
 | P4 | **Shipping & Delivery Policy** | 🔴 | `/legal/shipping` | Notice: shown before payment | Footer, shipping page |
 | P5 | **Contact Us + Grievance Officer** | 🔴 | `/legal/contact` | Notice only | Footer, privacy policy |
-| P6 | **Cookie & Storage Notice** | 🔴 (notice) / 🟡 (banner) | `/legal/cookies` | Notice today. Becomes an opt-in banner once non-essential storage exists (§5). | Footer, banner |
+| P6 | **Cookie & Storage Notice** | 🔴 (notice) / 🟡 (banner) | `/legal/cookies` | Notice today. The opt-in banner (§5) is being built in marketing phase 0, because store owners can now add Google and Meta tags. The notice lists the tag cookies in §4. | Footer, banner |
 | P7 | **Marketing communications consent** | 🟡 (only if we send promotional email, SMS or WhatsApp) | covered in P2 | Separate unticked opt-in | Register form, account settings |
 | P8 | **Admin acceptable-use & confidentiality** | 🟢 | `/legal/admin-aup` | Clickwrap on an admin's first login, and again whenever the version changes | Admin sidebar |
 | P9 | **Data retention schedule** | 🟢 (internal) | this file, §7 | None. This is an internal document. | Referenced in P2 |
@@ -42,6 +42,13 @@ payments, the courier for delivery, and hosting/infra providers. How long we kee
 correction, erasure, nominating someone, and grievance. How to withdraw consent. The Grievance Officer's
 contact. The right to complain to the Data Protection Board. Under DPDP, the notice must be available in
 English or in any of the 22 Eighth Schedule languages, on request.
+
+**Advertising partners (P2 and P6, marketing integrations):** when a store turns on Google or Meta tags, P2 must
+say that, with the shopper's consent, the store shares browsing and purchase events (pages and products viewed,
+cart and checkout steps, order id, value and currency) and the identifiers in those cookies with Google (Analytics,
+Ads, Tag Manager) and Meta (Pixel) to measure and target its advertising, that those companies process the data
+under their own terms, and how to withdraw (Cookie settings). This is a new data-sharing recipient, so it is a
+major change: bump the privacy and cookie-policy versions (C4 re-prompt; the banner shows again).
 
 **Data minimisation:** registration currently *requires* `gender` and `dob`. DOB is justified because we need it
 for the age check (§3, C2). Gender is only used by the admin dashboard charts, so **make it optional**, or else
@@ -56,7 +63,7 @@ state that purpose in P2 and take consent for it.
 | C3 | **Registration: marketing** | "Send me offers and updates by email" | **Separate unticked, optional checkbox** | 🟡 | No | Yes: `marketing_email` |
 | C4 | **Login, when a policy changed materially** | A modal: "We've updated our Terms/Privacy Policy" with a summary of the change and links | Blocking modal with an **Accept** button and a **Log out** option. Re-prompt whenever the user's accepted version is older than the current *major* version. | 🔴 | Yes, until accepted | Yes: new version |
 | C5 | **Login, when a policy changed in a minor way** | A dismissible banner: "Our Privacy Policy was updated on …" | Notice only | 🟢 | No | No |
-| C6 | **First visit, before any non-essential storage** | Cookie banner (§5) | Opt-in banner with **Accept all / Reject all / Customise** given equal weight | 🟡 (today 🟢 notice only) | No (site stays usable) | Yes: `cookies.*` |
+| C6 | **First visit, before any non-essential storage** | Cookie banner (§5) | Opt-in banner with **Accept all / Reject all / Customise** given equal weight | 🟡 (being built in marketing phase 0; mandatory once a store turns on tags) | No (site stays usable) | Yes: `cookies.*` |
 | C7 | **Cart → shipping page** | Links to Refund and Shipping policies. Full price breakup: subtotal, tax 18%, shipping, discount, total. | Notice. The price breakup already exists (FR5). | 🔴 | No | No |
 | C8 | **Pay button** (`shipping.tsx`) | "By placing this order you agree to the [Terms] and [Refund Policy]. Payment is processed by Razorpay." | Text next to the button (browsewrap at the point of action). Clickwrap is stronger if wanted. | 🔴 | No | Yes: store `termsVersion` on the order |
 | C9 | **Before loading Razorpay checkout.js** | Covered by C8. Razorpay sets its own cookies for fraud checks. List them in P6 as strictly necessary. | None needed | 🔴 (disclose) | No | No |
@@ -74,16 +81,19 @@ state that purpose in P2 and take consent for it.
 
 ## 4. Browser storage & cookie inventory
 
-The app sets **no cookies today**. It uses `localStorage`, which ePrivacy and DPDP treat the same way as cookies.
+The app sets **no cookies today**; the Google and Meta tags below (marketing phase 1) set them only after consent. It uses `localStorage`, which ePrivacy and DPDP treat the same way as cookies.
 
 | Key / cookie | Set by | Where | Purpose | Category | Lifetime | Consent needed? |
 |---|---|---|---|---|---|---|
 | `token` | us | localStorage (`redux/reducer/userReducer.ts`) | JWT session (24 h expiry, ADR-006) | Strictly necessary | Until logout or expiry | No, list it in P6 |
 | `cart` | us | localStorage (`redux/reducer/cartReducer.ts`) | Cart items, coupon, shipping info (address, recipient name and phone) | Strictly necessary (the user asked for it) | Until checkout or cleared | No, list it in P6 |
-| `consent` (new) | us | localStorage + server (§6) | Remembers the cookie-banner choice | Strictly necessary | 6 months, then re-prompt | No |
+| `consent` (new) | us | localStorage (phase 0; server sync deferred, §5) | Remembers the cookie-banner choice | Strictly necessary | 6 months, then re-prompt | No |
 | Razorpay cookies | checkout.razorpay.com | 3rd-party, only on the payment step | Payment processing, fraud checks | Strictly necessary | Set by Razorpay | No, disclose in P6 |
 | Google Fonts request | fonts.googleapis.com (`index.html`) | 3rd-party request, sends the visitor's IP to Google | Font delivery | Not necessary | n/a | 🟡 Under GDPR this needs consent. **Recommended: self-host the fonts** so the issue goes away. |
-| *(future)* Google Analytics, Meta Pixel, Hotjar, etc. | 3rd-party | cookies | Analytics, marketing | Analytics / Marketing | varies | **Yes, opt-in. Load only after consent.** |
+| `_ga`, `_ga_<id>` | Google Analytics 4 (store's own measurement ID) | 1st-party cookies on the store domain | Tells visitors and sessions apart | Analytics | up to 2 years | **Yes, analytics opt-in.** Only on storefront routes |
+| `_gcl_au` | Google Ads / Tag Manager | 1st-party cookie | Links ad clicks to conversions | Marketing | 90 days | **Yes, marketing opt-in** |
+| `_fbp`, `_fbc` | Meta Pixel | 1st-party cookies | Browser id; ad-click id (`fbclid`) for conversions | Marketing | 90 days | **Yes, marketing opt-in** |
+| *(future)* Hotjar or other tags | 3rd-party | cookies | Analytics, marketing | Analytics / Marketing | varies | **Yes, opt-in. Load only after consent.** |
 
 Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared on sign-out, and P6 mentions it.
 
@@ -93,7 +103,12 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared 
 3. **Analytics**: off by default.
 4. **Marketing**: off by default.
 
-## 5. Cookie banner behaviour (when it is needed)
+## 5. Cookie banner behaviour
+
+**Status: being built in marketing phase 0** (`feat/marketing`, ADR-028), ahead of the store-owner Google and Meta
+tags in phase 1. The banner offers the categories **analytics** and **marketing**. GA4 needs analytics consent;
+Google Ads, GTM and the Meta Pixel need marketing consent. Google Consent Mode v2 is set to `denied` before any
+Google tag loads and updated from the banner choice. Only storefront routes load tags, never the admin.
 
 - Show it on the first visit, and again if the stored choice is older than 6 months or the cookie-policy version changed.
 - Use a bottom bar with no overlay. The site stays fully usable.
@@ -101,8 +116,9 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared 
   `hasConsent("analytics")` helper instead of adding `<script>` tags straight into `index.html`.
 - "Customise" opens per-category toggles. "Cookie settings" in the footer reopens them at any time.
 - When a category is withdrawn, stop the scripts and delete the cookies they set, as far as possible.
-- A logged-in user's choice is also sent to the server (§6) so it follows them across devices.
-  Anonymous choices stay in `localStorage` only.
+- **Known gap (deferred):** in phase 0 every choice, a signed-in user's included, is kept in `localStorage` only.
+  Sending a signed-in user's choice to the server (§6, purposes `cookies.*`) so it follows them across devices and
+  becomes part of the consent proof is deferred to a later phase.
 
 ## 6. How consents are stored and handled
 
@@ -142,8 +158,8 @@ Note: `cart.shippingInfo` holds a home address in `localStorage`. It is cleared 
 | `POST /register` | 🔓 | `acceptTerms` (must be true) and `marketingOptIn`. Rejects anyone under 18 |
 
 "Download my data" (right to access) is assembled in the browser from `/user/me`, `/order/my` and
-`/consent/me`, so no new endpoint was needed. Anonymous cookie choices (`anonId`) aren't stored because there
-is no banner yet. Full request and response shapes are in `contracts.md`.
+`/consent/me`, so no new endpoint was needed. Cookie choices (`anonId` or a signed-in user's) aren't stored on the
+server yet: the phase 0 banner keeps them in `localStorage` (§5). Full request and response shapes are in `contracts.md`.
 
 ### User rights & grievances
 - **Access / export**: return JSON with the profile, orders and consent history.
@@ -204,6 +220,8 @@ I'll go with **Option A** unless you object.
 - [x] 🟡 Fonts self-hosted (`@fontsource-variable/*`). The Google Fonts links are gone and the CSP no longer allows them.
 - [x] 🟢 `cart.shippingInfo` cleared on sign-out.
 - [x] 🟢 `hasConsent(category)` helper (`utils/consent.ts`) as the gate for future third-party scripts.
+- [ ] 🟡 Cookie banner (C6, §5) with analytics and marketing categories, footer "Cookie settings", cookie deletion on
+  withdrawal, and P2/P6 text for advertising partners and the §4 tag cookies (marketing phase 0, in progress).
 - [x] 🟢 Admin acceptable-use clickwrap (P8 / C12): `admin_aup` purpose, accepted on first login and re-asked when `LEGAL_ADMIN_AUP_VERSION` changes. Admin endpoints return 403 until it is accepted.
 - [ ] 🟢 Set Loki log retention to ≥ 1 year.
 - [x] Tests (`ConsentIntegrationTest`): registration rejected without `acceptTerms` or under 18; consent recorded with a hashed IP; legacy users prompted and blocked from checkout until they accept; marketing withdrawal is append-only; terms can't be withdrawn; deletion needs the password, waits for delivery (admins too) and anonymises orders; admins can't self-delete.

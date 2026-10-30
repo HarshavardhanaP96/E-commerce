@@ -49,7 +49,7 @@
 **Files:** `ecommerce-frontend/src/utils/consent.ts`, new `components/CookieBanner.tsx` + test, footer "Cookie settings" link, `docs/foundations/compliance-consent.md` (§5 status, policy version bump), privacy text (advertising partners).
 
 - [ ] Tests first (`consent.test.ts`, `CookieBanner.test.tsx`): no choice → every optional category `false`; accept analytics only → `hasConsent("analytics")` true, `"marketing"` false; choice older than 6 months or version change → banner shows again; withdraw → listeners notified and known cookies (`_ga*`, `_fbp`, `_fbc`, `_gcl_*`) deleted.
-- [ ] Implement per compliance-consent §5: bottom bar, no overlay, Customise toggles, `localStorage` for anonymous, existing consent API for signed-in users. Export `onConsentChange(cb)`.
+- [ ] Implement per compliance-consent §5: bottom bar, no overlay, Customise toggles, `localStorage` for everyone in this phase (syncing a signed-in user's choice to the server is deferred; see compliance-consent.md). Export `onConsentChange(cb)`.
 - [ ] Commit `feat(consent): cookie banner and per-category consent`.
 
 **Phase 0 done when:** banner works on the storefront, `hasConsent` reflects the choice, nothing else changed.
@@ -129,7 +129,7 @@
 
 ### Task 3.1: Secret encryption
 
-**Files:** `marketing/infra/crypto/SecretBox.java`, `marketing/application/MarketingProperties.java` (`MARKETING_KEYS`), `.env.example` (fake key), `docs/foundations/architecture.md` **ADR-028** (secrets encrypted in Mongo for owner-set and rotating tokens; deviation from T+).
+**Files:** `marketing/infra/crypto/SecretBox.java`, `marketing/application/MarketingProperties.java` (`MARKETING_KEYS`), `.env.example` (fake key), `docs/foundations/architecture.md` new ADR, next free number (ADR-028 is the module decision) (secrets encrypted in Mongo for owner-set and rotating tokens; deviation from T+).
 
 - [ ] Tests first (`SecretBoxTest`): round trip; same plaintext twice → different ciphertexts; tampered ciphertext, IV or tag → fails; **other tenant's AAD → fails**; decrypts with an older key id after a new key is put first; no key configured → `isAvailable() == false`.
 - [ ] Tests first (`MarketingAdminIT`): `PUT` with `server.secret` stores ciphertext only (assert raw Mongo document), response has `hasSecret: true` and no secret anywhere; audit diff shows `secret: "[changed]"`.

@@ -19,6 +19,7 @@ The collection names and field names match the old Mongoose models, so existing 
 | `password_reset_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256), `expiresAt` (TTL index), `used` |
 | `daily_sales` (new, analytics step 2) | `_id`, `tenantId`, `day` (store-local `YYYY-MM-DD`), `currency`, `timeZone`, `orders`, `grossRevenue`, `refunds`, `netRevenue`, `discount`, `tax`, `units`, `newCustomers`, `computedAt`; unique (`tenantId`, `currency`, `day`). Counts and sums only, no customer data. Days with no orders and no refunds have no row |
 | `daily_sales_state` (new) | `_id`, `tenantId`, `key` (= tenantId, unique), `through` (last complete day), `timeZone`, `computedAt` |
+| `marketing_integrations` (new, marketing phase 1, ADR-028) | `_id`, `tenantId`, `provider` (Google or Meta), `browser{ga4MeasurementId?, adsConversionId?, adsPurchaseLabel?, gtmContainerId?}` (Google) or `browser{pixelId}` (Meta), `createdAt`, `updatedAt`; unique (`tenantId`, `provider`). A row exists only while at least one ID is set, so a store with no row for a provider is `NOT_CONNECTED`. Public IDs only; secrets, feed token, outbox and daily spend come in later phases (design spec §5) |
 
 Pricing rule (store rules from `StoreConfig`, ADR-023): `subtotal = Σ price×qty`, `shipping = subtotal > freeShippingAbove ? 0 : shippingFee` (platform default 1000 / 200), `tax = Σ per rate round(group × rate)` with the store's `defaultTaxRate` (platform default 18) for products without their own rate, stamped on each order line at checkout,
 `discount = min(coupon.amount, subtotal)`, `total = subtotal + tax + shipping − discount`.
@@ -149,7 +150,7 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 `USER_ERASED`, `ACCOUNT_DELETED_SELF`, `PROFILE_UPDATED`, `ADDRESS_ADDED/UPDATED/DELETED`, `LOGIN_SUCCEEDED`,
 `LOGIN_FAILED`, `LOGIN_BLOCKED_SUSPENDED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `EMAIL_VERIFIED`, `CONSENT_CHANGED`,
 `TENANT_CREATED`, `TENANT_UPDATED`, `TENANT_STATUS_CHANGED`, `TENANT_EXPORTED`, `TENANT_PURGED`, `STORE_SETTINGS_UPDATED`,
-`ANALYTICS_EXPORTED`. Only successful refunds are recorded as `ORDER_REFUNDED`; a failed one is kept on the order
+`ANALYTICS_EXPORTED`, `INTEGRATION_UPDATED`, `INTEGRATION_DISCONNECTED`. Only successful refunds are recorded as `ORDER_REFUNDED`; a failed one is kept on the order
 (`payment.failureReason`), not in the log.
 
 Product-variant writes (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED`, with `variantPrices`
@@ -169,13 +170,13 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}, features:{variants}, commerce:{shippingFee, freeShippingAbove, defaultTaxRate, minimumAge}, timeZone}}`. `features`, `commerce` and `timeZone` are the effective values (the store's own, else the platform default) |
+| `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}, features:{variants}, commerce:{shippingFee, freeShippingAbove, defaultTaxRate, minimumAge}, timeZone, marketing?:{tags:{ga4, adsId, adsPurchaseLabel, gtm, metaPixel}}}}`. `features`, `commerce` and `timeZone` are the effective values (the store's own, else the platform default). `marketing` is present only when the store's `marketing` switch is on and at least one tag ID is set; otherwise the key is absent. It holds public IDs only, never a secret |
 | `GET /store/settings` | 🛡 | — | `{success, settings:{commerce:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge}, catalog:{pageSize, lowStockThreshold}, invoice:{gstin, state}, regional:{timeZone}, storefront:{…}}, effective:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge, pageSize, lowStockThreshold, timeZone}, defaults:{same keys}}`. `defaults` is what each rule returns to when cleared. `settings` holds only the store's own values (null = platform default `app.store.defaults.*`) |
 | `PUT /store/settings` | 🛡 | any of `commerce, catalog, invoice, regional, storefront`; a group sent replaces the store's previous one, a group left out is kept, a null field returns to the platform default | same as GET. 400 out of range (shipping 0–1,000,000, free-shipping level 0–10,000,000, GST 0–100, coupon cap 1–10,000,000, minimum age 18–100, page size 1–100, low-stock 0–1,000,000), unknown time zone, malformed GSTIN, invalid storefront email/URL. Audited as `STORE_SETTINGS_UPDATED` in the store's log |
 | `POST /platform/login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token}`. Platform credentials only; the token has role `PLATFORM_ADMIN` and no tenant |
 | `GET /platform/tenants`, `GET /platform/tenants/{id}` | 🏛 | — | `{success, tenants}` / `{success, tenant}` |
 | `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, features?, limits?, trial?, admin?:{name,email,password}}`. With `trial: true` the store starts as `TRIAL` with `trialEndsAt` = now + `TENANT_TRIAL_LENGTH` (14 days) | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
-| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `limits: {products?, uploadBytes?, requestsPerMinute?}` sets the store's own limits (null or omitted field = platform default `TENANT_MAX_PRODUCTS` 5000, `TENANT_MAX_UPLOADS` 2GB, `TENANT_REQUESTS_PER_MINUTE` 600; non-positive is 400). `features` maps a switch (`variants`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
+| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `limits: {products?, uploadBytes?, requestsPerMinute?}` sets the store's own limits (null or omitted field = platform default `TENANT_MAX_PRODUCTS` 5000, `TENANT_MAX_UPLOADS` 2GB, `TENANT_REQUESTS_PER_MINUTE` 600; non-positive is 400). `features` maps a switch (`variants`, `marketing`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
 | `POST /platform/tenants/{id}/suspend` / `/activate` / `/cancel` | 🏛 | — | `{success, message, tenant}`. `activate` also ends a trial. `cancel` (the owner is leaving) closes the store like `suspend`; it can be activated again or offboarded. The default tenant cannot be suspended or cancelled |
 | Tenant statuses | | | `TRIAL` and `ACTIVE` serve the storefront; `SUSPENDED`, `CANCELLED`, `SCHEDULED_FOR_DELETION` answer 403 "This store is currently unavailable"; `DELETED` stores have no domains (404). A trial past `trialEndsAt` is suspended by the hourly job (audited with actor `SYSTEM`) |
 | `GET /platform/tenants/{id}/export` | 🏛 | — | `application/zip` download `<slug>-export.zip`: `manifest.json` (tenant, `exportedAt`, `counts` per collection, `omitted`), `<collection>.json` (Mongo relaxed Extended JSON array) for every tenant collection except `password_reset_tokens` and `payment_intents`, `users` without `password`, and every uploaded file under its public path (`uploads/<tenantId>/…`). Audited as `TENANT_EXPORTED` |
@@ -189,6 +190,46 @@ customer) are refused on `/platform/**`.
 `tenant.payment = {provider (razorpay|fake), keyId, secretRef}` (the secret is the environment entry `TENANT_SECRET_<secretRef>`),
 `tenant.mail = {baseUrl?}` (reset links; default `https://<first domain>`). A tenant other than the default with no payment account
 gets 503 `Payments are not configured for this store` at checkout. Theme tokens are CSS custom properties (`--name`: value).
+
+### Marketing — `/admin/marketing` (phase 1, ADR-028)
+Store owners save the public tag IDs of their Google and Meta accounts. Every route: 🛡 tenant `ADMIN` only (the
+admin-agreement 403 above applies), **404 when the store's `marketing` switch is off** (platform default off).
+`{provider}` is `google` or `meta`; anything else is 404.
+
+An integration is `{provider, status, browser, updatedAt}`. `status` is `NOT_CONNECTED` or `ACTIVE` in phase 1.
+`browser` is `{ga4MeasurementId, adsConversionId, adsPurchaseLabel, gtmContainerId}` for `google` and `{pixelId}` for
+`meta`; unset fields are `null`. `updatedAt` is ISO-8601 UTC, or `null` when not connected.
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /admin/marketing` | 🛡 | — | `{success:true, integrations:[google, meta]}`: always both, `google` first |
+| `PUT /admin/marketing/{provider}` | 🛡 | `{browser:{…}}` with that provider's fields | `{success:true, integration}`. Values are trimmed and blank becomes `null`; all `null` deletes the store's row and returns `NOT_CONNECTED`. 400 `{success:false, message:"<field>: <reason>"}` for a value that fails its pattern, and for `adsPurchaseLabel` without `adsConversionId`. Audited as `INTEGRATION_UPDATED` |
+| `DELETE /admin/marketing/{provider}` | 🛡 | — | `{success:true, integration:{provider, status:"NOT_CONNECTED", browser:{all null}, updatedAt:null}}`. Audited as `INTEGRATION_DISCONNECTED` |
+
+ID patterns, checked before saving because the IDs are written into a `<script>` call: `ga4MeasurementId`
+`^G-[A-Z0-9]{4,12}$`, `adsConversionId` `^AW-\d{6,12}$`, `adsPurchaseLabel` `^[A-Za-z0-9_-]{1,40}$`, `gtmContainerId`
+`^GTM-[A-Z0-9]{4,10}$`, `pixelId` `^\d{10,20}$`.
+
+Audit: entity type `marketing_integration`, entity id = the provider (`google`/`meta`), with a before/after diff of the
+`browser` fields.
+
+Storefront: the tags come from `GET /tenant/config` (`marketing.tags`), so the storefront makes no extra call.
+Only storefront routes load tags. GA4 loads after analytics consent; Google Ads, GTM and the Meta Pixel after marketing
+consent; Google Consent Mode v2 starts `denied` and is updated from the banner. Events: `view_item`, `add_to_cart`,
+`begin_checkout`, `purchase` (Meta: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`); the purchase event id
+is the order `_id`. The admin and the storefront are one SPA behind `ecommerce-frontend/nginx.conf.template`, so the
+CSP additions for the Google and Meta hosts apply to both.
+
+**Call budgets:**
+
+| Screen / action | Calls | Budget |
+|---|---|---|
+| Admin → Marketing, first load | `GET /admin/marketing` | 1 |
+| Save a provider | `PUT /admin/marketing/{provider}` (returns the updated integration) | 1 |
+| Disconnect a provider | `DELETE /admin/marketing/{provider}` | 1 |
+| Storefront, first load | `marketing.tags` inside the existing `GET /tenant/config` | +0 |
+
+Later phases (feed, test event, delivery log, OAuth) add endpoints listed in the design spec §7.
 
 ### Dashboard — `/dashboard` (🛡, all accept `?productId=&category=&userId=`)
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`

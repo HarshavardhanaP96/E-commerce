@@ -30,6 +30,7 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment, user and consent APIs. Blocks deletion of users with undelivered orders and anonymises addresses on `UserDeletedEvent` |
 | `audit`     | `AuditTrail` (record an event), `AuditEvent`, `AuditAction`, `FieldChange`, `Changes` | append-only `audit_log` with redaction by allowlist, `/admin/audit` and the read-only `/platform/audit` |
 | `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`), the `daily_sales` summary table and its nightly `DailySummaryJob` (ADR-024), live section reads and audited CSV exports (ADR-025) |
+| `marketing` | — (implements `shared.tenant.MarketingTags`, which `tenant` reads for `/tenant/config`) | per-store Google and Meta integrations (ADR-028): `marketing_integrations`, `/admin/marketing`, public tag IDs. Behind `Feature.MARKETING`; nothing depends on it. Phase 1 is browser tags only; feed, server conversions, OAuth and reporting follow |
 
 Layer rules inside a module: `web → application → domain ← infra`. Domain types never import Spring Data
 or Mongo classes. Each `infra` adapter implements a `domain` port. Moving to Postgres, S3 or a separate
@@ -97,6 +98,21 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-30: ADR-028 **Marketing integrations are an in-house per-store module (option A).** A new Modulith
+  module `marketing` lets a store owner connect Google (GA4, Google Ads, optional GTM container) and Meta (Pixel)
+  from Admin → Marketing, behind the per-store switch `marketing` (`Feature.MARKETING`, platform default off).
+  Config lives in `marketing_integrations` (a `TenantDocument`, unique per store and provider, only through
+  `TenantMongo`); public IDs are checked against strict patterns before saving because they end up in a `<script>`
+  call. The storefront gets them from the existing `/tenant/config` (no extra call) and loads each tag only after the
+  matching cookie consent. `tenant` reads them through a `shared.tenant.MarketingTags` port, so no module depends on
+  `marketing` and switching it off never touches checkout. Built in phases that each ship alone behind the same
+  switch: browser tags first (phases 0–1), then one product feed, server-side conversions through a per-tenant
+  outbox, OAuth connect and spend reporting. Rejected: a GTM-only field (not easy for an owner, no feed or server
+  events; kept as an optional field in the Google card), a CDP workspace per store such as Segment (per-store cost
+  and a new processor of shopper data) and a server-side GTM container per store (one running container per
+  tenant). Cost: we follow each provider's API changes ourselves. Keeping owner-set secrets (Conversions API tokens,
+  OAuth refresh tokens) encrypted in Mongo instead of sealed secrets gets its own ADR in phase 3. Design and
+  diagram: `docs/superpowers/specs/2026-10-30-marketing-integrations-design.md`. Still active.
 - 2026-10-21: ADR-026 **A store's theme recolours its storefront only.** `applyTenantConfig` writes the
   theme into one `<style id="tenant-theme">` scoped to `[data-surface="store"]` instead of `<html>` inline
   style, which overrode the admin tokens too. `data-surface` is set in `main.tsx` before the first render.
