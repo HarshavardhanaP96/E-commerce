@@ -110,4 +110,19 @@ class TenantFeatureFlagsIntegrationTest extends TenantIntegrationTest {
         setFeatures(acme, Map.of("varients", true)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("features: unknown feature 'varients'"));
     }
+
+    @Test
+    void marketingIsOffUntilAPlatformAdminTurnsItOnForAStore() throws Exception {
+        Tenant acme = createTenant("acme", "Acme Shop", "shop.acme.test");
+        mvc.perform(get("/api/v1/tenant/config").with(host(hostOf(acme))))
+                .andExpect(jsonPath("$.tenant.features.marketing").value(false));
+
+        setFeatures(acme, Map.of("marketing", true)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.tenant.features.marketing").value(true));
+
+        mvc.perform(get("/api/v1/tenant/config").with(host(hostOf(acme))))
+                .andExpect(jsonPath("$.tenant.features.marketing").value(true));
+        mvc.perform(get("/api/v1/tenant/config"))
+                .andExpect(jsonPath("$.tenant.features.marketing").value(false));
+    }
 }
