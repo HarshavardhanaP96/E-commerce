@@ -1690,6 +1690,17 @@
   }
 }
 
+// ---------- marketing (pages/admin/apps/marketing.tsx) ----------
+// Cards sit in .store-settings, which scrolls; each card is a .form-grid.
+.marketing-card__head {
+  @include flex(row, space-between, center, $spacing-sm);
+
+  h2 {
+    @include text(h4);
+    color: $color-text-primary;
+  }
+}
+
 // ---------- analytics sections ----------
 .analytics__tabs {
   flex-basis: 100%;
