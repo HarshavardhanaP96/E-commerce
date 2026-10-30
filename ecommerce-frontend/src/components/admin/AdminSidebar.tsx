@@ -5,6 +5,7 @@ import {
   LuBookOpen,
   LuFolderTree,
   LuHistory,
+  LuMegaphone,
   LuMenu,
   LuPackage,
   LuReceipt,
@@ -14,7 +15,8 @@ import {
   LuX,
 } from "react-icons/lu";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { brand } from "../../tenant/tenant";
+import { brand, features } from "../../tenant/tenant";
+import { adminPageVisible } from "../../utils/routes";
 
 const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/analytics", text: "Analytics", Icon: LuBarChart3 },
@@ -23,6 +25,7 @@ const NAV: { url: string; text: string; Icon: IconType }[] = [
   { url: "/admin/customer", text: "Customers", Icon: LuUsers },
   { url: "/admin/transaction", text: "Transactions", Icon: LuReceipt },
   { url: "/admin/app/coupon", text: "Coupons", Icon: LuTicket },
+  { url: "/admin/app/marketing", text: "Marketing", Icon: LuMegaphone },
   { url: "/admin/audit", text: "Audit log", Icon: LuHistory },
   { url: "/admin/settings", text: "Store settings", Icon: LuSettings },
 ];
@@ -59,7 +62,7 @@ const AdminSidebar = () => {
 
         <h5>Manage</h5>
         <ul>
-          {NAV.map(({ url, text, Icon }) => (
+          {NAV.filter(({ url }) => adminPageVisible(url, features)).map(({ url, text, Icon }) => (
             <li key={url}>
               <NavLink to={url} title={text}>
                 <Icon aria-hidden />

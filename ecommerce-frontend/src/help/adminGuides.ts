@@ -33,7 +33,7 @@ export const GUIDES: Guide[] = [
     title: "Admin panel basics",
     summary: "What each section does and how to get around.",
     body: [
-      { type: "p", text: "The sidebar is your menu: Analytics for the numbers, Products for the catalogue, Categories for the category tree, Customers for accounts, Transactions for orders, Coupons for discount codes, Audit log for who changed what, and Store settings for your shop's rules. Help & guides, at the bottom, opens this help centre. On a phone or small window the menu opens from the button at the bottom left." },
+      { type: "p", text: "The sidebar is your menu: Analytics for the numbers, Products for the catalogue, Categories for the category tree, Customers for accounts, Transactions for orders, Coupons for discount codes, Marketing for your Google and Meta tags (when your platform has switched it on), Audit log for who changed what, and Store settings for your shop's rules. Help & guides, at the bottom, opens this help centre. On a phone or small window the menu opens from the button at the bottom left." },
       { type: "steps", title: "Good to know", items: [
         "Click any row in a table to open that record.",
         "The Help button at the top right of every admin page opens the guide for the page you are on.",
@@ -385,6 +385,31 @@ export const GUIDES: Guide[] = [
     related: ["orders", "analytics-sections", "store-settings"],
   },
   {
+    slug: "marketing",
+    group: "Sales",
+    title: "Connecting Google and Meta",
+    summary: "Paste your GA4, Google Ads, Tag Manager and Meta Pixel IDs so visits and sales from your ads are counted.",
+    openLabel: { to: "/admin/app/marketing", label: "Open Marketing" },
+    body: [
+      { type: "p", text: "Marketing appears in the menu once your platform administrator switches it on for your store. Each card holds the public IDs of one company's tags. Leave a field empty and that tag is not used." },
+      { type: "steps", title: "Where to find each ID", items: [
+        "GA4 measurement ID: in Google Analytics, open Admin → Data streams → your website stream. It starts with G-.",
+        "Google Ads conversion ID and purchase label: in Google Ads, open Goals → Conversions → your purchase action → Tag setup → Install the tag yourself. In the send_to value AW-123456789/AbC-1dEf, the part before the slash is the ID and the part after it is the label.",
+        "Tag Manager container ID (advanced): the GTM-… ID next to your container's name in Tag Manager. Only needed if you already manage tags there.",
+        "Meta Pixel ID: in Meta Events Manager, open Data sources and choose your pixel. The ID is the number shown under its name.",
+      ] },
+      { type: "steps", title: "Connect and check", items: [
+        "Go to Marketing.",
+        "Paste the IDs into the card and click Save. A wrong-looking ID is flagged under its field and nothing is saved. The card then shows Active.",
+        "Open your store in a private window, accept cookies and view a product. Within a minute it shows in GA4 under Reports → Realtime and in Meta Events Manager under Test events.",
+      ] },
+      { type: "p", text: "Tags load only for shoppers who accept cookies in the banner: GA4 with Analytics, and Google Ads, Tag Manager and the Meta Pixel with Marketing. Your store sends view item, add to cart, begin checkout and purchase. Each purchase is sent once, with the order's id, total and your store's currency." },
+      { type: "warn", text: "Your store's security policy blocks Tag Manager tags that run custom HTML or load scripts from other sites. Use the GA4, Google Ads and Meta fields for those tools instead." },
+      { type: "tip", text: "Disconnect removes the IDs: shoppers stop loading that company's tags on their next visit. Every save and disconnect is recorded in the Audit log." },
+    ],
+    related: ["coupons", "audit-log", "store-settings"],
+  },
+  {
     slug: "audit-log",
     group: "Start here",
     title: "Checking who changed what in the Audit log",
@@ -425,6 +450,7 @@ export const guideForPath = (pathname: string): string => {
   if (pathname === "/admin/transaction") return "orders";
   if (pathname.startsWith("/admin/transaction/")) return "fulfil-order";
   if (pathname.startsWith("/admin/app/coupon")) return "coupons";
+  if (pathname === "/admin/app/marketing") return "marketing";
   if (pathname === "/admin/audit") return "audit-log";
   if (pathname === "/admin/settings") return "store-settings";
   return "getting-started";
