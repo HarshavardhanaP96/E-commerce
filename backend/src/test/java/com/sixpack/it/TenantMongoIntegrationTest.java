@@ -76,6 +76,22 @@ class TenantMongoIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void streamReadsOnlyTheCurrentTenantAndFailsClosed() {
+        saveAs(A, "one", "x");
+        saveAs(B, "two", "x");
+
+        TenantContext.runAs(A, () -> {
+            try (var probes = tenantMongo.stream(new Query(), Probe.class)) {
+                assertThat(probes.map(p -> p.name)).containsExactly("one");
+            }
+        });
+        try (var none = TenantContext.open(null)) {
+            assertThatThrownBy(() -> tenantMongo.stream(new Query(), Probe.class))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
+
+    @Test
     void failsClosedWithoutATenant() {
         try (var none = TenantContext.open(null)) {
             assertThatThrownBy(() -> tenantMongo.find(new Query(), Probe.class))
