@@ -1,5 +1,6 @@
 package com.sixpack.marketing.web;
 
+import com.sixpack.marketing.application.FeedSettingsService;
 import com.sixpack.marketing.application.IntegrationService;
 import com.sixpack.marketing.domain.BrowserTags;
 import com.sixpack.marketing.domain.Integration;
@@ -52,17 +53,20 @@ class MarketingAdminController {
     }
 
     private final IntegrationService service;
+    private final FeedSettingsService feeds;
     private final TenantFeatures features;
 
-    MarketingAdminController(IntegrationService service, TenantFeatures features) {
+    MarketingAdminController(IntegrationService service, FeedSettingsService feeds, TenantFeatures features) {
         this.service = service;
+        this.feeds = feeds;
         this.features = features;
     }
 
     @GetMapping
     Map<String, Object> all() {
         requireEnabled();
-        return ApiResponse.of("integrations", service.all().stream().map(IntegrationView::from).toList());
+        return ApiResponse.of("integrations", service.all().stream().map(IntegrationView::from).toList(),
+                "feed", feeds.view());
     }
 
     @PutMapping("/{provider}")
