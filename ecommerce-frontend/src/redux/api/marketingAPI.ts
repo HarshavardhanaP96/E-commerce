@@ -12,7 +12,10 @@ export type Integration = {
   updatedAt: string | null;
 };
 
-export type MarketingResponse = { success: boolean; integrations: Integration[] };
+/** The store's product feed (phase 2); `url` is null while it is off. */
+export type Feed = { enabled: boolean; url: string | null };
+
+export type MarketingResponse = { success: boolean; integrations: Integration[]; feed: Feed };
 export type IntegrationResponse = { success: boolean; integration: Integration };
 
 /**

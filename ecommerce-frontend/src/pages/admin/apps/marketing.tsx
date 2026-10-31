@@ -13,6 +13,7 @@ import {
 } from "../../../redux/api/marketingAPI";
 import { formatDateTime } from "../../../utils/features";
 import { PROVIDERS, ProviderDef, draftFrom, fieldError, toBrowser, validate } from "./marketingForm";
+import FeedCard from "./FeedCard";
 
 const HELP = "/admin/help/marketing";
 
@@ -128,6 +129,7 @@ const Marketing = () => {
           PROVIDERS.map((def) => (
             <ProviderCard key={def.provider} def={def} integration={data.integrations.find((i) => i.provider === def.provider)} />
           ))}
+        {data?.feed && <FeedCard feed={data.feed} />}
       </div>
     </AdminLayout>
   );
