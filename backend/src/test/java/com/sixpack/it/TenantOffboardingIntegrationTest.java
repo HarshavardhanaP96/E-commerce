@@ -230,4 +230,27 @@ class TenantOffboardingIntegrationTest extends TenantIntegrationTest {
                 .andExpect(jsonPath("$.entries[*].action", hasItem("TENANT_PURGED")))
                 .andExpect(jsonPath("$.entries[*].action", hasItem("TENANT_STATUS_CHANGED")));
     }
+
+    @Test
+    void theExportLeavesOutSecretsAndTheOutbox() throws Exception {
+        Tenant acme = populatedStore();
+        mongo.getCollection("marketing_integrations").insertOne(new Document("tenantId", acme.id())
+                .append("provider", "META").append("browser", new Document("pixelId", "123456789012345"))
+                .append("secrets", new Document("server", new Document("keyId", "k1").append("iv", "aXY=")
+                        .append("ciphertext", "c2VhbGVk"))));
+        mongo.getCollection("marketing_outbox").insertOne(new Document("tenantId", acme.id())
+                .append("provider", "META").append("eventId", "o1").append("status", "SENT"));
+
+        byte[] zip = mvc.perform(get(API + acme.id() + "/export").header("Authorization", bearer(platformToken())))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        Map<String, byte[]> files = unzip(zip);
+
+        JsonNode integrations = json.readTree(files.get("marketing_integrations.json"));
+        assertThat(integrations).hasSize(1);
+        assertThat(integrations.get(0).has("secrets")).isFalse();
+        assertThat(new String(files.get("marketing_integrations.json"))).doesNotContain("c2VhbGVk");
+        assertThat(files).doesNotContainKey("marketing_outbox.json");
+        assertThat(json.readTree(files.get("manifest.json")).get("omitted").toString())
+                .contains("marketing_integrations.secrets", "marketing_outbox");
+    }
 }
