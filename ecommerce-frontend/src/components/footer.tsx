@@ -1,6 +1,7 @@
 import { brand } from "../tenant/tenant";
 import { Link, useLocation } from "react-router-dom";
 import { BUSINESS, POLICIES, PolicySlug, isFilledIn, policyPath } from "../legal/policies";
+import { openCookieSettings } from "../utils/consent";
 
 const HELP: PolicySlug[] = ["contact", "shipping", "refunds"];
 const LEGAL: PolicySlug[] = ["terms", "privacy", "cookies"];
@@ -38,6 +39,9 @@ const Footer = () => {
               {POLICIES[slug].title}
             </Link>
           ))}
+          <button type="button" className="footer__link" onClick={openCookieSettings}>
+            Cookie settings
+          </button>
         </nav>
         {business.length > 0 && (
           <address>

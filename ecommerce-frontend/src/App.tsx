@@ -6,6 +6,7 @@ import Header from "./components/header";
 import BottomNav from "./components/bottomNav";
 import Footer from "./components/footer";
 import ConsentPrompt from "./components/consentPrompt";
+import CookieBanner from "./components/CookieBanner";
 import VerifyEmailBanner from "./components/verifyEmailBanner";
 import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,7 +14,9 @@ import { userExist, userNotExist } from "./redux/reducer/userReducer";
 import { useLazyGetMyProfileQuery } from "./redux/api/userAPI";
 import { getToken } from "./redux/api/baseQuery";
 import { RootState } from "./redux/store";
-import { surfaceFor } from "./utils/routes";
+import { adminPageVisible, surfaceFor } from "./utils/routes";
+import { features } from "./tenant/tenant";
+import { routeChanged } from "./utils/tracking";
 
 const Home = lazy(() => import("./pages/home"));
 const Search = lazy(() => import("./pages/search"));
@@ -39,6 +42,7 @@ const Customers = lazy(() => import("./pages/admin/customers"));
 const Transaction = lazy(() => import("./pages/admin/transaction"));
 
 const Coupon = lazy(() => import("./pages/admin/apps/coupon"));
+const Marketing = lazy(() => import("./pages/admin/apps/marketing"));
 const CategoryAdmin = lazy(() => import("./pages/admin/category"));
 const AuditLog = lazy(() => import("./pages/admin/audit"));
 const StoreSettings = lazy(() => import("./pages/admin/settings"));
@@ -61,6 +65,7 @@ const SurfaceScope = () => {
   const { pathname } = useLocation();
   useEffect(() => {
     document.documentElement.dataset.surface = surfaceFor(pathname);
+    routeChanged();
   }, [pathname]);
   return null;
 };
@@ -169,6 +174,10 @@ const App = () => {
             
             {/* Apps */}
             <Route path="/admin/app/coupon" element={<Coupon />} />
+            {/* Feature off: no route, so the address falls through to "/" like any unknown page. */}
+            {adminPageVisible("/admin/app/marketing", features) && (
+              <Route path="/admin/app/marketing" element={<Marketing />} />
+            )}
             <Route path="/admin/audit" element={<AuditLog />} />
             <Route path="/admin/settings" element={<StoreSettings />} />
 
@@ -189,6 +198,7 @@ const App = () => {
       </Suspense>
       </div>
       {user && <ConsentPrompt key={user._id} userId={user._id} />}
+      <CookieBanner />
       <Footer />
       <BottomNav />
     </Router>

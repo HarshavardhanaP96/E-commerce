@@ -24,6 +24,7 @@ import {
   priceRange,
   quantityInCart,
 } from "../utils/variants";
+import { cartLine, track } from "../utils/tracking";
 
 const MAX_PER_ORDER = 100;
 
@@ -66,6 +67,9 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
   const inCart = withVariants && !variant ? 0 : quantityInCart(cart, key);
   const room = line ? Math.min(line.stock, MAX_PER_ORDER) - inCart : 0;
 
+  useEffect(() => {
+    track("view_item", { items: [{ id: product._id, name: product.name, price: product.price, quantity: 1 }], value: product.price });
+  }, [product]);
   useEffect(() => setImageIndex(0), [images.length, selection]);
   // Keep the stepper within what can still be added after the choice or the cart changes.
   useEffect(() => setQuantity((q) => Math.max(1, Math.min(q, room || 1))), [room]);
@@ -78,19 +82,19 @@ const ProductDetail = ({ product }: { product: ProductType }) => {
     if (withVariants && !variant) return toast.error(`Please choose ${missing.join(" and ")}`);
     if (!line || line.stock < 1) return toast.error("Out of Stock");
     if (room < 1) return toast.error("You already have the maximum available in your cart");
-    dispatch(
-      addToCart({
-        productId: product._id,
-        variantId: variant?.id,
-        variantLabel: variant?.label,
-        photo: images[0] ?? product.photo,
-        name: product.name,
-        price: line.price,
-        quantity: inCart + quantity,
-        stock: Math.min(line.stock, MAX_PER_ORDER),
-        taxRate: product.taxRate,
-      })
-    );
+    const item = {
+      productId: product._id,
+      variantId: variant?.id,
+      variantLabel: variant?.label,
+      photo: images[0] ?? product.photo,
+      name: product.name,
+      price: line.price,
+      quantity: inCart + quantity,
+      stock: Math.min(line.stock, MAX_PER_ORDER),
+      taxRate: product.taxRate,
+    };
+    dispatch(addToCart(item));
+    track("add_to_cart", { items: [cartLine({ ...item, quantity })], value: line.price * quantity });
     toast.success("Added to Cart");
   };
 

@@ -13,6 +13,7 @@ import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatMoney } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 import CheckoutSteps from "../components/checkoutSteps";
+import { cartLine, track } from "../utils/tracking";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
 
@@ -106,6 +107,8 @@ const Shipping = () => {
         billingInfo: sameBilling ? undefined : billing,
         notes: notes.trim() || undefined,
       }).unwrap();
+      // Here, not on /order/:id (which also shows past orders); tracking sends each order id once.
+      track("purchase", { orderId: res.orderId, value: c.total, currency: c.currency, items: cartItems.map(cartLine) });
       dispatch(resetCart());
       toast.success(res.message);
       navigate(`/order/${res.orderId}`);

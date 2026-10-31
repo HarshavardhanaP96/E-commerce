@@ -28,6 +28,7 @@ describe("guideForPath", () => {
     ["/admin/transaction", "orders"],
     ["/admin/transaction/abc", "fulfil-order"],
     ["/admin/app/coupon", "coupons"],
+    ["/admin/app/marketing", "marketing"],
     ["/admin/audit", "audit-log"],
     ["/admin/settings", "store-settings"],
     ["/admin/somewhere-else", "getting-started"],
@@ -37,7 +38,7 @@ describe("guideForPath", () => {
   });
 
   it("opens a guide that exists on every admin page", () => {
-    for (const path of ["/admin/analytics", "/admin/audit", "/admin/settings", "/admin/product/new"]) {
+    for (const path of ["/admin/analytics", "/admin/audit", "/admin/settings", "/admin/product/new", "/admin/app/marketing"]) {
       expect(guideBySlug(guideForPath(path))).toBeDefined();
     }
   });

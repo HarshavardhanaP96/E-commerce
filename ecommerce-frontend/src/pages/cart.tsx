@@ -12,6 +12,7 @@ import { formatMoney } from "../utils/features";
 import { cartKey } from "../utils/variants";
 import { policyPath } from "../legal/policies";
 import CheckoutSteps from "../components/checkoutSteps";
+import { cartLine, track } from "../utils/tracking";
 
 const Cart = () => {
   const { cartItems, subtotal, tax, total, shippingCharges, discount, coupon } = useSelector(
@@ -116,7 +117,11 @@ const Cart = () => {
             )
           ))}
         <small>Final amount is confirmed at checkout.</small>
-        {cartItems.length > 0 && <Link to="/shipping">Checkout</Link>}
+        {cartItems.length > 0 && (
+          <Link to="/shipping" onClick={() => track("begin_checkout", { items: cartItems.map(cartLine), value: total })}>
+            Checkout
+          </Link>
+        )}
         <small className="cart__policies">
           <Link to={policyPath("refunds")}>Returns &amp; refunds</Link> ·{" "}
           <Link to={policyPath("shipping")}>Shipping</Link>

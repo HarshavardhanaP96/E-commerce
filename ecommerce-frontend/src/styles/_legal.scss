@@ -138,12 +138,22 @@
     }
 
     a,
-    span {
+    span,
+    .footer__link {
       @include text(body-sm);
       color: $color-text-secondary;
     }
 
-    a:hover {
+    .footer__link {
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      @include focus-ring;
+    }
+
+    a:hover,
+    .footer__link:hover {
       color: $color-text-primary;
       text-decoration: underline;
     }
@@ -159,6 +169,56 @@
   @media (max-width: 720px) {
     &__groups {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+// Cookie banner (components/CookieBanner.tsx): a bottom bar above the mobile tab bar, no backdrop.
+.cookie-banner {
+  position: fixed;
+  right: 0;
+  bottom: calc(var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 90; // under the header and tab bar (100+), above page content
+  @include flex(column, flex-start, stretch, $spacing-sm);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: $spacing-md var(--gutter);
+  border-top: 1px solid $color-border;
+  background: $color-bg-secondary;
+  color: $color-text-primary;
+  box-shadow: $shadow-lg;
+
+  h2 {
+    @include text(h3);
+    outline: none;
+  }
+
+  > p {
+    @include text(body-sm);
+    color: $color-text-secondary;
+    max-width: 70ch;
+
+    a {
+      font-weight: 600;
+      text-decoration: underline;
+    }
+  }
+
+  &__options {
+    @include flex(column, flex-start, stretch, $spacing-sm);
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__actions {
+    @include flex(row, flex-end, center, $spacing-sm);
+    flex-wrap: wrap;
+
+    // Equal weight on purpose (dark-pattern guidelines): Reject is as visible as Accept.
+    > button {
+      @include button(secondary);
     }
   }
 }
