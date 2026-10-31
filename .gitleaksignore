@@ -1,0 +1,7 @@
+# False positives only. Each line is one finding's fingerprint (commit:file:rule:line), with the reason above it.
+
+# generic-api-key matched `key: "ga4MeasurementId"`: a form field's name, not a secret.
+937cb77b82b762c8cee742d44e317ca6d9c7779e:ecommerce-frontend/src/pages/admin/apps/marketingForm.ts:generic-api-key:15
+937cb77b82b762c8cee742d44e317ca6d9c7779e:ecommerce-frontend/src/pages/admin/apps/marketingForm.test.ts:generic-api-key:49
+0e31692fddbde066ff6df848de6ba94e54a41043:docs/superpowers/plans/2026-10-30-marketing-phase1-frontend.md:generic-api-key:1861
+0e31692fddbde066ff6df848de6ba94e54a41043:docs/superpowers/plans/2026-10-30-marketing-phase1-frontend.md:generic-api-key:1894
