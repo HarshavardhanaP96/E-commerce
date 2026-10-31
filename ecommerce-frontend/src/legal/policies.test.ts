@@ -24,4 +24,12 @@ describe("cookie and privacy notices", () => {
     const cookies = JSON.stringify(POLICIES.cookies);
     for (const name of ["_ga", "_gcl_au", "_fbp", "_fbc", "Cookie settings"]) expect(cookies).toContain(name);
   });
+
+  it("say that purchases are sent from the server, with Meta getting hashed contact details", () => {
+    const privacy = JSON.stringify(POLICIES.privacy);
+    expect(privacy).toContain("hashed");
+    expect(privacy).not.toContain("We don't send them your name, email, phone or address");
+    expect(JSON.stringify(POLICIES.cookies)).toContain("from its own server");
+    expect(POLICIES.cookies.updated).toBe("2026-10-31"); // = backend app.marketing.pii-consent-version
+  });
 });
