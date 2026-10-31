@@ -1,0 +1,23 @@
+// ---------- marketing server events (pages/admin/apps/ServerEventsSection.tsx) ----------
+.badge--error { background: var(--danger-subtle); color: var(--danger); }
+
+.server-events {
+  display: grid;
+  gap: $spacing-sm;
+  border: none;
+  border-top: 1px solid $color-border;
+  margin: 0;
+  padding: $spacing-md 0 0;
+
+  h3 { @include text(h4); color: $color-text-primary; }
+  h4 { @include text(caption); font-weight: 600; color: $color-text-secondary; }
+
+  &__log {
+    width: 100%;
+    border-collapse: collapse;
+    @include text(caption);
+
+    th, td { padding: 0.375rem 0.5rem; text-align: left; border-bottom: 1px solid $color-border; }
+    td:last-child { color: $color-text-secondary; }
+  }
+}

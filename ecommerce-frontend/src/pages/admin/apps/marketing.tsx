@@ -13,6 +13,7 @@ import {
 } from "../../../redux/api/marketingAPI";
 import { formatDateTime } from "../../../utils/features";
 import { PROVIDERS, ProviderDef, draftFrom, fieldError, toBrowser, validate } from "./marketingForm";
+import ServerEventsSection from "./ServerEventsSection";
 
 const HELP = "/admin/help/marketing";
 
@@ -30,7 +31,7 @@ const ProviderCard = ({ def, integration }: { def: ProviderDef; integration?: In
   const errors = validate(draft, def.fields);
   const errorFor = (key: string) => (checked[key] ? errors[key] : undefined) ?? (server?.key === key ? server.text : undefined);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const connected = integration?.status === "ACTIVE";
+  const connected = !!integration && integration.status !== "NOT_CONNECTED";
   const busy = saving || removing;
   const titleId = `marketing-${def.provider}`;
 
@@ -108,6 +109,7 @@ const ProviderCard = ({ def, integration }: { def: ProviderDef; integration?: In
           <span className="store-settings__note">Last saved {formatDateTime(integration.updatedAt)}</span>
         )}
       </div>
+      <ServerEventsSection provider={def.provider} integration={integration} />
     </form>
   );
 };
