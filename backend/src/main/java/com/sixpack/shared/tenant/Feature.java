@@ -9,7 +9,9 @@ import java.util.Optional;
  */
 public enum Feature {
     /** Products with size/colour options (docs/superpowers/plans/2026-10-18-product-variants.md). */
-    VARIANTS("variants");
+    VARIANTS("variants"),
+    /** Admin → Marketing: Google and Meta tags (docs/superpowers/specs/2026-10-30-marketing-integrations-design.md). */
+    MARKETING("marketing");
 
     private final String key;
 

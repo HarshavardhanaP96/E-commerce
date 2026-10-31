@@ -61,6 +61,8 @@ app:
     # Platform default for each per-store feature switch (a platform admin can override it per store).
     defaults:
       variants: ${app.products.variants-enabled}
+      # Admin → Marketing (Google and Meta tags). Off until a platform admin turns it on for a store.
+      marketing: false
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).

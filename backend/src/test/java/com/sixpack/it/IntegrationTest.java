@@ -103,7 +103,7 @@ public abstract class IntegrationTest {
     void cleanDatabase() {
         for (String c : new String[] {"users", "products", "orders", "coupons", "payment_intents",
                 "password_reset_tokens", "email_verification_tokens", "consents", "categories", "coupon_redemptions", "audit_log",
-                "daily_sales", "daily_sales_state"}) {
+                "daily_sales", "daily_sales_state", "marketing_integrations"}) {
             mongo.getCollection(c).deleteMany(new org.bson.Document());
         }
         // TenantCache.clear() clears the whole delegate, so no tenant context is needed here
