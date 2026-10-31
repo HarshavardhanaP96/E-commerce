@@ -14,6 +14,13 @@ describe("admin guides", () => {
   it("puts every guide in a listed group", () => {
     for (const g of GUIDES) expect(GUIDE_GROUPS).toContain(g.group);
   });
+
+  it("explains the product feed for both platforms", () => {
+    const text = JSON.stringify(guideBySlug("product-feed"));
+    expect(text).toContain("Merchant Center");
+    expect(text).toContain("Commerce Manager");
+    expect(text).toContain("New URL");
+  });
 });
 
 describe("guideForPath", () => {

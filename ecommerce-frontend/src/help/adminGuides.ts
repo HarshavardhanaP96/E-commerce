@@ -410,6 +410,35 @@ export const GUIDES: Guide[] = [
     related: ["coupons", "audit-log", "store-settings"],
   },
   {
+    slug: "product-feed",
+    group: "Sales",
+    title: "Listing your products on Google and Meta",
+    summary: "Turn on the product feed and paste its address into Google Merchant Center and Meta Commerce Manager.",
+    openLabel: { to: "/admin/app/marketing", label: "Open Marketing" },
+    body: [
+      { type: "p", text: "The product feed is one web address that lists your active products with their price, stock, picture and a link to their page. Google Merchant Center and Meta Commerce Manager read it on their own schedule, so your products can show in Google Shopping and in ads and shops on Facebook and Instagram. Each size or colour of a product is listed on its own and grouped under the product." },
+      { type: "steps", title: "Turn it on", items: [
+        "Go to Marketing and find the Product feed card.",
+        "Tick Publish my products in a feed. The card shows the feed address.",
+        "Click Copy to copy the address.",
+      ] },
+      { type: "steps", title: "Add it to Google Merchant Center", items: [
+        "In Merchant Center, open Products and add a product source.",
+        "Choose to add products from a file, then Enter a link to your file, and paste the feed address.",
+        "Set it to fetch daily and save. Your products appear under Products after the first fetch.",
+      ] },
+      { type: "steps", title: "Add it to Meta Commerce Manager", items: [
+        "In Commerce Manager, open your catalogue, then Data sources, and add items with a data feed.",
+        "Choose a scheduled feed, paste the feed address and pick a daily or hourly update.",
+        "Save. Meta lists any item it could not accept under Issues.",
+      ] },
+      { type: "p", text: "Only active products with a picture are listed; drafts, archived products and switched-off options are left out. Prices are in your store's currency and the brand is your store's name. A change shows up the next time Google or Meta fetch the feed; the feed itself is refreshed at most every 15 minutes." },
+      { type: "warn", text: "Keep the address to yourself. If it has leaked, click New URL: the old address stops working at once, so paste the new one into Merchant Center and Commerce Manager straight away." },
+      { type: "tip", text: "Turning the feed off makes the address stop working; turning it back on brings the same address back. Every change is recorded in the Audit log." },
+    ],
+    related: ["marketing", "products", "audit-log"],
+  },
+  {
     slug: "audit-log",
     group: "Start here",
     title: "Checking who changed what in the Audit log",
