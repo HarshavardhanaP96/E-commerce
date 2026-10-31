@@ -16,6 +16,7 @@ import com.sixpack.tenant.application.TenantPurge;
 import com.sixpack.tenant.domain.Tenant;
 import com.sixpack.tenant.domain.TenantStatus;
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -229,5 +230,30 @@ class TenantOffboardingIntegrationTest extends TenantIntegrationTest {
                         .header("Authorization", bearer(platformToken())))
                 .andExpect(jsonPath("$.entries[*].action", hasItem("TENANT_PURGED")))
                 .andExpect(jsonPath("$.entries[*].action", hasItem("TENANT_STATUS_CHANGED")));
+    }
+
+    @Test
+    void theFeedTokenIsNeitherExportedNorKeptAfterPurge() throws Exception {
+        Tenant acme = populatedStore();
+        String token = "feed-token-that-must-not-leak";
+        mongo.getCollection("marketing_settings").insertOne(new Document("_id", acme.id())
+                .append("tenantId", acme.id()).append("feedEnabled", true).append("feedToken", token));
+
+        byte[] zip = mvc.perform(get(API + acme.id() + "/export").header("Authorization", bearer(platformToken())))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        Map<String, byte[]> files = unzip(zip);
+
+        assertThat(files).containsKey("marketing_settings.json");
+        JsonNode settings = json.readTree(files.get("marketing_settings.json"));
+        assertThat(settings).hasSize(1);
+        assertThat(settings.get(0).get("feedEnabled").asBoolean()).isTrue();
+        assertThat(settings.get(0).has("feedToken")).isFalse();
+        assertThat(files.values()).noneMatch(b -> new String(b, StandardCharsets.ISO_8859_1).contains(token));
+        assertThat(json.readTree(files.get("manifest.json")).get("omitted").toString())
+                .contains("marketing_settings.feedToken");
+
+        platform(acme.id() + "/offboard").andExpect(status().isOk());
+        purge.purgeDue(Instant.now().plus(Duration.ofDays(31)));
+        assertThat(ownedBy(acme, "marketing_settings")).isZero();
     }
 }
