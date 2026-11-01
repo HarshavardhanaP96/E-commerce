@@ -12,8 +12,8 @@ Update the "Status" and "Pending" sections whenever something changes.
 | Built | Phases 0–3 of 6 |
 | Tests | 756 backend, 189 frontend, lint and build green on the merged tree |
 | Security scan | gitleaks, semgrep, trivy: nothing new from this branch |
-| Pushed | Yes: `origin/feat/marketing` and `origin/dev` (2026-11-01). Not merged into `dev` |
-| Next | Browser check → owner decisions → PR into `dev` |
+| In `dev` | Yes, merged by pull request on 2026-11-01, before the browser check and owner decisions below |
+| Next | Browser check → owner decisions → phases 4–5 once Google/Meta approve |
 
 The main checkout (`6Pack`, branch `chore/central-secrets`) holds the owner's own uncommitted audit-log
 changes. Do not touch, stash or commit them.
@@ -59,7 +59,7 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 
 ## Pending
 
-### Before `feat/marketing` goes into `dev`
+### Still open (merged into `dev` without them)
 
 - [ ] **Browser check.** Nobody has clicked through it in a running app yet: cookie banner (accept / reject /
       customise, tags load only after consent), Marketing page (save and remove IDs, validation errors),
@@ -72,10 +72,8 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 - [ ] **Owner decision: open questions Q1–Q6** (spec §10). They were filled with defaults, not answered:
       Google + Meta first; store `ADMIN` connects; paste-IDs before OAuth; platform registers its own
       Google/Meta apps; feature switch, no billing; India (DPDP) only.
-- [x] Push `feat/marketing` (done 2026-11-01).
-- [ ] **Open a PR into `dev`** (ask the owner first; `dev` is on GitHub since 2026-11-01):
-
-      gh pr create --base dev --head feat/marketing
+- [x] Push `feat/marketing` and `dev` (done 2026-11-01).
+- [x] Pull request into `dev` merged (2026-11-01).
 
 ### Not started
 
@@ -84,6 +82,9 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 - **Phase 5, ad spend and return-on-ad-spend reporting** (`marketing_daily`). Depends on phase 4.
 
 ### Known limits
+
+- CI's "Build, scan & push images" job fails on every branch: the repo has no registry login secrets for
+  `docker/login-action`. Tests, lint, build and k8s validation pass.
 
 - The Content Security Policy (`ecommerce-frontend/nginx.conf.template`) blocks custom HTML tags inside
   Google Tag Manager; GTM's built-in tag types work.
