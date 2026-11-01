@@ -14,6 +14,13 @@ describe("admin guides", () => {
   it("puts every guide in a listed group", () => {
     for (const g of GUIDES) expect(GUIDE_GROUPS).toContain(g.group);
   });
+
+  it("explains the product feed for both platforms", () => {
+    const text = JSON.stringify(guideBySlug("product-feed"));
+    expect(text).toContain("Merchant Center");
+    expect(text).toContain("Commerce Manager");
+    expect(text).toContain("New URL");
+  });
 });
 
 describe("guideForPath", () => {
@@ -28,6 +35,7 @@ describe("guideForPath", () => {
     ["/admin/transaction", "orders"],
     ["/admin/transaction/abc", "fulfil-order"],
     ["/admin/app/coupon", "coupons"],
+    ["/admin/app/marketing", "marketing"],
     ["/admin/audit", "audit-log"],
     ["/admin/settings", "store-settings"],
     ["/admin/somewhere-else", "getting-started"],
@@ -37,7 +45,7 @@ describe("guideForPath", () => {
   });
 
   it("opens a guide that exists on every admin page", () => {
-    for (const path of ["/admin/analytics", "/admin/audit", "/admin/settings", "/admin/product/new"]) {
+    for (const path of ["/admin/analytics", "/admin/audit", "/admin/settings", "/admin/product/new", "/admin/app/marketing"]) {
       expect(guideBySlug(guideForPath(path))).toBeDefined();
     }
   });

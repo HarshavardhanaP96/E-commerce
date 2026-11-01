@@ -13,6 +13,8 @@ import { SavedAddress, ShippingInfo } from "../types/types";
 import { formatMoney } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 import CheckoutSteps from "../components/checkoutSteps";
+import { cartLine, track } from "../utils/tracking";
+import { attributionForCheckout } from "../utils/attribution";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
 
@@ -76,6 +78,7 @@ const Shipping = () => {
       const quote = await checkout({
         items: cartItems.map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
         coupon: coupon || undefined,
+        attribution: attributionForCheckout(),
       }).unwrap();
       const c = quote.checkout;
 
@@ -106,6 +109,8 @@ const Shipping = () => {
         billingInfo: sameBilling ? undefined : billing,
         notes: notes.trim() || undefined,
       }).unwrap();
+      // Here, not on /order/:id (which also shows past orders); tracking sends each order id once.
+      track("purchase", { orderId: res.orderId, value: c.total, currency: c.currency, items: cartItems.map(cartLine) });
       dispatch(resetCart());
       toast.success(res.message);
       navigate(`/order/${res.orderId}`);

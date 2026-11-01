@@ -30,6 +30,7 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | `order`     | —                                                 | checkout + order lifecycle; uses product, coupon, payment, user and consent APIs. Blocks deletion of users with undelivered orders and anonymises addresses on `UserDeletedEvent` |
 | `audit`     | `AuditTrail` (record an event), `AuditEvent`, `AuditAction`, `FieldChange`, `Changes` | append-only `audit_log` with redaction by allowlist, `/admin/audit` and the read-only `/platform/audit` |
 | `dashboard` | —                                                 | read-side Mongo aggregations (`DashboardReadPort`), the `daily_sales` summary table and its nightly `DailySummaryJob` (ADR-024), live section reads and audited CSV exports (ADR-025) |
+| `marketing` | — (implements `shared.tenant.MarketingTags`, which `tenant` reads for `/tenant/config`) | per-store Google and Meta integrations (ADR-028): `marketing_integrations`, `/admin/marketing`, public tag IDs. Behind `Feature.MARKETING`; nothing depends on it. Phase 3 adds server-side conversions: sealed owner secrets (ADR-029), the per-store `marketing_outbox`, `ConversionRecorder`/`ConversionSweep`/`ConversionDispatcher` and the Meta CAPI / GA4 MP adapters; reads `order.PaidOrders` |
 
 Layer rules inside a module: `web → application → domain ← infra`. Domain types never import Spring Data
 or Mongo classes. Each `infra` adapter implements a `domain` port. Moving to Postgres, S3 or a separate
@@ -52,7 +53,9 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
 ### Observability plan
 - **Metrics:** Micrometer → `/actuator/prometheus`. HTTP server metrics, JVM, Mongo driver pool, Caffeine
   cache, and business counters (`sixpack.orders.placed`, `sixpack.checkout.failed{reason}`,
-  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`, `sixpack.ratelimit.rejected`). Every one of these, and
+  `sixpack.auth.login{result}`, `sixpack.audit.write{result}`, `sixpack.ratelimit.rejected`) and marketing server
+  events (`marketing.events{provider,outcome}` with outcome `sent|retry|failed|skipped`, `marketing.outbox.due.age{provider}`
+  in seconds, `marketing.record.failed`). Every one of these, and
   `http.server.requests`, carries a `tenant` tag: the store's slug, `unknown` for a host that matched no store,
   or `none` on platform and operational paths. The Grafana dashboard has a store picker and the payment and
   audit alerts name the store.
@@ -71,6 +74,28 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
 - **Alerts** (`infra/observability/k8s/alerts.yaml`, through Alertmanager to Slack): 5xx rate > 2% for 5 min,
   p95 latency > 500 ms, readiness flapping, `checkout.failed{reason="paid_but_unfulfilled"}` > 0, no ready
   backend pods, scrape down, and memory near its limit. Severity is critical in prod-env and warning in test-env.
+  Marketing conversions failing > 5 % for 15 min and the oldest due conversion waiting > 30 min are warnings in both.
+
+### Consistency & failure (distributed-systems checklist)
+Single backend replica in prod today (ADR-008); these hold for N. Marketing server events (phase 3, ADR-029):
+
+| # | Boundary | Failure modes | Decision | Proven by |
+|---|---|---|---|---|
+| D1 | Paid order → outbox (Mongo, **no transactions**) | process dies after the order is saved but before the row is written; listener throws | Synchronous `@EventListener(OrderChangedEvent)` queues with an idempotent upsert and swallows its own errors; `ConversionSweep` every 5 min re-queues consented paid orders of the last 72 h that have no row (the order is the source of truth — the outbox is derived from it, so there is no dual write to lose) | `theSweepQueuesAPaidOrderTheListenerMissed`, `aFailingRecorderNeverFailsCheckout` |
+| D2 | Duplicate `OrderChangedEvent` (placed, advanced, refunded), sweep racing the listener, N replicas | duplicate rows → double send | **Idempotency key `eventId = order._id`** (the same id the browser sends as Meta `eventID` / GA4 `transaction_id`); unique index `{tenantId, provider, eventId}` + `$setOnInsert` upsert (Mongo retries a duplicate-key upsert on that exact key; a `DuplicateKeyException` is caught as "already queued") | `theSameOrderIsQueuedOnceHoweverOftenItIsSeen` (incl. 10 concurrent), `addIfAbsentIsIdempotentUnderConcurrency` |
+| D3 | Several dispatchers / replicas | double send | Claim one row at a time with `findAndModify` PENDING(due) → SENDING, `leaseUntil = now + 2 min`, `attempts + 1`, fresh `claimToken`; finishing requires the same `claimToken` (fencing), so a dispatcher whose lease expired cannot overwrite the new owner's result | `concurrentDispatchersSendEachRowOnce`, `aStaleClaimCannotOverwriteTheNewOwner` |
+| D4 | Replica dies mid-send | row stuck in SENDING | A SENDING row with an expired lease is claimable again (attempt counted). Delivery to the provider is therefore **at-least-once**; the provider de-duplicates by `event_id` / `transaction_id` | `anExpiredLeaseIsSentAgainAndALiveOneIsLeftAlone` |
+| D5 | Outbound HTTP | slow, hung, reset | Connect 2 s, read 5 s on every call (`SimpleClientHttpRequestFactory`); the 2-min lease is far longer than one call. Test sends use the same client. Sync vs async: purchases are **async** (checkout must not wait on or fail because of Meta/Google); the test event is **sync** (the owner is waiting for the verdict) | `aTimeoutIsRetried` (stub delays 1.5 s, read timeout 500 ms) |
+| D6 | 5xx, 429, timeout, Meta transient/throttle codes | transient | Retry only these, at one layer (the outbox): backoff 1 m, 5 m, 30 m, 2 h, 12 h × jitter U(0.8, 1.2), `Retry-After` honoured, capped at 12 h; 6 attempts (≈ 15 h, inside GA4's 72 h and Meta's 7 days), then FAILED `GAVE_UP` | `BackoffTest`, `retryableFailuresBackOffThenGiveUpAndFlagTheCard`, `throttlingHonoursRetryAfter` |
+| D7 | 4xx (bad token, bad parameter) | permanent | No retry: FAILED at once, the card gets `lastError` (→ `ERROR`) with an owner-actionable message; provider text is cleaned (secret replaced, ≤ 200 chars) | `aRejectedEventFailsAtOnceAndShowsTheReason`, `aRejectedTokenAsksTheOwnerForANewOne`, adapter tests |
+| D8 | Provider outage / slowness | threads tied up, hammering a down provider, one provider starving the other | Circuit breaker per provider per instance (5 transient failures in a row → open 60 s, then the first failure reopens it; rows stay PENDING untouched). Bulkhead: one dispatcher thread per provider; at most 50 rows per store per pass (fairness between stores). No Resilience4j (not on the classpath; ~25 lines instead) | `ProviderBreakerTest` |
+| D9 | Dead letter | silent loss | FAILED and SKIPPED rows stay 30 days (TTL) and show in the delivery log; `lastError` flags the card; alerts on failed ratio > 5 % for 15 min and oldest due row > 30 min. Replay: the owner fixes the secret; new orders flow (re-queueing old FAILED rows is a manual DB step, documented in the runbook) | admin ITs, `promtool check rules` |
+| D10 | Shutdown | half-sent row, lost work | `SmartLifecycle.stop()`: stop claiming, wait ≤ 20 s for the in-flight send, then exit; anything left in SENDING is recovered by lease expiry (D4) | `stopFinishesTheSendInFlightAndClaimsNothingMore` |
+| D11 | Cross-tenant | wrong credentials or rows | Dispatcher, sweep and recorder run per store inside `TenantContext`; `TenantMongo` scopes every query; the sealed secret's AAD is `tenantId|PROVIDER|server.secret`, so a ciphertext copied to another store's row does not decrypt | `sendsEachStoresOwnCredentials`, `anotherStoresCopiedSecretCannotBeRead`, `SecretBoxTest` |
+| D12 | Admin `PUT` vs dispatcher writes on the same integration row | lost update | Field-level `$set` only: the dispatcher writes only `lastError`/`lastSuccessAt`; `PUT` writes browser/server fields and only *unsets* `lastError` with a new secret. Two admins editing one card at once: last write wins per field (rare; no `version` field, as in Phase 1) | by construction |
+| D13 | Erasure and consent after queueing | PII of a deleted user or a withdrawn shopper sent | Outbox rows hold **no PII** (ids and status only); the payload is built from the order at send time, and consent is re-checked then → `SKIPPED NO_CONSENT` once erasure removed `attribution` | `rowsAreSkippedWhenConsentOrSettingsAreGone` |
+| D14 | Clock | replica clock skew | Server `Instant.now()` for leases and backoff; skew (NTP, ms) is negligible against a 2-min lease and ≥ 48 s backoff. Documented, not tested | — |
+| — | Caching / isolation level | — | No cache added (one integration read per row is cheap). Every write is a single-document atomic operation; no multi-document invariant exists | — |
 
 ### Frontend UI (`ecommerce-frontend/src/`)
 - **Design tokens** live in `styles/_tokens.scss` as CSS custom properties. There are two surfaces: the
@@ -97,6 +122,37 @@ The rollout gate is the readiness probe. Rollback is `kubectl rollout undo` (see
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-10-31: ADR-029 **Owner-set marketing secrets are encrypted in MongoDB.** Store owners paste a Meta
+  Conversions API access token and a GA4 Measurement Protocol API secret on Admin → Marketing; phase 4 adds OAuth
+  refresh tokens that rotate on their own. The T+ rule for tenant secrets (a sealed secret per store, referenced by
+  name like `TENANT_SECRET_<REF>`) needs a platform admin and a redeploy per change, so it does not fit. `SecretBox`
+  (marketing infra) seals each value with AES-256-GCM, a random 12-byte IV and a 128-bit tag, with
+  `tenantId|PROVIDER|field` as associated data, so a ciphertext copied to another store's or provider's row does not
+  decrypt. Keys come from `MARKETING_KEYS` (`k1:<base64 of 32 bytes>,k0:…`, newest first), delivered like every
+  platform secret (Sealed Secret in k8s, `.env` locally, where `.env.example` carries an all-zero dev key that logs a
+  warning). New values use the first key and record its id; rotating means putting a new key first and keeping the
+  old one until every store has saved again (a re-encrypt job is deferred). Without a key the server-side capability
+  is unavailable and the API says so (fail closed); browser tags and the feed are unaffected. Secrets are write-only:
+  responses carry `hasSecret`, the audit diff marks `secret` as a redacted change, the tenant export drops the
+  `secrets` field and the outbox, adapters never log a `RestClientException` (GA4's secret is a query parameter) and
+  use a client without trace observation. Rejected: plaintext in Mongo (one database leak exposes every store's ad
+  accounts), a cloud KMS call per use (new dependency and latency), a sealed secret per store (redeploy per change).
+  Server conversions themselves go through the per-store outbox described under "Consistency & failure". Still active.
+- 2026-10-30: ADR-028 **Marketing integrations are an in-house per-store module (option A).** A new Modulith
+  module `marketing` lets a store owner connect Google (GA4, Google Ads, optional GTM container) and Meta (Pixel)
+  from Admin → Marketing, behind the per-store switch `marketing` (`Feature.MARKETING`, platform default off).
+  Config lives in `marketing_integrations` (a `TenantDocument`, unique per store and provider, only through
+  `TenantMongo`); public IDs are checked against strict patterns before saving because they end up in a `<script>`
+  call. The storefront gets them from the existing `/tenant/config` (no extra call) and loads each tag only after the
+  matching cookie consent. `tenant` reads them through a `shared.tenant.MarketingTags` port, so no module depends on
+  `marketing` and switching it off never touches checkout. Built in phases that each ship alone behind the same
+  switch: browser tags first (phases 0–1), then one product feed, server-side conversions through a per-tenant
+  outbox, OAuth connect and spend reporting. Rejected: a GTM-only field (not easy for an owner, no feed or server
+  events; kept as an optional field in the Google card), a CDP workspace per store such as Segment (per-store cost
+  and a new processor of shopper data) and a server-side GTM container per store (one running container per
+  tenant). Cost: we follow each provider's API changes ourselves. Keeping owner-set secrets (Conversions API tokens,
+  OAuth refresh tokens) encrypted in Mongo instead of sealed secrets gets its own ADR in phase 3. Design and
+  diagram: `docs/superpowers/specs/2026-10-30-marketing-integrations-design.md`. Still active.
 - 2026-10-21: ADR-026 **A store's theme recolours its storefront only.** `applyTenantConfig` writes the
   theme into one `<style id="tenant-theme">` scoped to `[data-surface="store"]` instead of `<html>` inline
   style, which overrode the admin tokens too. `data-surface` is set in `main.tsx` before the first render.

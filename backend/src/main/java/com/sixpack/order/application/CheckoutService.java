@@ -8,6 +8,7 @@ import com.sixpack.consent.ConsentLedger;
 import com.sixpack.consent.Purpose;
 import com.sixpack.coupon.CouponLine;
 import com.sixpack.coupon.CouponLookup;
+import com.sixpack.order.OrderAttribution;
 import com.sixpack.order.OrderChangedEvent;
 import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.OrderDetails;
@@ -148,6 +149,11 @@ public class CheckoutService {
     }
 
     public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon) {
+        return checkout(userId, lines, coupon, null);
+    }
+
+    /** @param attribution already sanitised ({@link OrderAttribution#from}); null when the browser sent none */
+    public CheckoutResult checkout(String userId, List<CartLine> lines, String coupon, OrderAttribution attribution) {
         // Checked before money moves, so a paid order is never refused for a missing acceptance.
         if (!consents.hasAcceptedCurrent(userId, Purpose.TERMS)) {
             throw ApiException.forbidden("Please accept the updated Terms & Conditions before placing an order");
@@ -160,7 +166,7 @@ public class CheckoutService {
         PaymentGateway gateway = gateways.current();
         ProviderOrder providerOrder = gateway.createOrder(quote.totalPaise(), "rcpt_" + System.currentTimeMillis());
         intents.save(new PaymentIntent(null, userId, gateway.provider(), providerOrder.id(), priced.items(),
-                priced.coupon(), quote, providerOrder.currency()));
+                priced.coupon(), quote, providerOrder.currency(), attribution));
         return new CheckoutResult(gateway.provider(), gateway.publicKey(), providerOrder.id(),
                 providerOrder.amountPaise(), providerOrder.currency(), quote);
     }
@@ -213,7 +219,7 @@ public class CheckoutService {
                     new OrderDetails(OrderNumbers.generate(now, ThreadLocalRandom.current()), details.billing(),
                             new Customer(contact.name(), contact.email(), contact.phone()),
                             List.of(new StatusEntry(OrderStatus.PROCESSING, now, userId)), intent.coupon(),
-                            details.notes())));
+                            details.notes(), intent.attribution())));
         } catch (RuntimeException e) {
             if (couponRedeemed) {
                 coupons.release(intent.coupon(), userId);

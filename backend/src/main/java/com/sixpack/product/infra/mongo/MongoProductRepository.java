@@ -25,8 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.data.domain.Sort;
 
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -64,6 +66,14 @@ class MongoProductRepository implements ProductRepository {
     @Override
     public List<Product> findLatest(int limit) {
         return find(new Query(publicOnly()).with(NEWEST_FIRST).limit(limit));
+    }
+
+    @Override
+    public void forEachPublic(int limit, Consumer<Product> action) {
+        try (Stream<ProductDocument> docs = mongo.stream(
+                new Query(publicOnly()).with(Sort.by("id")).limit(limit), ProductDocument.class)) {
+            docs.map(MongoProductRepository::toDomain).forEach(action);
+        }
     }
 
     @Override

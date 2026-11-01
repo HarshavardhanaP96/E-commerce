@@ -28,6 +28,7 @@ class MongoPaymentIntentRepository implements PaymentIntentRepository {
         d.items = intent.items().stream().map(MongoOrderRepository::toDoc).toList();
         d.coupon = intent.coupon();
         d.currency = intent.currency();
+        d.attribution = MongoOrderRepository.toDoc(intent.attribution());
         d.subtotal = intent.quote().subtotal();
         d.tax = intent.quote().tax();
         d.shippingCharges = intent.quote().shippingCharges();
@@ -41,7 +42,8 @@ class MongoPaymentIntentRepository implements PaymentIntentRepository {
     public Optional<PaymentIntent> findByProviderOrderId(String providerOrderId) {
         return mongo.findOne(byProviderOrder(providerOrderId), PaymentIntentDocument.class).map(doc -> new PaymentIntent(doc.id, doc.userId, doc.provider,
                 doc.providerOrderId, doc.items.stream().map(MongoOrderRepository::toDomain).toList(), doc.coupon,
-                new Quote(doc.subtotal, doc.tax, doc.shippingCharges, doc.discount, doc.total), doc.currency));
+                new Quote(doc.subtotal, doc.tax, doc.shippingCharges, doc.discount, doc.total), doc.currency,
+                MongoOrderRepository.toDomain(doc.attribution)));
     }
 
     @Override

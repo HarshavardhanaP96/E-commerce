@@ -14,6 +14,7 @@ import { addToCart } from "../redux/reducer/cartReducer";
 import { formatMoney } from "../utils/features";
 import { MAX_PRICE, SORTS, activeFilters } from "../utils/filters";
 import { useDispatch } from "react-redux";
+import { cartLine, track } from "../utils/tracking";
 
 const Search = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -96,6 +97,7 @@ const Search = () => {
   const addToCartHandler = (cartItem: CartItem) => {
     if (cartItem.stock < 1) return toast.error("Out of stock");
     dispatch(addToCart(cartItem));
+    track("add_to_cart", { items: [cartLine(cartItem)], value: cartItem.price * cartItem.quantity });
     toast.success("Added to cart");
   };
 

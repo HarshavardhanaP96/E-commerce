@@ -1,5 +1,6 @@
 package com.sixpack.order.web;
 
+import com.sixpack.order.OrderAttribution;
 import com.sixpack.order.application.CheckoutService;
 import com.sixpack.order.application.CheckoutService.CartLine;
 import com.sixpack.order.application.CheckoutService.ConfirmDetails;
@@ -12,6 +13,7 @@ import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.shared.security.AuthUser;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.user.UserDirectory;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Max;
@@ -22,6 +24,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,8 +53,17 @@ class OrderController {
                            @Min(1) @Max(100) int quantity) {
     }
 
+    /** First touch and the shopper's cookie choice (spec §5.5). Not bean-validated on purpose: bad values are dropped. */
+    record AttributionRequest(String utmSource, String utmMedium, String utmCampaign, String utmContent,
+                              String utmTerm, String gclid, String fbclid, String fbp, String fbc, String gaClientId,
+                              String landingPath, ConsentRequest consent) {
+    }
+
+    record ConsentRequest(Boolean analytics, Boolean marketing, String version) {
+    }
+
     record CheckoutRequest(@NotEmpty @Size(max = 50) List<@Valid CartLineRequest> items,
-                           @Size(max = 32) String coupon) {
+                           @Size(max = 32) String coupon, AttributionRequest attribution) {
     }
 
     record QuoteRequest(@NotEmpty @Size(max = 50) List<@Valid CartLineRequest> items, @Size(max = 32) String coupon) {
@@ -109,10 +121,12 @@ class OrderController {
 
     @PostMapping("/checkout")
     @ResponseStatus(HttpStatus.CREATED)
-    Map<String, Object> checkout(@Valid @RequestBody CheckoutRequest request, @AuthenticationPrincipal Jwt jwt) {
+    Map<String, Object> checkout(@Valid @RequestBody CheckoutRequest request, @AuthenticationPrincipal Jwt jwt,
+                                 HttpServletRequest http) {
         List<CartLine> lines = request.items().stream()
                 .map(i -> new CartLine(i.productId(), i.variantId(), i.quantity())).toList();
-        CheckoutResult r = checkout.checkout(AuthUser.from(jwt).id(), lines, request.coupon());
+        CheckoutResult r = checkout.checkout(AuthUser.from(jwt).id(), lines, request.coupon(),
+                attribution(request.attribution(), http));
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("provider", r.provider());
         body.put("key", r.key());
@@ -196,5 +210,19 @@ class OrderController {
     private List<OrderView> views(List<Order> list, boolean admin) {
         Map<String, String> names = users.namesByIds(list.stream().map(Order::userId).collect(Collectors.toSet()));
         return list.stream().map(o -> OrderView.from(o, names, admin)).toList();
+    }
+
+    private static OrderAttribution attribution(AttributionRequest a, HttpServletRequest http) {
+        if (a == null) {
+            return null;
+        }
+        ConsentRequest c = a.consent();
+        return OrderAttribution.from(new OrderAttribution.Raw(a.utmSource(), a.utmMedium(), a.utmCampaign(),
+                        a.utmContent(), a.utmTerm(), a.gclid(), a.fbclid(), a.fbp(), a.fbc(), a.gaClientId(),
+                        a.landingPath(), c == null ? null : c.analytics(), c == null ? null : c.marketing(),
+                        c == null ? null : c.version()),
+                http.getHeader("User-Agent"),
+                // The host already matched one of the store's domains (TenantResolutionFilter): not shopper input.
+                "https://" + http.getServerName() + "/shipping", Instant.now());
     }
 }

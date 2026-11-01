@@ -22,6 +22,7 @@ public class CacheConfig {
     public static final String PRODUCTS_BY_ID = "products.byId";
     public static final String PRODUCTS_ADMIN = "products.admin";
     public static final String DASHBOARD = "dashboard";
+    public static final String MARKETING_TAGS = "marketing.tags";
 
     @Bean
     CacheManager cacheManager() {
@@ -35,6 +36,9 @@ public class CacheConfig {
         }
         manager.registerCustomCache(DASHBOARD, Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(120)).maximumSize(500).recordStats().build());
+        // Read on every storefront /tenant/config; evicted by IntegrationService on save and disconnect.
+        manager.registerCustomCache(MARKETING_TAGS, Caffeine.newBuilder()
+                .expireAfterWrite(Duration.ofSeconds(60)).maximumSize(1_000).recordStats().build());
         return new com.sixpack.shared.tenant.TenantCacheManager(manager);
     }
 }

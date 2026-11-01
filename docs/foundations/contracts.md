@@ -10,7 +10,7 @@ The collection names and field names match the old Mongoose models, so existing 
 |---|---|
 | `users` | `_id: string` (legacy: string ids like Firebase uids or ObjectId hex), `name`, `email` (unique), `password` (bcrypt, never serialised), `photo`, `role: "admin"\|"user"`, `gender: "male"\|"female"`, `dob: Date`, `createdAt`, `updatedAt` |
 | `products` | `_id: ObjectId`, `name`, `photo` (relative path `uploads/yyyy/mm/dd/<uuid>.<ext>` or absolute URL), `price: number`, `stock: int ≥ 0`, `category` (lower-case, trimmed), `createdAt`, `updatedAt`, `countryOfOrigin?`, `lowStockThreshold?`, `sizeChart?{columns, rows, note}`, `variants?{axes[], items[{variantId, sku, options[{name,value}], price, mrp, stock, status}]}` (absent unless the product has variants; sparse unique index on `variants.items.sku`), `rev?` (bumped by every stock change) |
-| `orders` | `_id`, `shippingInfo{address, city, state, country, pinCode}`, `user: string` (user id), `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: Processing\|Shipped\|Delivered`, `orderItems[{name, photo, price, quantity, productId, sku?, taxRate?, variantId?, variantLabel?, options?[{name,value}]}]`, `payment{provider, orderId, paymentId, status, amount, currency, paidAt, method?, failureReason?, refundedPaise?, refunds?[{providerRefundId, amount, reason, status, actor, at}]}` (new, optional; the refund fields are changed only by atomic updates, and `refundedPaise` includes refunds still in flight), `termsVersion` (new, optional: the Terms version in force when the order was placed), `createdAt`, `updatedAt` |
+| `orders` | `_id`, `shippingInfo{address, city, state, country, pinCode}`, `user: string` (user id), `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: Processing\|Shipped\|Delivered`, `orderItems[{name, photo, price, quantity, productId, sku?, taxRate?, variantId?, variantLabel?, options?[{name,value}]}]`, `payment{provider, orderId, paymentId, status, amount, currency, paidAt, method?, failureReason?, refundedPaise?, refunds?[{providerRefundId, amount, reason, status, actor, at}]}` (new, optional; the refund fields are changed only by atomic updates, and `refundedPaise` includes refunds still in flight), `termsVersion` (new, optional: the Terms version in force when the order was placed), `createdAt`, `updatedAt`. `attribution?` `{utmSource, utmMedium, utmCampaign, utmContent, utmTerm, gclid, fbclid, fbp, fbc, gaClientId, landingPath, userAgent, sourceUrl, consent{analytics, marketing, version, at}}` (all optional but `consent`; set at checkout, erased with the account, never returned) |
 | `coupons` | `_id`, `coupon` (unique code), `amount` (flat ₹ discount; a percent for PERCENT), plus the optional rule fields `type, maxDiscount, minOrderValue, startsAt, expiresAt, usageLimit, usedCount, perUserLimit, active`, and `productIds[], categories[], firstOrderOnly` (scope; absent means everything) |
 | `payment_intents` (new) | `_id`, `userId`, `providerOrderId` (unique), `items[{productId, name, photo, price, quantity, variantId?, variantLabel?, options?}]`, `coupon`, `subtotal`, `tax`, `shippingCharges`, `discount`, `total`, `status: CREATED\|CONSUMED`, `createdAt` (TTL index: 24 h) |
 | `consents` (new, append-only) | `_id`, `userId`, `expireAt?` (set to now + 3 years when the account is erased; a TTL index then deletes the rows), `purpose: terms\|privacy\|marketing_email\|admin_aup`, `granted`, `policyVersion`, `source: register\|reprompt\|settings`, `ipHash` (salted SHA-256), `userAgent`, `createdAt`. Never updated or deleted: a withdrawal is a new row. A user's state is the newest row per purpose |
@@ -19,6 +19,9 @@ The collection names and field names match the old Mongoose models, so existing 
 | `password_reset_tokens` (new) | `_id`, `userId`, `tokenHash` (SHA-256), `expiresAt` (TTL index), `used` |
 | `daily_sales` (new, analytics step 2) | `_id`, `tenantId`, `day` (store-local `YYYY-MM-DD`), `currency`, `timeZone`, `orders`, `grossRevenue`, `refunds`, `netRevenue`, `discount`, `tax`, `units`, `newCustomers`, `computedAt`; unique (`tenantId`, `currency`, `day`). Counts and sums only, no customer data. Days with no orders and no refunds have no row |
 | `daily_sales_state` (new) | `_id`, `tenantId`, `key` (= tenantId, unique), `through` (last complete day), `timeZone`, `computedAt` |
+| `marketing_integrations` (new, marketing phase 1, ADR-028) | `_id`, `tenantId`, `provider` (Google or Meta), `browser{ga4MeasurementId?, adsConversionId?, adsPurchaseLabel?, gtmContainerId?}` (Google) or `browser{pixelId}` (Meta), `createdAt`, `updatedAt`; unique (`tenantId`, `provider`). A row exists only while at least one ID is set, so a store with no row for a provider is `NOT_CONNECTED`. Public IDs only; secrets, feed token, outbox and daily spend come in later phases (design spec §5). Phase 3 adds `server{enabled, testEventCode?}`, `secrets{server{keyId, iv, ciphertext}}` (AES-256-GCM, ADR-029; never returned or exported), `lastError?{at, code, message}`, `lastSuccessAt?` |
+| `marketing_settings` (new, marketing phase 2) | `_id` (= `tenantId`, so one row per store), `tenantId`, `feedEnabled`, `feedToken` (32 random bytes, URL-safe base64 without padding; created on the first enable, kept while the feed is off, replaced by "New URL"), `updatedAt`. The token is a credential: it never appears in audit entries, logs, traces, error messages or the offboarding export (`TenantExport` leaves the field out). Purged with the store |
+| `marketing_outbox` (new, marketing phase 3) | `_id`, `tenantId`, `provider` (META\|GOOGLE), `eventId` (= order `_id`), `eventName` ("purchase"), `orderId`, `orderNumber`, `status` PENDING\|SENDING\|SENT\|FAILED\|SKIPPED, `attempts`, `nextAttemptAt`, `leaseUntil?`, `claimToken?`, `error?` (delivery code), `createdAt` (TTL 30 d), `updatedAt`; unique (`tenantId`, `provider`, `eventId`). No personal data: the payload is built from the order when sent. Not exported; purged with the store |
 
 Pricing rule (store rules from `StoreConfig`, ADR-023): `subtotal = Σ price×qty`, `shipping = subtotal > freeShippingAbove ? 0 : shippingFee` (platform default 1000 / 200), `tax = Σ per rate round(group × rate)` with the store's `defaultTaxRate` (platform default 18) for products without their own rate, stamped on each order line at checkout,
 `discount = min(coupon.amount, subtotal)`, `total = subtotal + tax + shipping − discount`.
@@ -97,7 +100,7 @@ Optional catalogue fields on `POST /new` and `PUT /{id}`:
 ### Order — `/order`
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `POST /checkout` | 👤 | `{items:[{productId, variantId?, quantity}], coupon?}`. `variantId` is required for a product with variants and rejected (400) for one without; the same product in two variants is two lines; a disabled or deleted variant is 400, a sold-out one 409 | 201 `{success, checkout:{providerOrderId, provider, key, amount (paise), currency, subtotal, tax, shippingCharges, discount, total}}`. 403 if the user hasn't accepted the current Terms (checked before any money moves) |
+| `POST /checkout` | 👤 | `{items:[{productId, variantId?, quantity}], coupon?, attribution?}` (`attribution`: see Marketing server events; bad values are dropped, never a 400). `variantId` is required for a product with variants and rejected (400) for one without; the same product in two variants is two lines; a disabled or deleted variant is 400, a sold-out one 409 | 201 `{success, checkout:{providerOrderId, provider, key, amount (paise), currency, subtotal, tax, shippingCharges, discount, total}}`. 403 if the user hasn't accepted the current Terms (checked before any money moves) |
 | `POST /new` | 👤 | `{providerOrderId, paymentId, signature, shippingInfo:{address, city, state, country, pinCode, name?, phone?}, billingInfo?:{same shape}, notes?}` (`phone` is 10–13 digits with an optional `+`; `notes` ≤ 500) | 201 `{success, message, orderId}`. 400 on invalid input, and the payment intent is **not** consumed, so the customer can fix it and retry |
 | `GET /my` | 👤 | — | `{success, orders}` (own orders only) |
 | `GET /all` | 🛡 | `?status=` | `{success, orders}` (`user` is `{_id, name}`) |
@@ -149,7 +152,7 @@ Removed: `POST /payment/create-order` and `POST /payment/verify`. They're replac
 `USER_ERASED`, `ACCOUNT_DELETED_SELF`, `PROFILE_UPDATED`, `ADDRESS_ADDED/UPDATED/DELETED`, `LOGIN_SUCCEEDED`,
 `LOGIN_FAILED`, `LOGIN_BLOCKED_SUSPENDED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`, `EMAIL_VERIFIED`, `CONSENT_CHANGED`,
 `TENANT_CREATED`, `TENANT_UPDATED`, `TENANT_STATUS_CHANGED`, `TENANT_EXPORTED`, `TENANT_PURGED`, `STORE_SETTINGS_UPDATED`,
-`ANALYTICS_EXPORTED`. Only successful refunds are recorded as `ORDER_REFUNDED`; a failed one is kept on the order
+`ANALYTICS_EXPORTED`, `INTEGRATION_UPDATED`, `INTEGRATION_DISCONNECTED`, `INTEGRATION_TESTED`. Only successful refunds are recorded as `ORDER_REFUNDED`; a failed one is kept on the order
 (`payment.failureReason`), not in the log.
 
 Product-variant writes (`replaceVariants`, `adjustVariantStock`) are audited as `PRODUCT_UPDATED`, with `variantPrices`
@@ -169,13 +172,13 @@ whose domain it arrived on (`X-Forwarded-Host`). An unknown host is 404 `Store n
 
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}, features:{variants}, commerce:{shippingFee, freeShippingAbove, defaultTaxRate, minimumAge}, timeZone}}`. `features`, `commerce` and `timeZone` are the effective values (the store's own, else the platform default) |
+| `GET /tenant/config` | 🔓 | — | `{success, tenant:{slug, name, theme, locale, currency, storefront:{logoUrl?, legalName?, address?, email?, phone?, grievanceOfficer?, grievanceEmail?}, features:{variants}, commerce:{shippingFee, freeShippingAbove, defaultTaxRate, minimumAge}, timeZone, marketing?:{tags:{ga4, adsId, adsPurchaseLabel, gtm, metaPixel}}}}`. `features`, `commerce` and `timeZone` are the effective values (the store's own, else the platform default). `marketing` is present only when the store's `marketing` switch is on and at least one tag ID is set; otherwise the key is absent. It holds public IDs only, never a secret |
 | `GET /store/settings` | 🛡 | — | `{success, settings:{commerce:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge}, catalog:{pageSize, lowStockThreshold}, invoice:{gstin, state}, regional:{timeZone}, storefront:{…}}, effective:{shippingFee, freeShippingAbove, defaultTaxRate, maxCouponAmount, minimumAge, pageSize, lowStockThreshold, timeZone}, defaults:{same keys}}`. `defaults` is what each rule returns to when cleared. `settings` holds only the store's own values (null = platform default `app.store.defaults.*`) |
 | `PUT /store/settings` | 🛡 | any of `commerce, catalog, invoice, regional, storefront`; a group sent replaces the store's previous one, a group left out is kept, a null field returns to the platform default | same as GET. 400 out of range (shipping 0–1,000,000, free-shipping level 0–10,000,000, GST 0–100, coupon cap 1–10,000,000, minimum age 18–100, page size 1–100, low-stock 0–1,000,000), unknown time zone, malformed GSTIN, invalid storefront email/URL. Audited as `STORE_SETTINGS_UPDATED` in the store's log |
 | `POST /platform/login` | 🔓 (rate-limited) | `{email, password}` | `{success, message, token}`. Platform credentials only; the token has role `PLATFORM_ADMIN` and no tenant |
 | `GET /platform/tenants`, `GET /platform/tenants/{id}` | 🏛 | — | `{success, tenants}` / `{success, tenant}` |
 | `POST /platform/tenants` | 🏛 | `{slug, name, domains[1..20], theme?, locale?, currency?, legal?, payment?, mail?, storefront?, features?, limits?, trial?, admin?:{name,email,password}}`. With `trial: true` the store starts as `TRIAL` with `trialEndsAt` = now + `TENANT_TRIAL_LENGTH` (14 days) | 201 `{success, message, tenant}`. 400 invalid slug/domain/theme token/URL/email, 409 slug or domain already used. With `admin`, the first administrator of that tenant is created (and the tenant removed again if that fails) |
-| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `limits: {products?, uploadBytes?, requestsPerMinute?}` sets the store's own limits (null or omitted field = platform default `TENANT_MAX_PRODUCTS` 5000, `TENANT_MAX_UPLOADS` 2GB, `TENANT_REQUESTS_PER_MINUTE` 600; non-positive is 400). `features` maps a switch (`variants`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
+| `PUT /platform/tenants/{id}` | 🏛 | any of `name, domains, theme, locale, currency, legal, payment, mail, storefront, features` (omitted keeps; a nested object replaces the previous one). `limits: {products?, uploadBytes?, requestsPerMinute?}` sets the store's own limits (null or omitted field = platform default `TENANT_MAX_PRODUCTS` 5000, `TENANT_MAX_UPLOADS` 2GB, `TENANT_REQUESTS_PER_MINUTE` 600; non-positive is 400). `features` maps a switch (`variants`, `marketing`) to true/false; `{}` returns all to the platform default (`app.features.defaults`); an unknown name is 400 | `{success, message, tenant}` (`tenant.features` holds only the store's own switches) |
 | `POST /platform/tenants/{id}/suspend` / `/activate` / `/cancel` | 🏛 | — | `{success, message, tenant}`. `activate` also ends a trial. `cancel` (the owner is leaving) closes the store like `suspend`; it can be activated again or offboarded. The default tenant cannot be suspended or cancelled |
 | Tenant statuses | | | `TRIAL` and `ACTIVE` serve the storefront; `SUSPENDED`, `CANCELLED`, `SCHEDULED_FOR_DELETION` answer 403 "This store is currently unavailable"; `DELETED` stores have no domains (404). A trial past `trialEndsAt` is suspended by the hourly job (audited with actor `SYSTEM`) |
 | `GET /platform/tenants/{id}/export` | 🏛 | — | `application/zip` download `<slug>-export.zip`: `manifest.json` (tenant, `exportedAt`, `counts` per collection, `omitted`), `<collection>.json` (Mongo relaxed Extended JSON array) for every tenant collection except `password_reset_tokens` and `payment_intents`, `users` without `password`, and every uploaded file under its public path (`uploads/<tenantId>/…`). Audited as `TENANT_EXPORTED` |
@@ -189,6 +192,172 @@ customer) are refused on `/platform/**`.
 `tenant.payment = {provider (razorpay|fake), keyId, secretRef}` (the secret is the environment entry `TENANT_SECRET_<secretRef>`),
 `tenant.mail = {baseUrl?}` (reset links; default `https://<first domain>`). A tenant other than the default with no payment account
 gets 503 `Payments are not configured for this store` at checkout. Theme tokens are CSS custom properties (`--name`: value).
+
+### Marketing — `/admin/marketing` (phase 1, ADR-028)
+Store owners save the public tag IDs of their Google and Meta accounts. Every route: 🛡 tenant `ADMIN` only (the
+admin-agreement 403 above applies), **404 when the store's `marketing` switch is off** (platform default off).
+`{provider}` is `google` or `meta`; anything else is 404.
+
+An integration is `{provider, status, browser, updatedAt}`. `status` is `NOT_CONNECTED` or `ACTIVE` in phase 1.
+`browser` is `{ga4MeasurementId, adsConversionId, adsPurchaseLabel, gtmContainerId}` for `google` and `{pixelId}` for
+`meta`; unset fields are `null`. `updatedAt` is ISO-8601 UTC, or `null` when not connected.
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /admin/marketing` | 🛡 | — | `{success:true, integrations:[google, meta], feed:{enabled, url}}`: always both integrations, `google` first; `feed` as in "Marketing product feed" below |
+| `PUT /admin/marketing/{provider}` | 🛡 | `{browser:{…}}` with that provider's fields | `{success:true, integration}`. Values are trimmed and blank becomes `null`; all `null` deletes the store's row and returns `NOT_CONNECTED`. 400 `{success:false, message:"<field>: <reason>"}` for a value that fails its pattern, and for `adsPurchaseLabel` without `adsConversionId`. Audited as `INTEGRATION_UPDATED` |
+| `DELETE /admin/marketing/{provider}` | 🛡 | — | `{success:true, integration:{provider, status:"NOT_CONNECTED", browser:{all null}, updatedAt:null}}`. Audited as `INTEGRATION_DISCONNECTED` |
+
+ID patterns, checked before saving because the IDs are written into a `<script>` call: `ga4MeasurementId`
+`^G-[A-Z0-9]{4,12}$`, `adsConversionId` `^AW-\d{6,12}$`, `adsPurchaseLabel` `^[A-Za-z0-9_-]{1,40}$`, `gtmContainerId`
+`^GTM-[A-Z0-9]{4,10}$`, `pixelId` `^\d{10,20}$`.
+
+Audit: entity type `marketing_integration`, entity id = the provider (`google`/`meta`), with a before/after diff of the
+`browser` fields.
+
+Storefront: the tags come from `GET /tenant/config` (`marketing.tags`), so the storefront makes no extra call.
+Only storefront routes load tags. GA4 loads after analytics consent; Google Ads, GTM and the Meta Pixel after marketing
+consent; Google Consent Mode v2 starts `denied` and is updated from the banner. Events: `view_item`, `add_to_cart`,
+`begin_checkout`, `purchase` (Meta: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`); the purchase event id
+is the order `_id`. The admin and the storefront are one SPA behind `ecommerce-frontend/nginx.conf.template`, so the
+CSP additions for the Google and Meta hosts apply to both.
+
+**Call budgets:**
+
+| Screen / action | Calls | Budget |
+|---|---|---|
+| Admin → Marketing, first load | `GET /admin/marketing` | 1 |
+| Save a provider | `PUT /admin/marketing/{provider}` (returns the updated integration) | 1 |
+| Disconnect a provider | `DELETE /admin/marketing/{provider}` | 1 |
+| Storefront, first load | `marketing.tags` inside the existing `GET /tenant/config` | +0 |
+
+Product feed and server events: see the next two sections. OAuth comes in phase 4.
+
+### Marketing product feed (phase 2)
+One feed per store that Google Merchant Center and the Meta catalogue both read. The admin routes follow the
+Marketing rules above (🛡 tenant `ADMIN`, 404 while the store's `marketing` switch is off). `feed` is
+`{enabled, url}`; `url` is `https://<store's first domain>/api/v1/feeds/<token>/products.xml` while the feed is on,
+else `null` (also `null` for a store without a domain).
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `PUT /admin/marketing/feed` | 🛡 | `{enabled:boolean}` | `{success:true, feed}`. The first enable creates the token; turning the feed off keeps it, so turning it on again restores the same URL. 400 `enabled: is required`. Audited as `FEED_UPDATED` when `enabled` changes |
+| `POST /admin/marketing/feed/rotate` | 🛡 | — | `{success:true, feed}` with a new token; the old URL answers 404 at once. 400 `feed: enable it first` while the feed is off. Audited as `FEED_TOKEN_ROTATED` |
+| `GET /feeds/{token}/products.xml` | 🔓 | optional `If-None-Match` | 200 `application/rss+xml;charset=UTF-8`, Google RSS 2.0 with the `g:` namespace, `ETag`, `Cache-Control: max-age=900, public`; 304 when `If-None-Match` matches. An empty 404 unless `marketing` is on, the feed is on and `{token}` equals the token of the store the host resolves to (constant-time compare). 429 after 60 requests a minute from one client address on one store, whatever the token |
+
+Items: one per active variant (`g:item_group_id` = product id) or per product without variants, with `g:id` (product
+id, or `<product id>-<variant id>`, the variant part hashed when the whole would pass 50 characters), `title` (name,
+plus ` - <variant label>`; at most 150), `description` (HTML stripped; the name when empty; at most 5000), `link`
+(`https://<domain>/product/<id>`), `g:image_link` (absolute on the store's domain: the variant's colour image, else
+the product photo), `g:availability` (`in stock`/`out of stock`), `g:price` (`<amount with 2 decimals> <store
+currency>`), `g:brand` (the product's brand, else the store name) and `g:condition` `new`. Only `ACTIVE` products,
+oldest first, at most the store's product limit; products without an image and disabled variants are left out.
+Rendered one product at a time from a cursor with a streaming XML writer, cached per store for 15 minutes; a product
+change or a feed setting change drops the store's copy.
+
+Audit: entity type `marketing_settings`, entity id `feed`. `FEED_UPDATED` holds `enabled` before/after and `feedToken`
+only as "changed" (no value) when a token was created; `FEED_TOKEN_ROTATED` holds `feedToken` as "changed" only.
+
+**Call budgets:**
+
+| Screen / action | Calls | Budget |
+|---|---|---|
+| Admin → Marketing, first load | `feed` inside the existing `GET /admin/marketing` | +0 |
+| Turn the feed on or off | `PUT /admin/marketing/feed` (returns `feed`) | 1 |
+| New feed URL | `POST /admin/marketing/feed/rotate` (returns `feed`) | 1 |
+| Copy the feed URL | — (clipboard) | 0 |
+| Google / Meta fetch | `GET /feeds/{token}/products.xml`, 304 while unchanged | — |
+
+### Marketing server events — phase 3 (ADR-029)
+
+All routes: tenant `ADMIN` only (admin-agreement 403 applies), **404 when the store's `marketing` switch is off**, `{provider}` ∈ `google|meta` else 404.
+
+#### Integration card (every response that returns a card: `GET /admin/marketing`, `PUT`, `DELETE`)
+
+```json
+{
+  "provider": "meta",
+  "status": "NOT_CONNECTED | ACTIVE | ERROR",
+  "browser": { "pixelId": "123456789012345" },
+  "updatedAt": "2026-10-31T10:00:00.123Z",
+  "server": { "enabled": true, "hasSecret": true, "testEventCode": "TEST123", "available": true },
+  "lastError": { "at": "2026-10-31T10:05:00Z", "code": "AUTH_FAILED", "message": "Meta rejected the saved secret. Create a new one and save it here." },
+  "lastSuccessAt": "2026-10-31T10:00:30Z",
+  "deliveries": [ { "eventId": "6720f0c2a1b2c3d4e5f60718", "orderNumber": "ORD-20261031-K7M3QX", "eventName": "purchase",
+                    "status": "SENT", "attempts": 1, "createdAt": "…", "updatedAt": "…", "nextAttemptAt": null, "error": null } ]
+}
+```
+
+- The Phase 1 keys and their meaning are unchanged; the four new keys are always present (in this order, after `updatedAt`).
+- `server.testEventCode` is always `null` for `google`. `server.available` is `false` when the platform has no `MARKETING_KEYS`. A NOT_CONNECTED card has `server = {enabled:false, hasSecret:false, testEventCode:null, available}`, `lastError:null`, `lastSuccessAt:null`.
+- `status`: `NOT_CONNECTED` when no browser ID is saved; `ERROR` when `server.enabled` and `lastError` is newer than `lastSuccessAt` (or there was no success); else `ACTIVE`.
+- `deliveries`: the provider's newest 10 outbox rows, newest first (`createdAt` desc). `nextAttemptAt` only for `PENDING`, else `null`. `error` is `null` or `{code, message}`. **No email, phone, hash, IP, user agent or click ID ever appears.**
+- `status` of a delivery ∈ `PENDING | SENDING | SENT | FAILED | SKIPPED`. Error codes (closed list): retried — `TIMEOUT`, `RATE_LIMITED`, `PROVIDER_DOWN`; failed at once — `AUTH_FAILED`, `REJECTED`, `SECRET_UNREADABLE`; failed after 6 attempts — `GAVE_UP`; skipped — `NO_CONSENT`, `SERVER_OFF`, `TOO_OLD`, `ORDER_GONE`. `lastError.code` is one of `AUTH_FAILED | REJECTED | SECRET_UNREADABLE | GAVE_UP`.
+
+#### `PUT /api/v1/admin/marketing/{provider}`
+
+Body `{browser?: {…phase 1 fields}, server?: {enabled?: boolean, secret?: string, testEventCode?: string|null}}`.
+
+| Rule | Behaviour |
+|---|---|
+| neither `browser` nor `server` | 400 `browser: is required` (Phase 1 message) |
+| `browser` omitted | saved IDs kept |
+| `server` omitted | saved server settings (and secret) kept — a Phase 1 client never wipes them |
+| `server.enabled` missing | `false` |
+| `server.secret` missing or `null` | stored secret kept; a string replaces it (stripped) and clears `lastError` |
+| `server.testEventCode` | Meta only (ignored for Google); `null`/blank clears it; never used on real events, only by `/test` |
+| resulting browser IDs all empty (browser sent) | row deleted **including the secret** → NOT_CONNECTED (Phase 1 rule) |
+| invalid browser ID | Phase 1 400 messages, checked first |
+
+Exact 400 messages for `server`:
+
+| Condition | Message |
+|---|---|
+| `enabled:true` or a `secret` while the platform has no key | `server: not available on this platform yet` |
+| `enabled:true` or a `secret` without the provider's ID (saved or in this body); also `{server}` alone when nothing is saved | `server: save the Meta Pixel ID first` / `server: save the GA4 measurement ID first` |
+| `secret` not `^[A-Za-z0-9_-]{16,512}$` | `server.secret: use 16-512 letters, digits, _ or -` |
+| `enabled:true`, no stored and no new secret | `server.secret: is required to turn on server events` |
+| `testEventCode` (Meta) not `^[A-Za-z0-9]{1,32}$` | `server.testEventCode: use 1-32 letters or digits` |
+
+Audit `INTEGRATION_UPDATED` diff adds `serverEnabled` (values), `testEventCode` (values) and `secret` as a **redacted** change (`{field:"secret", redacted:true}`, no values — the audit UI renders it as "secret changed").
+
+#### `POST /api/v1/admin/marketing/{provider}/test` (new)
+
+No body. Sends one synthetic purchase with the stored secret: Meta with the saved `test_event_code`, GA4 to the debug endpoint. Never touches the outbox, `lastError` or the card status.
+
+- 200 `{success:true, test:{ok: boolean, code: string|null, message: string}}` for any provider answer (`code` = an error code above when `ok` is false).
+- 400 `server: not available on this platform yet` · `server: save the Meta Pixel ID first` / `server: save the GA4 measurement ID first` · `server.secret: save the secret first` · Meta only: `server.testEventCode: set a test event code from Events Manager first`.
+- 429 `Too many test events, please wait a minute` from the 11th call in one clock minute per store (per instance).
+- Audited `INTEGRATION_TESTED`, entity `marketing_integration:<provider>`, outcome `SUCCESS` when `ok`, else `FAILURE`; no changes.
+
+#### `GET /api/v1/admin/marketing/{provider}/deliveries?page=` (new)
+
+`page` ≥ 1 (default 1), 20 per page, newest first → 200 `{success:true, deliveries:[delivery], page, totalPage}`. Past the end → `deliveries: []`. Non-number or < 1 → 400 `page: must be a positive number`.
+
+#### `POST /api/v1/order/checkout` gains optional `attribution`
+
+```json
+{ "items": [...], "coupon": "…",
+  "attribution": { "utmSource": "…", "utmMedium": "…", "utmCampaign": "…", "utmContent": "…", "utmTerm": "…",
+                   "gclid": "…", "fbclid": "…", "fbp": "fb.1.1730000000000.1098115397", "fbc": "fb.1.1730000000000.IwAR…",
+                   "gaClientId": "1234567890.1730000000", "landingPath": "/product/lamp",
+                   "consent": { "analytics": true, "marketing": true, "version": "2026-10-31" } } }
+```
+
+- **Never fails a checkout.** No `consent` (or a `version` not `^[A-Za-z0-9.-]{1,20}$`) → the whole attribution is dropped. Each other bad value is dropped: `utm*` stripped of control characters, blank → absent, cut to 150; `gclid`/`fbclid` `^[A-Za-z0-9_.-]{1,512}$`; `fbp` `^fb\.\d\.\d{1,15}\.\d{1,25}$`; `fbc` `^fb\.\d\.\d{1,15}\.[A-Za-z0-9_.-]{1,512}$`; `gaClientId` `^\d{1,20}\.\d{1,20}$`; `landingPath` must start with one `/`, ≤ 512.
+- **Server-side consent enforcement:** `utm*`, click IDs, `fbp`/`fbc` kept only when `consent.marketing`; `gaClientId` only when `consent.analytics`; `landingPath` when either. With marketing consent the server also records the request's `User-Agent` (≤ 512) and `sourceUrl = https://<store host>/shipping`. No IP is stored.
+- The server stamps `consent.at`. The response is unchanged. Order JSON (`GET /order/…`) does **not** expose `attribution`.
+- Erasure (`DELETE /user/me`, admin user delete) removes `attribution` from that user's orders.
+
+#### Call budgets
+
+| Screen / action | Calls | Budget |
+|---|---|---|
+| Admin → Marketing first load (cards incl. server settings and last 10 deliveries each) | `GET /admin/marketing` | 1 |
+| Save server settings | `PUT /admin/marketing/{provider}` with `{server}` (returns the card) | 1 |
+| Send test event | `POST /admin/marketing/{provider}/test` | 1 |
+| Older deliveries | `GET /admin/marketing/{provider}/deliveries?page=` | 1 per page |
+| Checkout | `attribution` inside the existing `POST /order/checkout` | +0 |
 
 ### Dashboard — `/dashboard` (🛡, all accept `?productId=&category=&userId=`)
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`

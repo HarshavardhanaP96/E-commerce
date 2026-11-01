@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contrastRatio } from "../utils/contrast";
-import { applyTheme } from "./tenant";
+import { configureTracking } from "../utils/tracking";
+import { applyTenantConfig, applyTheme } from "./tenant";
+
+vi.mock("../utils/tracking", () => ({ configureTracking: vi.fn() }));
 
 const sheet = () => document.getElementById("tenant-theme")?.textContent ?? "";
 const token = (name: string) => new RegExp(`${name}: (#[0-9a-f]{6});`).exec(sheet())?.[1];
@@ -57,5 +60,14 @@ describe("applyTheme", () => {
     expect(sheet()).not.toContain("#111111");
     applyTheme({});
     expect(document.getElementById("tenant-theme")).toBeNull();
+  });
+});
+
+describe("applyTenantConfig", () => {
+  it("hands the store's marketing tags to the tag loader, and none when the config has no marketing key", () => {
+    applyTenantConfig({ slug: "s", name: "Shop", theme: {}, marketing: { tags: { ga4: "G-AB12CD3" } } });
+    expect(configureTracking).toHaveBeenLastCalledWith({ ga4: "G-AB12CD3" });
+    applyTenantConfig({ slug: "s", name: "Shop", theme: {} });
+    expect(configureTracking).toHaveBeenLastCalledWith(undefined);
   });
 });

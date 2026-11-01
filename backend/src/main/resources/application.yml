@@ -61,6 +61,27 @@ app:
     # Platform default for each per-store feature switch (a platform admin can override it per store).
     defaults:
       variants: ${app.products.variants-enabled}
+      # Admin → Marketing (Google and Meta tags). Off until a platform admin turns it on for a store.
+      marketing: false
+  marketing:
+    # Encryption keys for store owners' marketing secrets (ADR-029): "k1:<base64 of 32 bytes>,k0:<older>", newest
+    # first. Empty: server-side conversions are unavailable (fail closed); browser tags and the feed still work.
+    keys: ${MARKETING_KEYS:}
+    # Cookie-notice version from which shoppers are told that Meta gets their hashed email and phone (policies.ts).
+    pii-consent-version: "2026-10-31"
+    # Prefix for 10-digit phone numbers without a country code (India only for now, design Q6).
+    calling-code: "91"
+    dispatch-interval: PT30S
+    sweep-interval: PT5M
+    breaker-open-for: PT60S
+    meta:
+      base-url: https://graph.facebook.com
+      api-version: v25.0
+    google:
+      base-url: https://www.google-analytics.com
+    http:
+      connect-timeout: 2s
+      read-timeout: 5s
   legal:
     # Effective date of the policy text users must have accepted. Bump only for a material change:
     # every logged-in user is asked to accept again (docs/foundations/compliance-consent.md §6).
