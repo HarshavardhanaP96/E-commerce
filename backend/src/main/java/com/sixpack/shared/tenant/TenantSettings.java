@@ -10,6 +10,9 @@ public interface TenantSettings {
     /** The tenant's slug; the default tenant is the only one allowed to fall back to platform payment keys. */
     String slug();
 
+    /** The store's display name, as shoppers see it. */
+    String name();
+
     boolean isDefaultTenant();
 
     LegalSettings legal();

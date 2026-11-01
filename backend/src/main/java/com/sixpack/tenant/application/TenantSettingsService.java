@@ -31,6 +31,11 @@ class TenantSettingsService implements TenantSettings {
     }
 
     @Override
+    public String name() {
+        return tenant().name();
+    }
+
+    @Override
     public boolean isDefaultTenant() {
         return tenant().slug().equals(props.defaultSlug());
     }

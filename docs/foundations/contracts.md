@@ -20,6 +20,7 @@ The collection names and field names match the old Mongoose models, so existing 
 | `daily_sales` (new, analytics step 2) | `_id`, `tenantId`, `day` (store-local `YYYY-MM-DD`), `currency`, `timeZone`, `orders`, `grossRevenue`, `refunds`, `netRevenue`, `discount`, `tax`, `units`, `newCustomers`, `computedAt`; unique (`tenantId`, `currency`, `day`). Counts and sums only, no customer data. Days with no orders and no refunds have no row |
 | `daily_sales_state` (new) | `_id`, `tenantId`, `key` (= tenantId, unique), `through` (last complete day), `timeZone`, `computedAt` |
 | `marketing_integrations` (new, marketing phase 1, ADR-028) | `_id`, `tenantId`, `provider` (Google or Meta), `browser{ga4MeasurementId?, adsConversionId?, adsPurchaseLabel?, gtmContainerId?}` (Google) or `browser{pixelId}` (Meta), `createdAt`, `updatedAt`; unique (`tenantId`, `provider`). A row exists only while at least one ID is set, so a store with no row for a provider is `NOT_CONNECTED`. Public IDs only; secrets, feed token, outbox and daily spend come in later phases (design spec §5) |
+| `marketing_settings` (new, marketing phase 2) | `_id` (= `tenantId`, so one row per store), `tenantId`, `feedEnabled`, `feedToken` (32 random bytes, URL-safe base64 without padding; created on the first enable, kept while the feed is off, replaced by "New URL"), `updatedAt`. The token is a credential: it never appears in audit entries, logs, traces, error messages or the offboarding export (`TenantExport` leaves the field out). Purged with the store |
 
 Pricing rule (store rules from `StoreConfig`, ADR-023): `subtotal = Σ price×qty`, `shipping = subtotal > freeShippingAbove ? 0 : shippingFee` (platform default 1000 / 200), `tax = Σ per rate round(group × rate)` with the store's `defaultTaxRate` (platform default 18) for products without their own rate, stamped on each order line at checkout,
 `discount = min(coupon.amount, subtotal)`, `total = subtotal + tax + shipping − discount`.
@@ -202,7 +203,7 @@ An integration is `{provider, status, browser, updatedAt}`. `status` is `NOT_CON
 
 | Method & path | Auth | Request | Response |
 |---|---|---|---|
-| `GET /admin/marketing` | 🛡 | — | `{success:true, integrations:[google, meta]}`: always both, `google` first |
+| `GET /admin/marketing` | 🛡 | — | `{success:true, integrations:[google, meta], feed:{enabled, url}}`: always both integrations, `google` first; `feed` as in "Marketing product feed" below |
 | `PUT /admin/marketing/{provider}` | 🛡 | `{browser:{…}}` with that provider's fields | `{success:true, integration}`. Values are trimmed and blank becomes `null`; all `null` deletes the store's row and returns `NOT_CONNECTED`. 400 `{success:false, message:"<field>: <reason>"}` for a value that fails its pattern, and for `adsPurchaseLabel` without `adsConversionId`. Audited as `INTEGRATION_UPDATED` |
 | `DELETE /admin/marketing/{provider}` | 🛡 | — | `{success:true, integration:{provider, status:"NOT_CONNECTED", browser:{all null}, updatedAt:null}}`. Audited as `INTEGRATION_DISCONNECTED` |
 
@@ -229,7 +230,42 @@ CSP additions for the Google and Meta hosts apply to both.
 | Disconnect a provider | `DELETE /admin/marketing/{provider}` | 1 |
 | Storefront, first load | `marketing.tags` inside the existing `GET /tenant/config` | +0 |
 
-Later phases (feed, test event, delivery log, OAuth) add endpoints listed in the design spec §7.
+Later phases (test event, delivery log, OAuth) add endpoints listed in the design spec §7.
+
+### Marketing product feed (phase 2)
+One feed per store that Google Merchant Center and the Meta catalogue both read. The admin routes follow the
+Marketing rules above (🛡 tenant `ADMIN`, 404 while the store's `marketing` switch is off). `feed` is
+`{enabled, url}`; `url` is `https://<store's first domain>/api/v1/feeds/<token>/products.xml` while the feed is on,
+else `null` (also `null` for a store without a domain).
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `PUT /admin/marketing/feed` | 🛡 | `{enabled:boolean}` | `{success:true, feed}`. The first enable creates the token; turning the feed off keeps it, so turning it on again restores the same URL. 400 `enabled: is required`. Audited as `FEED_UPDATED` when `enabled` changes |
+| `POST /admin/marketing/feed/rotate` | 🛡 | — | `{success:true, feed}` with a new token; the old URL answers 404 at once. 400 `feed: enable it first` while the feed is off. Audited as `FEED_TOKEN_ROTATED` |
+| `GET /feeds/{token}/products.xml` | 🔓 | optional `If-None-Match` | 200 `application/rss+xml;charset=UTF-8`, Google RSS 2.0 with the `g:` namespace, `ETag`, `Cache-Control: max-age=900, public`; 304 when `If-None-Match` matches. An empty 404 unless `marketing` is on, the feed is on and `{token}` equals the token of the store the host resolves to (constant-time compare). 429 after 60 requests a minute from one client address on one store, whatever the token |
+
+Items: one per active variant (`g:item_group_id` = product id) or per product without variants, with `g:id` (product
+id, or `<product id>-<variant id>`, the variant part hashed when the whole would pass 50 characters), `title` (name,
+plus ` - <variant label>`; at most 150), `description` (HTML stripped; the name when empty; at most 5000), `link`
+(`https://<domain>/product/<id>`), `g:image_link` (absolute on the store's domain: the variant's colour image, else
+the product photo), `g:availability` (`in stock`/`out of stock`), `g:price` (`<amount with 2 decimals> <store
+currency>`), `g:brand` (the product's brand, else the store name) and `g:condition` `new`. Only `ACTIVE` products,
+oldest first, at most the store's product limit; products without an image and disabled variants are left out.
+Rendered one product at a time from a cursor with a streaming XML writer, cached per store for 15 minutes; a product
+change or a feed setting change drops the store's copy.
+
+Audit: entity type `marketing_settings`, entity id `feed`. `FEED_UPDATED` holds `enabled` before/after and `feedToken`
+only as "changed" (no value) when a token was created; `FEED_TOKEN_ROTATED` holds `feedToken` as "changed" only.
+
+**Call budgets:**
+
+| Screen / action | Calls | Budget |
+|---|---|---|
+| Admin → Marketing, first load | `feed` inside the existing `GET /admin/marketing` | +0 |
+| Turn the feed on or off | `PUT /admin/marketing/feed` (returns `feed`) | 1 |
+| New feed URL | `POST /admin/marketing/feed/rotate` (returns `feed`) | 1 |
+| Copy the feed URL | — (clipboard) | 0 |
+| Google / Meta fetch | `GET /feeds/{token}/products.xml`, 304 while unchanged | — |
 
 ### Dashboard — `/dashboard` (🛡, all accept `?productId=&category=&userId=`)
 - `GET /stats` → `{success, stats:{count{revenue,product,user,order}, changePercent{...same}, chart{order[6], revenue[6]}, categoryCount:[{category, percent}], genderRatio{male,female}, latestTransaction:[{_id, discount, amount, quantity, status}]}}`

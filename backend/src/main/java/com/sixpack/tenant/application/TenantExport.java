@@ -35,7 +35,8 @@ import org.springframework.stereotype.Service;
 public class TenantExport {
 
     static final Set<String> SKIPPED_COLLECTIONS = Set.of("password_reset_tokens", "payment_intents");
-    private static final Map<String, Set<String>> SKIPPED_FIELDS = Map.of("users", Set.of("password"));
+    private static final Map<String, Set<String>> SKIPPED_FIELDS = Map.of("users", Set.of("password"),
+            "marketing_settings", Set.of("feedToken"));
     private static final JsonWriterSettings JSON = JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build();
 
     private final TenantAdminService admin;
@@ -99,7 +100,8 @@ public class TenantExport {
             manifest.put("exportedAt", Instant.now().toString());
             manifest.put("counts", counts);
             manifest.put("files", files.size());
-            manifest.put("omitted", List.of("users.password", "password_reset_tokens", "payment_intents"));
+            manifest.put("omitted", List.of("users.password", "marketing_settings.feedToken", "password_reset_tokens",
+                    "payment_intents"));
             zip.putNextEntry(new ZipEntry("manifest.json"));
             zip.write(mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest));
             zip.closeEntry();

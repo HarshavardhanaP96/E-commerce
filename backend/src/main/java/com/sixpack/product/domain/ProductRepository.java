@@ -4,6 +4,7 @@ import com.sixpack.shared.PageResult;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /** Persistence port for products. */
@@ -18,6 +19,9 @@ public interface ProductRepository {
 
     /** Public (ACTIVE) products only. */
     List<Product> findLatest(int limit);
+
+    /** Public (ACTIVE) products, oldest first, at most {@code limit}, read through a cursor one at a time. */
+    void forEachPublic(int limit, Consumer<Product> action);
 
     /** Every product regardless of status (admin). */
     List<Product> findAll();
