@@ -84,6 +84,9 @@ class Ga4MeasurementProtocol implements MarketingDestination {
             // Never log e: its message holds the request URL, and with it the API secret.
             throw new DeliveryException(DeliveryCode.TIMEOUT, null, null);
         } catch (RestClientException e) {
+            if (ProviderHttp.timedOut(e)) {
+                throw new DeliveryException(DeliveryCode.TIMEOUT, null, null);
+            }
             log.warn("GA4 Measurement Protocol call failed: {}", e.getClass().getSimpleName());
             throw new DeliveryException(DeliveryCode.PROVIDER_DOWN, null, null);
         }

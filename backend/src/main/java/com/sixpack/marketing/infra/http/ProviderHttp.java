@@ -1,6 +1,7 @@
 package com.sixpack.marketing.infra.http;
 
 import com.sixpack.marketing.domain.DeliveryCode;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -41,6 +42,19 @@ public final class ProviderHttp {
         String s = secret == null || secret.isEmpty() ? text : text.replace(secret, "[hidden]");
         s = s.replaceAll("\\p{Cntrl}", " ").strip();
         return s.length() > 200 ? s.substring(0, 200) : s;
+    }
+
+    /**
+     * True when the call ran out of time. A read timeout while the status line or body is read surfaces as a plain
+     * RestClientException (not ResourceAccessException), so the cause chain is checked.
+     */
+    public static boolean timedOut(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof SocketTimeoutException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Status-only mapping; Meta refines its 4xx with error codes. */

@@ -92,6 +92,9 @@ class MetaConversionsApi implements MarketingDestination {
         } catch (ResourceAccessException e) {
             throw new DeliveryException(DeliveryCode.TIMEOUT, null, null);
         } catch (RestClientException e) {
+            if (ProviderHttp.timedOut(e)) {
+                throw new DeliveryException(DeliveryCode.TIMEOUT, null, null);
+            }
             log.warn("Meta Conversions API call failed: {}", e.getClass().getSimpleName());
             throw new DeliveryException(DeliveryCode.PROVIDER_DOWN, null, null);
         }
