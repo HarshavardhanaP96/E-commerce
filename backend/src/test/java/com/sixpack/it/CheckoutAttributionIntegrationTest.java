@@ -5,16 +5,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.sixpack.order.PaidOrders;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 /** POST /order/checkout with an attribution snapshot (marketing spec §5.5). */
 class CheckoutAttributionIntegrationTest extends IntegrationTest {
+
+    @Autowired
+    PaidOrders paidOrders;
 
     private String orderWith(String token, String product, Map<String, Object> attribution) throws Exception {
         Map<String, Object> checkout = new HashMap<>(Map.of("items", List.of(Map.of("productId", product, "quantity", 1))));
@@ -91,5 +97,33 @@ class CheckoutAttributionIntegrationTest extends IntegrationTest {
                 .get("attribution", Document.class);
         assertThat(a).doesNotContainKeys("utmSource", "gclid", "fbp", "gaClientId", "landingPath", "userAgent");
         assertThat(a.get("consent", Document.class).getBoolean("marketing")).isFalse();
+    }
+
+    @Test
+    void paidOrdersShowsAPaidOrderAndListsOnlyConsentedOnes() throws Exception {
+        String product = createProduct(adminToken(), "Lamp", 500, 5, "home");
+        String withConsent = orderWith(register("p@test.dev"), product, attribution(true, false));
+        String declined = orderWith(register("q@test.dev"), product, attribution(false, false));
+        String without = placeOrder(register("r@test.dev"), product);
+
+        var paid = paidOrders.find(withConsent).orElseThrow();
+        assertThat(paid.orderNumber()).startsWith("ORD-");
+        assertThat(paid.total()).isEqualTo(790.0);
+        assertThat(paid.tax()).isEqualTo(90.0);
+        assertThat(paid.shipping()).isEqualTo(200.0);
+        assertThat(paid.currency()).isEqualTo("INR");
+        assertThat(paid.email()).isEqualTo("p@test.dev");
+        assertThat(paid.lines()).singleElement().satisfies(l -> {
+            assertThat(l.productId()).isEqualTo(product);
+            assertThat(l.quantity()).isEqualTo(1);
+        });
+        assertThat(paid.attribution().consent().analytics()).isTrue();
+        assertThat(paid.placedAt()).isNotNull();
+        assertThat(paidOrders.find("6720f0c2a1b2c3d4e5f60718")).isEmpty();
+
+        Instant now = Instant.now();
+        assertThat(paidOrders.consentedBetween(now.minusSeconds(600), now.plusSeconds(60), 10))
+                .containsExactly(withConsent).doesNotContain(declined, without);
+        assertThat(paidOrders.consentedBetween(now.plusSeconds(60), now.plusSeconds(120), 10)).isEmpty();
     }
 }

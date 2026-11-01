@@ -1,5 +1,6 @@
 package com.sixpack.order.domain;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,4 +40,7 @@ public interface OrderRepository {
      * status stay for tax records.
      */
     void anonymiseShippingForUser(String userId);
+
+    /** Ids of paid orders created in [from, to) with an analytics or marketing consent, oldest first. */
+    List<String> findConsentedIdsBetween(Instant from, Instant to, int limit);
 }

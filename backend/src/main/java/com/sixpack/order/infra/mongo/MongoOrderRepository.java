@@ -13,6 +13,7 @@ import com.sixpack.order.domain.Refund;
 import com.sixpack.order.domain.Quote;
 import com.sixpack.order.domain.ShippingInfo;
 import com.sixpack.order.domain.StatusEntry;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
@@ -152,6 +153,16 @@ class MongoOrderRepository implements OrderRepository {
         mongo.updateFirst(byId, new Update().set("payment.status",
                 refunded >= totalPaise ? PaymentInfo.REFUNDED : PaymentInfo.PARTIALLY_REFUNDED),
                 OrderDocument.class);
+    }
+
+    @Override
+    public List<String> findConsentedIdsBetween(Instant from, Instant to, int limit) {
+        Query query = Query.query(Criteria.where("createdAt").gte(from).lt(to).and("payment.status").ne(null)
+                        .orOperator(Criteria.where("attribution.consent.analytics").is(true),
+                                Criteria.where("attribution.consent.marketing").is(true)))
+                .with(Sort.by("createdAt")).limit(limit);
+        query.fields().include("id");
+        return mongo.find(query, OrderDocument.class).stream().map(d -> d.id).toList();
     }
 
     @Override
