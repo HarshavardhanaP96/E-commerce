@@ -24,6 +24,7 @@ class PaymentIntentDocument extends TenantDocument {
     List<OrderDocument.OrderItemDoc> items;
     String coupon;
     String currency;
+    OrderDocument.AttributionDoc attribution;
     Double subtotal;
     Double tax;
     Double shippingCharges;

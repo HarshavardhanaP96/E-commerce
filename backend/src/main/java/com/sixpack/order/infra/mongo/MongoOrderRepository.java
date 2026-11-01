@@ -1,5 +1,6 @@
 package com.sixpack.order.infra.mongo;
 
+import com.sixpack.order.OrderAttribution;
 import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.order.domain.Customer;
 import com.sixpack.order.domain.Order;
@@ -55,6 +56,10 @@ class MongoOrderRepository implements OrderRepository {
                 : d.statusHistory().stream().map(MongoOrderRepository::toDoc).toList();
         doc.couponCode = d.couponCode();
         doc.notes = d.notes();
+        // Written once at checkout; erasure removes it with an atomic unset, never through save.
+        if (d.attribution() != null) {
+            doc.attribution = toDoc(d.attribution());
+        }
         doc.orderItems = order.items().stream().map(MongoOrderRepository::toDoc).toList();
         if (order.payment() != null) {
             // Refund state is changed only by the atomic refund operations below, so saving an order that was read
@@ -155,7 +160,7 @@ class MongoOrderRepository implements OrderRepository {
                 new Update()
                         .unset("shippingInfo.address").unset("shippingInfo.pinCode")
                         .unset("shippingInfo.name").unset("shippingInfo.phone")
-                        .unset("billingInfo").unset("customer").unset("notes"),
+                        .unset("billingInfo").unset("customer").unset("notes").unset("attribution"),
                 OrderDocument.class);
     }
 
@@ -214,7 +219,7 @@ class MongoOrderRepository implements OrderRepository {
                 d.customer == null ? null : new Customer(d.customer.name, d.customer.email, d.customer.phone),
                 d.statusHistory == null ? null : d.statusHistory.stream()
                         .map(e -> new StatusEntry(OrderStatus.fromWire(e.status), e.at, e.actor)).toList(),
-                d.couponCode, d.notes);
+                d.couponCode, d.notes, toDomain(d.attribution));
         List<OrderItem> items = d.orderItems == null ? List.of()
                 : d.orderItems.stream().map(MongoOrderRepository::toDomain).toList();
         return new Order(d.id, d.user, shipping, items,
@@ -246,5 +251,41 @@ class MongoOrderRepository implements OrderRepository {
 
     private static double nz(Double v) {
         return v == null ? 0 : v;
+    }
+
+    static OrderDocument.AttributionDoc toDoc(OrderAttribution a) {
+        if (a == null) {
+            return null;
+        }
+        OrderDocument.AttributionDoc d = new OrderDocument.AttributionDoc();
+        d.utmSource = a.utmSource();
+        d.utmMedium = a.utmMedium();
+        d.utmCampaign = a.utmCampaign();
+        d.utmContent = a.utmContent();
+        d.utmTerm = a.utmTerm();
+        d.gclid = a.gclid();
+        d.fbclid = a.fbclid();
+        d.fbp = a.fbp();
+        d.fbc = a.fbc();
+        d.gaClientId = a.gaClientId();
+        d.landingPath = a.landingPath();
+        d.userAgent = a.userAgent();
+        d.sourceUrl = a.sourceUrl();
+        d.consent = new OrderDocument.ConsentDoc();
+        d.consent.analytics = a.consent().analytics();
+        d.consent.marketing = a.consent().marketing();
+        d.consent.version = a.consent().version();
+        d.consent.at = a.consent().at();
+        return d;
+    }
+
+    static OrderAttribution toDomain(OrderDocument.AttributionDoc d) {
+        if (d == null || d.consent == null) {
+            return null;
+        }
+        return new OrderAttribution(d.utmSource, d.utmMedium, d.utmCampaign, d.utmContent, d.utmTerm, d.gclid,
+                d.fbclid, d.fbp, d.fbc, d.gaClientId, d.landingPath, d.userAgent, d.sourceUrl,
+                new OrderAttribution.Consent(Boolean.TRUE.equals(d.consent.analytics),
+                        Boolean.TRUE.equals(d.consent.marketing), d.consent.version, d.consent.at));
     }
 }
