@@ -13,7 +13,7 @@ Update the "Status" and "Pending" sections whenever something changes.
 | Tests | 756 backend, 189 frontend, lint and build green on the merged tree |
 | Security scan | gitleaks, semgrep, trivy: nothing new from this branch |
 | In `dev` | Yes, merged by pull request on 2026-11-01, before the browser check and owner decisions below |
-| Next | Owner decisions → server-events browser check → phases 4–5 once Google/Meta approve |
+| Next | Owner decisions → phases 4–5 once Google/Meta approve |
 
 The main checkout (`6Pack`, branch `chore/central-secrets`) holds the owner's own uncommitted audit-log
 changes. Do not touch, stash or commit them.
@@ -68,9 +68,13 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
       old URL; audit records for every change with the feed token redacted. Found and fixed on
       `fix/marketing-browser-check`: cards overlapping on short windows, and the CSP blocking
       `ad.doubleclick.net` for Google Ads.
-- [ ] **Not yet checked in a browser:** server events with `MARKETING_KEYS` set (save secrets, test button,
-      delivery log; without keys the page correctly says it isn't available), and a purchase event through a
-      real checkout.
+- [x] **Server events and a real purchase, 2026-11-01** (fake secrets, fake payment gateway). Secrets saved
+      and never returned by the API, audit or store export; test buttons give honest results (GA4 does not
+      check the secret, Meta rejected it); a gclid/fbclid visit with full consent placed an order: browser
+      `purchase` event with the order id, GA4 server event SENT on the first try, Meta FAILED once with
+      `AUTH_FAILED` (not retried), both shown in the delivery log.
+- [ ] **Checkout lands on the empty cart after paying** (`pages/shipping.tsx`: the "cart is empty → /cart"
+      effect races the navigation to `/order/:id`). Not marketing code; the order itself is placed.
 - [ ] **Owner decision: privacy version.** Phase 3 sends hashed email and phone to Meta. Decide whether to raise
       `LEGAL_PRIVACY_VERSION` (currently defaults to `2026-10-16`), which re-prompts existing users. The
       privacy policy (P2) and cookie notice (P6) text must mention advertising partners, see
