@@ -12,7 +12,7 @@ Update the "Status" and "Pending" sections whenever something changes.
 | Built | Phases 0–3 of 6 |
 | Tests | 756 backend, 189 frontend, lint and build green on the merged tree |
 | Security scan | gitleaks, semgrep, trivy: nothing new from this branch |
-| Pushed | No. Not in `dev` either |
+| Pushed | Yes, `origin/feat/marketing` (2026-11-01). Not in `dev`. GitHub has no `dev` branch yet, so the pushed branch also carries all of local `dev`'s unpushed history |
 | Next | Browser check → owner decisions → push → PR into `dev` |
 
 The main checkout (`6Pack`, branch `chore/central-secrets`) holds the owner's own uncommitted audit-log
@@ -72,9 +72,10 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 - [ ] **Owner decision: open questions Q1–Q6** (spec §10). They were filled with defaults, not answered:
       Google + Meta first; store `ADMIN` connects; paste-IDs before OAuth; platform registers its own
       Google/Meta apps; feature switch, no billing; India (DPDP) only.
-- [ ] **Push and open a PR** into `dev` (ask the owner first):
+- [x] Push `feat/marketing` (done 2026-11-01).
+- [ ] **Open a PR into `dev`** (ask the owner first). `dev` exists only locally, so it must be pushed first:
 
-      git -C ../6Pack-marketing push -u origin feat/marketing
+      git -C ../6Pack-dev push -u origin dev
       gh pr create --base dev --head feat/marketing
 
 ### Not started
