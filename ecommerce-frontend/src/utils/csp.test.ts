@@ -17,7 +17,8 @@ describe("nginx Content-Security-Policy", () => {
     ["script-src", ["https://*.googletagmanager.com", "https://www.googleadservices.com", "https://googleads.g.doubleclick.net",
       "https://www.google.com", "https://connect.facebook.net", "https://checkout.razorpay.com"]],
     ["connect-src", ["https://*.google-analytics.com", "https://*.analytics.google.com", "https://*.googletagmanager.com",
-      "https://*.g.doubleclick.net", "https://*.google.com", "https://pagead2.googlesyndication.com",
+      // Google Ads conversions also call ad.doubleclick.net, not only *.g.doubleclick.net.
+      "https://*.doubleclick.net", "https://*.google.com", "https://pagead2.googlesyndication.com",
       "https://www.facebook.com", "https://connect.facebook.net", "https://api.razorpay.com"]],
     ["frame-src", ["https://td.doubleclick.net", "https://www.googletagmanager.com", "https://checkout.razorpay.com"]],
   ])("%s allows the Google, Meta and Razorpay hosts", (name, hosts) => {

@@ -13,7 +13,7 @@ Update the "Status" and "Pending" sections whenever something changes.
 | Tests | 756 backend, 189 frontend, lint and build green on the merged tree |
 | Security scan | gitleaks, semgrep, trivy: nothing new from this branch |
 | In `dev` | Yes, merged by pull request on 2026-11-01, before the browser check and owner decisions below |
-| Next | Browser check → owner decisions → phases 4–5 once Google/Meta approve |
+| Next | Owner decisions → server-events browser check → phases 4–5 once Google/Meta approve |
 
 The main checkout (`6Pack`, branch `chore/central-secrets`) holds the owner's own uncommitted audit-log
 changes. Do not touch, stash or commit them.
@@ -61,10 +61,16 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 
 ### Still open (merged into `dev` without them)
 
-- [ ] **Browser check.** Nobody has clicked through it in a running app yet: cookie banner (accept / reject /
-      customise, tags load only after consent), Marketing page (save and remove IDs, validation errors),
-      feed card (turn on, copy URL, rotate token, open the XML), server-events section (save secrets, test
-      button, delivery log). Admin pages need a signed-in admin; the owner signs in.
+- [x] **Browser check, 2026-11-01** (local docker stack, Chromium). Passed: cookie banner (customise, saved
+      choice survives reload, footer reopens it); Consent Mode default-denied, GA4 only with analytics consent,
+      Ads and Meta Pixel only with marketing consent; tag form validation in the page and in the API (400 on a
+      bad pixel ID); feed on, XML with 27 items, ETag/304, wrong token 404, rotation asks first and kills the
+      old URL; audit records for every change with the feed token redacted. Found and fixed on
+      `fix/marketing-browser-check`: cards overlapping on short windows, and the CSP blocking
+      `ad.doubleclick.net` for Google Ads.
+- [ ] **Not yet checked in a browser:** server events with `MARKETING_KEYS` set (save secrets, test button,
+      delivery log; without keys the page correctly says it isn't available), and a purchase event through a
+      real checkout.
 - [ ] **Owner decision: privacy version.** Phase 3 sends hashed email and phone to Meta. Decide whether to raise
       `LEGAL_PRIVACY_VERSION` (currently defaults to `2026-10-16`), which re-prompts existing users. The
       privacy policy (P2) and cookie notice (P6) text must mention advertising partners, see
@@ -82,6 +88,10 @@ Config (`backend/src/main/resources/application.yml`, `app.marketing.*`):
 - **Phase 5, ad spend and return-on-ad-spend reporting** (`marketing_daily`). Depends on phase 4.
 
 ### Known limits
+
+- The platform admin turns Marketing on by editing the store's JSON (`"features": {"marketing": true}`) in
+  `/platform` → Edit; there is no toggle yet.
+- The feed URL shown in the admin is `https://<store domain>/…`, so on a local stack it lacks the `:8081` port.
 
 - CI's "Build, scan & push images" job fails on every branch: the repo has no registry login secrets for
   `docker/login-action`. Tests, lint, build and k8s validation pass.
