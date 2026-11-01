@@ -14,6 +14,7 @@ export const AUDIT_ACTIONS = [
   "TENANT_CREATED", "TENANT_UPDATED", "TENANT_STATUS_CHANGED",
   "STORE_SETTINGS_UPDATED", "ANALYTICS_EXPORTED",
   "INTEGRATION_UPDATED", "INTEGRATION_DISCONNECTED",
+  "INTEGRATION_TESTED",
 ] as const;
 
 export type AuditChange = { field: string; before?: unknown; after?: unknown; redacted: boolean };

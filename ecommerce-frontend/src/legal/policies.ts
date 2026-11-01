@@ -103,7 +103,7 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
   privacy: {
     slug: "privacy",
     title: "Privacy Policy",
-    updated: "2026-10-30",
+    updated: "2026-10-31",
     intro: `This notice explains what personal data ${b.legalName} collects, why, and the rights you have under the Digital Personal Data Protection Act, 2023. This notice is available in English or, on request, in any language listed in the Eighth Schedule to the Constitution.`,
     sections: [
       {
@@ -120,7 +120,7 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
         heading: "Who we share it with",
         body: [
           "Razorpay, to process payments. Our courier partners, who receive your name and delivery address to deliver orders. Our hosting and infrastructure providers, who store data on our behalf.",
-          "Advertising and analytics partners (Google and Meta), only if you allow analytics or marketing cookies and this shop uses their tools: the pages and products you view, what you add to your cart and your purchases (order number, amount and items), with an identifier stored in your browser. We don't send them your name, email, phone or address.",
+          "Advertising and analytics partners (Google and Meta), only if you allow analytics or marketing cookies and this shop uses their tools: the pages and products you view, what you add to your cart and your purchases (order number, amount and items), with an identifier stored in your browser. If you allow marketing cookies, the shop's server also sends each purchase to Meta with your email address and phone number in scrambled (hashed) form, so Meta can match it to your account. Google gets no email or phone. We never send your name or address.",
           "We don't sell your personal data. We share it with authorities only when the law requires it.",
         ],
       },
@@ -243,7 +243,7 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
   cookies: {
     slug: "cookies",
     title: "Cookie & Storage Notice",
-    updated: "2026-10-30",
+    updated: "2026-10-31",
     intro:
       "We store what the site needs to work. Analytics and marketing cookies are optional: they are used only if you allow them in the cookie banner, and you can change your choice at any time under Cookie settings at the bottom of every page.",
     sections: [
@@ -259,8 +259,8 @@ const build = (b: typeof BUSINESS): Record<PolicySlug, Policy> => ({
         heading: "Optional cookies, only with your consent",
         body: [
           "Functional: remembers preferences such as display settings. Off until you allow it.",
-          "Analytics: if this shop uses Google Analytics, Google sets cookies named _ga and _ga_… to count visits and see which products are viewed. Off until you allow it.",
-          "Marketing: if this shop advertises with Google Ads or Meta (Facebook, Instagram), their tags set cookies such as _gcl_au, _fbp and _fbc to measure which ads lead to purchases. Google and Meta may also use this to show you the shop's ads elsewhere. Off until you allow it.",
+          "Analytics: if this shop uses Google Analytics, Google sets cookies named _ga and _ga_… to count visits and see which products are viewed. Off until you allow it. With your consent the shop also reports each purchase to Google Analytics from its own server, using the same _ga identifier.",
+          "Marketing: if this shop advertises with Google Ads or Meta (Facebook, Instagram), their tags set cookies such as _gcl_au, _fbp and _fbc to measure which ads lead to purchases. Google and Meta may also use this to show you the shop's ads elsewhere. Off until you allow it. With your consent the shop also tells Meta about each purchase from its own server, with your email and phone hashed.",
         ],
       },
       {

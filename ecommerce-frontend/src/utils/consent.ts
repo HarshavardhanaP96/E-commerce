@@ -12,7 +12,7 @@ export type ConsentChoice = Record<ConsentCategory, boolean>;
 type Stored = ConsentChoice & { version: string; at: string };
 
 /** Bump together with the Cookie & Storage Notice's `updated` date: every shopper is asked again. */
-export const CONSENT_VERSION = "2026-10-30";
+export const CONSENT_VERSION = "2026-10-31";
 export const CONSENT_KEY = "consent";
 export const COOKIE_SETTINGS_EVENT = "cookie-settings:open";
 export const CATEGORIES: ConsentCategory[] = ["functional", "analytics", "marketing"];
