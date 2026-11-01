@@ -8,10 +8,12 @@ import com.sixpack.shared.tenant.TenantMongo;
 import com.sixpack.shared.tenant.TenantOwned;
 import com.sixpack.shared.tenant.TenantRef;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -186,5 +188,37 @@ class TenantMongoIntegrationTest extends IntegrationTest {
                     Probe.class)).isInstanceOf(IllegalArgumentException.class);
         });
         assertThat(List.of(mongo.getCollection("tenant_probe").find().first().get("tenantId"))).containsExactly("tenant-a");
+    }
+
+    @Test
+    void findAndModifyOnlyTouchesTheCurrentTenantsDocuments() {
+        saveAs(A, "a-row", "x");
+        saveAs(B, "b-row", "x");
+
+        Optional<Probe> claimed = TenantContext.callAs(A, () -> tenantMongo.findAndModify(
+                Query.query(Criteria.where("kind").is("x")), new Update().set("kind", "claimed"),
+                FindAndModifyOptions.options().returnNew(true), Probe.class));
+        assertThat(claimed).get().satisfies(p -> {
+            assertThat(p.name).isEqualTo("a-row");
+            assertThat(p.kind).isEqualTo("claimed");
+        });
+
+        // Nothing left for A, and B's row was never a candidate.
+        assertThat(TenantContext.callAs(A, () -> tenantMongo.findAndModify(Query.query(Criteria.where("kind").is("x")),
+                new Update().set("kind", "claimed"), FindAndModifyOptions.options(), Probe.class))).isEmpty();
+        assertThat(TenantContext.callAs(B, () -> tenantMongo.find(new Query(), Probe.class)))
+                .extracting(p -> p.kind).containsExactly("x");
+    }
+
+    @Test
+    void findAndModifyRefusesToMoveADocumentOrRunWithoutATenant() {
+        saveAs(A, "a-row", "x");
+        assertThatThrownBy(() -> TenantContext.callAs(A, () -> tenantMongo.findAndModify(new Query(),
+                new Update().set("tenantId", B.id()), FindAndModifyOptions.options(), Probe.class)))
+                .isInstanceOf(IllegalArgumentException.class);
+        try (TenantContext.Scope ignored = TenantContext.open(null)) {
+            assertThatThrownBy(() -> tenantMongo.findAndModify(new Query(), new Update().set("kind", "y"),
+                    FindAndModifyOptions.options(), Probe.class)).isInstanceOf(IllegalStateException.class);
+        }
     }
 }

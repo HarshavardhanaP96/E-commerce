@@ -12,6 +12,10 @@
   `CouponScopeIntegrationTest`), payment method and refunds with a spied gateway
   (`PaymentDetailsAndRefundIntegrationTest`), the Razorpay REST calls against a mock server (`RazorpayGatewayTest`),
   invoices (`InvoiceIntegrationTest`) and email verification with a mocked mail sender (`EmailVerificationIntegrationTest`).
+  Marketing server events (phase 3): `SecretBoxTest`, `MarketingOutboxIntegrationTest`, `MarketingServerSettingsIntegrationTest`,
+  `CheckoutAttributionIntegrationTest`, `ConversionRecorderIntegrationTest`, `ConversionDispatcherIntegrationTest` (provider
+  stub: retries, give-up, concurrent dispatchers, expired leases, cross-store credentials), `MarketingServerEventsIntegrationTest`,
+  adapter tests against `MockRestServiceServer`.
   These tests need Docker. CI's `ubuntu-latest` has it.
 - Tenant isolation matrix: `TenantCatalogueIsolationIntegrationTest`, `TenantCommerceIsolationIntegrationTest`, `TenantIdentityIsolationIntegrationTest` (two tenants, same shapes, every entity), `TenantConfigurationIntegrationTest`, `PlatformAdminIntegrationTest`, and the rehearsal `LegacyMigrationIntegrationTest` (a single-tenant database upgraded in place).
 - Tenancy: `TenantContextTest`, `TenantMongoIntegrationTest` (two tenants, same shapes), `TenantBootstrapIntegrationTest`, `TenantResolutionIntegrationTest`, `TenantTokenIntegrationTest`, and `TenantIsolationArchitectureTest` (no raw `MongoTemplate` outside the wrapper, with a shrinking allowlist). Tests that need a second tenant extend `TenantIntegrationTest`.
@@ -98,3 +102,8 @@ Run these once, in this order. The first two have never been done for this work.
   unscoped coupons on the old build, so pause them first. Suspended users' old tokens work again on the old build.
 - Deploy the frontend first or together with the backend. An old frontend served against the new backend would
   show an admin the agreement prompt without a link to the agreement text.
+
+## Runbooks
+- **A store's conversions stopped:** card status and `lastError` on Admin → Marketing → delivery log → ask the owner
+  for a new token → re-queue its FAILED rows of the last 72 h if wanted:
+  `db.marketing_outbox.updateMany({tenantId, provider, status:'FAILED', createdAt:{$gte: <now-72h>}}, {$set:{status:'PENDING', attempts:0, nextAttemptAt: new Date()}})`.

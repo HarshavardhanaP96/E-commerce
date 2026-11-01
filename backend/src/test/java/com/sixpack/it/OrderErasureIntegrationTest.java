@@ -61,4 +61,31 @@ class OrderErasureIntegrationTest extends IntegrationTest {
         assertThat(stored.get("statusHistory", List.class)).hasSize(3);
         assertThat(stored.get("payment", Document.class).getString("status")).isEqualTo("PAID");
     }
+
+    @Test
+    void attributionSurvivesStatusChangesAndIsErasedWithTheAccount() throws Exception {
+        String admin = adminToken();
+        String product = createProduct(admin, "Lamp", 500, 5, "home");
+        String user = register("attr@test.dev");
+        Map<String, Object> checkout = new HashMap<>(Map.of("items", List.of(Map.of("productId", product, "quantity", 1))));
+        checkout.put("attribution", CheckoutAttributionIntegrationTest.attribution(true, true));
+        String intent = body(mvc.perform(post("/api/v1/order/checkout").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(checkout)))
+                .andExpect(status().isCreated()).andReturn()).get("checkout").get("providerOrderId").asText();
+        String orderId = body(mvc.perform(post("/api/v1/order/new").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
+                                "providerOrderId", intent, "paymentId", "fake_pay_1", "signature", "fake",
+                                "shippingInfo", OrderCheckoutDetailsIntegrationTest.shipping()))))
+                .andExpect(status().isCreated()).andReturn()).get("orderId").asText();
+        Document byId = new Document("_id", new ObjectId(orderId));
+
+        mvc.perform(put("/api/v1/order/" + orderId).header("Authorization", bearer(admin))).andExpect(status().isOk());
+        mvc.perform(put("/api/v1/order/" + orderId).header("Authorization", bearer(admin))).andExpect(status().isOk());
+        assertThat(mongo.getCollection("orders").find(byId).first()).containsKey("attribution");
+
+        mvc.perform(delete("/api/v1/user/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"password123\"}"))
+                .andExpect(status().isOk());
+        assertThat(mongo.getCollection("orders").find(byId).first()).doesNotContainKey("attribution");
+    }
 }

@@ -23,6 +23,7 @@ config, host, and replica counts. CI renders an overlay with `kustomize edit set
    ADMIN_EMAIL=admin@yourdomain.com
    ADMIN_PASSWORD=a-long-unique-password
    CONSENT_IP_SALT=<openssl rand -base64 32>   # salts IPs kept as consent evidence; never change it
+   MARKETING_KEYS=k1:<openssl rand -base64 32>   # optional: enables server-side marketing conversions (ADR-029); keep old keys listed when rotating
    # Multi-tenancy (optional until a second tenant exists):
    # PLATFORM_ADMIN_EMAIL=ops@yourdomain.com      # signs in at /platform; manages tenants, sees no store data
    # PLATFORM_ADMIN_PASSWORD=<12+ characters>

@@ -37,6 +37,6 @@ public record Order(
         history.add(new StatusEntry(next, at, actor));
         return new Order(id, userId, shippingInfo, items, quote, next, payment, termsVersion, createdAt,
                 new OrderDetails(details.orderNumber(), details.billingInfo(), details.customer(), history,
-                        details.couponCode(), details.notes()));
+                        details.couponCode(), details.notes(), details.attribution()));
     }
 }
