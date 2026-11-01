@@ -15,9 +15,13 @@ import java.util.regex.Matcher;
 import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 
 /** Admin → Marketing product feed: on/off, the URL, a new URL, roles, the feature switch and audit. */
+@ExtendWith(OutputCaptureExtension.class)
 class FeedAdminIntegrationTest extends FeedIntegrationTest {
 
     Tenant acme;
@@ -155,5 +159,18 @@ class FeedAdminIntegrationTest extends FeedIntegrationTest {
         String everything = mongo.getCollection("audit_log").find(new Document("tenantId", acme.id()))
                 .map(Document::toJson).into(new ArrayList<>()).toString();
         assertThat(everything).doesNotContain(first).doesNotContain(second);
+    }
+
+    @Test
+    void theTokenNeverReachesTheLogs(CapturedOutput output) throws Exception {
+        insertProduct(acme, simple("Mug", 250, 4));
+        String first = enableFeed(acme, admin);
+        fetch(acme, first).andExpect(status().isOk());
+        String second = tokenOf(body(rotate(acme, admin).andExpect(status().isOk()).andReturn())
+                .get("feed").get("url").asText());
+        fetch(acme, first).andExpect(status().isNotFound());
+        fetch(acme, second).andExpect(status().isOk());
+
+        assertThat(output.getAll()).contains("Product feed rendered").doesNotContain(first).doesNotContain(second);
     }
 }

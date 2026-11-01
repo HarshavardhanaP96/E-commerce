@@ -158,4 +158,23 @@ class FeedEndpointIntegrationTest extends FeedIntegrationTest {
         marketing(acme, false);
         fetch(acme, token).andExpect(status().isNotFound()).andExpect(content().string(""));
     }
+
+    @Test
+    void sixtyFetchesAMinutePerClientThenTooManyRequests() throws Exception {
+        // The limiter counts per clock minute: start well inside one so all 62 calls share a window.
+        while (System.currentTimeMillis() % 60_000 > 50_000) {
+            Thread.sleep(250);
+        }
+        for (int i = 0; i < 60; i++) {
+            mvc.perform(get(feedPath(token)).with(host(hostOf(acme))).with(from("10.6.6.6")))
+                    .andExpect(status().isOk());
+        }
+        mvc.perform(get(feedPath(token)).with(host(hostOf(acme))).with(from("10.6.6.6")))
+                .andExpect(status().isTooManyRequests());
+        // Guessing another token buys no fresh budget.
+        mvc.perform(get(feedPath("guess")).with(host(hostOf(acme))).with(from("10.6.6.6")))
+                .andExpect(status().isTooManyRequests());
+        mvc.perform(get(feedPath(token)).with(host(hostOf(acme))).with(from("10.7.7.7")))
+                .andExpect(status().isOk());
+    }
 }

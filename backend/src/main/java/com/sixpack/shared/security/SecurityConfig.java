@@ -6,6 +6,7 @@ import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,6 +27,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 class SecurityConfig {
 
     private static final String ADMIN = "ADMIN";
+    /** Product feed fetches (Google, Meta) per minute, per client address and store, whatever the token. */
+    private static final int FEED_REQUESTS_PER_MINUTE = 60;
+    private static final Pattern FEED_PATH = Pattern.compile("^/api/v1/feeds/[^/]+/products\\.xml$");
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProperties props, JsonSecurityHandlers handlers,
@@ -92,8 +96,17 @@ class SecurityConfig {
                         .accessDeniedHandler(handlers.accessDenied()))
                 .addFilterBefore(new AuthRateLimitFilter(props.authRequestsPerMinute(), handlers),
                         BearerTokenAuthenticationFilter.class)
+                .addFilterBefore(feedRateLimit(handlers), BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(new AccountStatusFilter(accounts, handlers), BearerTokenAuthenticationFilter.class);
         return http.build();
+    }
+
+    private static AuthRateLimitFilter feedRateLimit(JsonSecurityHandlers handlers) {
+        AuthRateLimitFilter filter = new AuthRateLimitFilter(FEED_REQUESTS_PER_MINUTE, handlers,
+                r -> "GET".equals(r.getMethod()) && FEED_PATH.matcher(r.getRequestURI()).matches() ? "feed" : null);
+        // Its own OncePerRequestFilter marker, so it is never mistaken for the login limiter.
+        filter.setBeanName("feedRateLimitFilter");
+        return filter;
     }
 
     @Bean
