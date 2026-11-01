@@ -56,4 +56,26 @@ class AuthRateLimitFilterTest {
         filter.doFilter(req, res, new MockFilterChain());
         return res;
     }
+
+    @Test
+    void aBucketCountsEveryMatchingRequestTogether() throws Exception {
+        AuthRateLimitFilter feed = new AuthRateLimitFilter(2, new JsonSecurityHandlers(new ObjectMapper()),
+                r -> r.getRequestURI().startsWith("/api/v1/feeds/") ? "feed" : null);
+
+        assertThat(call(feed, "GET", "3.3.3.3", "/api/v1/feeds/a/products.xml").getStatus()).isEqualTo(200);
+        assertThat(call(feed, "GET", "3.3.3.3", "/api/v1/feeds/b/products.xml").getStatus()).isEqualTo(200);
+        // Another token in the path is still the same client: guessing tokens buys no fresh budget.
+        assertThat(call(feed, "GET", "3.3.3.3", "/api/v1/feeds/c/products.xml").getStatus()).isEqualTo(429);
+        assertThat(call(feed, "GET", "4.4.4.4", "/api/v1/feeds/c/products.xml").getStatus()).isEqualTo(200);
+        assertThat(call(feed, "POST", "3.3.3.3", "/api/v1/user/login").getStatus()).isEqualTo(200);
+    }
+
+    private static MockHttpServletResponse call(AuthRateLimitFilter f, String method, String ip, String uri)
+            throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest(method, uri);
+        req.setRemoteAddr(ip);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        f.doFilter(req, res, new MockFilterChain());
+        return res;
+    }
 }

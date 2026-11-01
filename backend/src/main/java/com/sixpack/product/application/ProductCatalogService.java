@@ -4,6 +4,7 @@ import static com.sixpack.shared.config.CacheConfig.PRODUCTS_ADMIN;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_BY_ID;
 import static com.sixpack.shared.config.CacheConfig.PRODUCTS_LATEST;
 
+import com.sixpack.product.CatalogReads;
 import com.sixpack.product.LowStockLine;
 import com.sixpack.product.ProductCatalog;
 import com.sixpack.product.ProductChangedEvent;
@@ -21,12 +22,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
-class ProductCatalogService implements ProductCatalog {
+class ProductCatalogService implements ProductCatalog, CatalogReads {
 
     private final ProductRepository products;
     private final ApplicationEventPublisher events;
@@ -42,6 +44,25 @@ class ProductCatalogService implements ProductCatalog {
     public List<LowStockLine> lowStock() {
         return service.lowStock().stream().map(a -> new LowStockLine(a.productId(), a.name(), a.variantId(),
                 a.label(), a.sku(), a.stock(), a.threshold())).toList();
+    }
+
+    @Override
+    public void forEachListing(int maxProducts, Consumer<Listing> sink) {
+        products.forEachPublic(maxProducts, p -> {
+            String description = p.details().description();
+            String brand = p.details().brand();
+            if (!p.hasVariants()) {
+                sink.accept(new Listing(p.id(), null, p.name(), null, description, brand, p.photo(), p.price(),
+                        p.stock()));
+                return;
+            }
+            for (Variant v : p.details().variants().items()) {
+                if (v.status().isSellable()) {
+                    sink.accept(new Listing(p.id(), v.id(), p.name(), v.label(), description, brand,
+                            variantPhoto(p, v), v.price(), v.stock()));
+                }
+            }
+        });
     }
 
     @Override

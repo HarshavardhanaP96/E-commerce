@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -26,16 +27,26 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private final int limitPerMinute;
     private final JsonSecurityHandlers handlers;
+    private final Function<HttpServletRequest, String> bucket;
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
 
+    /** Limits each credential endpoint on its own. */
     AuthRateLimitFilter(int limitPerMinute, JsonSecurityHandlers handlers) {
+        this(limitPerMinute, handlers, r -> "POST".equals(r.getMethod()) && LIMITED_PATHS.contains(r.getRequestURI())
+                ? r.getRequestURI() : null);
+    }
+
+    /** @param bucket names the counter a request belongs to, or null for a request this filter does not limit */
+    AuthRateLimitFilter(int limitPerMinute, JsonSecurityHandlers handlers,
+                        Function<HttpServletRequest, String> bucket) {
         this.limitPerMinute = limitPerMinute;
         this.handlers = handlers;
+        this.bucket = bucket;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !"POST".equals(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI());
+        return bucket.apply(request) == null;
     }
 
     @Override
@@ -43,7 +54,7 @@ class AuthRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         long minute = System.currentTimeMillis() / 60_000;
         String tenant = TenantContext.current().map(TenantRef::id).orElse("-");
-        String key = tenant + "|" + request.getRemoteAddr() + "|" + request.getRequestURI();
+        String key = tenant + "|" + request.getRemoteAddr() + "|" + bucket.apply(request);
         Window window = windows.compute(key, (k, w) -> w == null || w.minute != minute ? new Window(minute) : w);
         if (window.count.incrementAndGet() > limitPerMinute) {
             response.setHeader("Retry-After", "60");

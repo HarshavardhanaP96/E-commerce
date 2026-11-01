@@ -5,6 +5,7 @@ import com.mongodb.client.result.UpdateResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -41,6 +42,11 @@ public class TenantMongo {
 
     public <T> List<T> find(Query query, Class<T> type) {
         return mongo.find(scoped(query), type);
+    }
+
+    /** Like {@link #find(Query, Class)} but through a cursor, one document at a time. The caller closes it. */
+    public <T> Stream<T> stream(Query query, Class<T> type) {
+        return mongo.stream(scoped(query), type);
     }
 
     public <T> Optional<T> findAndRemove(Query query, Class<T> type) {
