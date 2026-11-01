@@ -14,6 +14,7 @@ import { formatMoney } from "../utils/features";
 import { payWithRazorpay } from "../utils/razorpay";
 import CheckoutSteps from "../components/checkoutSteps";
 import { cartLine, track } from "../utils/tracking";
+import { attributionForCheckout } from "../utils/attribution";
 
 const emptyAddress: ShippingInfo = { address: "", city: "", state: "", country: "India", pinCode: "" };
 
@@ -77,6 +78,7 @@ const Shipping = () => {
       const quote = await checkout({
         items: cartItems.map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
         coupon: coupon || undefined,
+        attribution: attributionForCheckout(),
       }).unwrap();
       const c = quote.checkout;
 

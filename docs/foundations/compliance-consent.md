@@ -49,6 +49,11 @@ cart and checkout steps, order id, value and currency) and the identifiers in th
 Ads, Tag Manager) and Meta (Pixel) to measure and target its advertising, that those companies process the data
 under their own terms, and how to withdraw (Cookie settings). This is a new data-sharing recipient, so it is a
 major change: bump the privacy and cookie-policy versions (C4 re-prompt; the banner shows again).
+With marketing consent the store's server also sends each purchase to Meta (Conversions API) with the shopper's
+email and phone hashed (SHA-256) and the browser identifiers `_fbp`/`_fbc` and user agent; with analytics consent it
+sends the purchase to GA4 (Measurement Protocol) with the `_ga` client id and no contact details. Hashing is applied
+only to consents given under cookie-notice version 2026-10-31 or later, the version that discloses it. No IP address
+is sent.
 
 **Data minimisation:** registration currently *requires* `gender` and `dob`. DOB is justified because we need it
 for the age check (§3, C2). Gender is only used by the admin dashboard charts, so **make it optional**, or else
@@ -185,6 +190,8 @@ server yet: the phase 0 banner keeps them in `localStorage` (§5). Full request 
 | Orders, payment ids | ~8 years (tax / accounting) | Anonymise the user link |
 | Consent records | Account lifetime + 3 years (proof). On erasure each row gets `expireAt = now + 3 years` and a TTL index deletes it (`ConsentIntegrationTest` checks this) | Deleted automatically |
 | Server and access logs | **At least 1 year** (DPDP Rules), then delete | Loki retention config |
+| Order attribution (`orders.attribution`: campaign tags, click ids, cookie ids, user agent, consent snapshot) | until the account is deleted (erased with it) | Erased with the account |
+| `marketing_outbox` (ids and delivery state only) | 30 days (TTL) | Deleted automatically |
 | `payment_intents`, `password_reset_tokens`, `email_verification_tokens` | Already TTL'd (24 h / 15 min / 24 h) | Already handled |
 | Audit log (`audit_log`) | 365 days, then deleted by a TTL index. The period is fixed in `AuditDocument` (`@Indexed(expireAfter = "365d")`); changing it needs a code change plus dropping the existing `at` index (`db.audit_log.dropIndex("at")`), because MongoDB refuses to change an index's options in place. Holds actor ids, record ids, the names of changed fields, non-personal values (prices, statuses, roles), a salted hash of the IP and the browser user-agent; personal values (name, email, phone, address) are never stored. | Deleted automatically |
 | Attempted-login email hash (`subjectHash`) | Same as the audit log. It is a salted hash, so it is pseudonymous. It can't be reversed without the salt, but that holds only when `CONSENT_IP_SALT` is set. The salt defaults to empty, in which case the hash is plain SHA-256 and the backend logs a startup warning; set it in every real environment. | Deleted automatically |

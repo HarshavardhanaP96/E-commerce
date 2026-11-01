@@ -5,7 +5,8 @@
 # Usage:  k8s/scripts/seal-backend-secrets.sh <test|prod> <path/to/plain.env>
 # The env file holds KEY=value lines: JWT_SECRET, MONGO_URI, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
 # ADMIN_EMAIL, ADMIN_PASSWORD, CONSENT_IP_SALT; any extra KEY=value lines are sealed too (for example
-# PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_PASSWORD and TENANT_SECRET_<REF> for multi-tenancy). Keep it outside the repo (or name it *.secret.env, which git ignores)
+# PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_PASSWORD and TENANT_SECRET_<REF> for multi-tenancy, or the optional
+# MARKETING_KEYS for server-side marketing conversions, ADR-029). Keep it outside the repo (or name it *.secret.env, which git ignores)
 # and delete it afterwards. The plaintext never touches disk here: it is piped straight into kubeseal.
 set -euo pipefail
 

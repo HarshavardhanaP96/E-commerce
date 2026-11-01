@@ -1,3 +1,4 @@
+import type { CheckoutAttribution } from "../utils/attribution";
 import { Bar, Category, Coupon, Invoice, Line, OptionFacet, Order, OrderPayment, Pie, Product, SavedAddress, ShippingInfo, SizeChart, StockAlert, Stats, User, VariantSales } from "./types";
 
 export type MessageResponse = { success: boolean; message: string };
@@ -54,6 +55,7 @@ export type QuoteResponse = { success: boolean; quote: Quote };
 export type CheckoutRequest = {
   items: { productId: string; variantId?: string; quantity: number }[];
   coupon?: string;
+  attribution?: CheckoutAttribution;
 };
 export type Checkout = {
   provider: "razorpay" | "fake";

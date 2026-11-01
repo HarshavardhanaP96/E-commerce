@@ -45,6 +45,8 @@ class OrderDocument extends TenantDocument {
     List<StatusEntryDoc> statusHistory;
     String couponCode;
     String notes;
+    /** Set once at checkout (marketing spec §5.5); removed by account erasure. Never returned by the API. */
+    AttributionDoc attribution;
     @CreatedDate
     @Indexed
     Instant createdAt;
@@ -113,5 +115,29 @@ class OrderDocument extends TenantDocument {
         String status;
         Instant at;
         String actor;
+    }
+
+    static class AttributionDoc {
+        String utmSource;
+        String utmMedium;
+        String utmCampaign;
+        String utmContent;
+        String utmTerm;
+        String gclid;
+        String fbclid;
+        String fbp;
+        String fbc;
+        String gaClientId;
+        String landingPath;
+        String userAgent;
+        String sourceUrl;
+        ConsentDoc consent;
+    }
+
+    static class ConsentDoc {
+        Boolean analytics;
+        Boolean marketing;
+        String version;
+        Instant at;
     }
 }

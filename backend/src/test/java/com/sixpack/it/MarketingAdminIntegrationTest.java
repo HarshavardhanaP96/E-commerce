@@ -53,7 +53,8 @@ class MarketingAdminIntegrationTest extends MarketingIntegrationTest {
         assertThat(cards).hasSize(2);
 
         JsonNode google = cards.get(0);
-        assertThat(fieldNames(google)).containsExactly("provider", "status", "browser", "updatedAt");
+        assertThat(fieldNames(google)).containsExactly("provider", "status", "browser", "updatedAt", "server",
+                "lastError", "lastSuccessAt", "deliveries");
         assertThat(google.get("provider").asText()).isEqualTo("google");
         assertThat(google.get("status").asText()).isEqualTo("NOT_CONNECTED");
         assertThat(fieldNames(google.get("browser")))
@@ -228,5 +229,24 @@ class MarketingAdminIntegrationTest extends MarketingIntegrationTest {
         assertThat(gone.getString("entityId")).isEqualTo("google");
         assertThat(changeOf(gone, "ga4MeasurementId").get("before")).isEqualTo("G-NEW12345");
         assertThat(changeOf(gone, "ga4MeasurementId").get("after")).isNull();
+    }
+
+    @Test
+    void withoutEncryptionKeysServerEventsAreUnavailable() throws Exception {
+        save(acme, admin, "meta", browser("pixelId", "123456789012345")).andExpect(status().isOk());
+        JsonNode meta = body(list(acme, admin).andExpect(status().isOk()).andReturn()).get("integrations").get(1);
+        assertThat(meta.get("server").get("available").asBoolean()).isFalse();
+        assertThat(meta.get("server").get("hasSecret").asBoolean()).isFalse();
+        assertThat(meta.get("deliveries")).isEmpty();
+
+        mvc.perform(put(BASE + "/meta").with(host(hostOf(acme))).header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"server\":{\"enabled\":true,\"secret\":\"fake-meta-token-aaaaaaaa\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("server: not available on this platform yet"));
+        mvc.perform(put(BASE + "/meta").with(host(hostOf(acme))).header("Authorization", bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"server\":{\"enabled\":false}}"))
+                .andExpect(status().isOk());
+        assertThat(rows(acme).get(0)).doesNotContainKey("secrets");
     }
 }

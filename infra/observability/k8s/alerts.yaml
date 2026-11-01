@@ -93,3 +93,28 @@ spec:
           annotations:
             summary: "{{ $value }} audit log writes failed in 10m for store {{ $labels.tenant }} ({{ $labels.namespace }}); those events were not recorded"
             runbook: "Search logs for 'Audit write failed' (Grafana → Explore → Loki), then check MongoDB availability and disk."
+
+        - alert: SixpackMarketingDeliveriesFailing
+          # Purchases Meta or Google refused, or that we gave up on after 6 attempts. Each store's Admin → Marketing
+          # card shows the reason (usually an expired token). Not a page: the store's sales are unaffected.
+          expr: |
+            sum by (namespace, provider) (increase(marketing_events_total{job="backend-service", outcome="failed"}[15m]))
+              /
+            sum by (namespace, provider) (increase(marketing_events_total{job="backend-service", outcome=~"sent|failed"}[15m]))
+              > 0.05
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanizePercentage }} of {{ $labels.provider }} conversions failed in 15m ({{ $labels.namespace }})"
+            runbook: "Grafana → marketing_events_total by tenant; open that store's Marketing card for lastError. Re-queue FAILED rows only after the owner fixed the secret (docs/foundations/test-rollout.md, Runbooks)."
+
+        - alert: SixpackMarketingOutboxStuck
+          # The oldest due conversion waited more than 30 min: the provider is down (breaker open), or dispatch is stuck.
+          expr: max by (namespace, provider) (marketing_outbox_due_age_seconds{job="backend-service"}) > 1800
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.provider }} conversions have waited {{ $value | humanizeDuration }} to be sent ({{ $labels.namespace }})"
+            runbook: "Check the provider's status page, then backend logs for 'Marketing dispatch failed' and 'Lost the claim'."

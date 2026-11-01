@@ -23,6 +23,8 @@ public enum AuditAction {
     INTEGRATION_UPDATED, INTEGRATION_DISCONNECTED,
     /** The store's product feed turned on or off, and its address replaced (Admin → Marketing). */
     FEED_UPDATED, FEED_TOKEN_ROTATED,
+    /** An owner sent a test event to Meta or Google from Admin → Marketing. */
+    INTEGRATION_TESTED,
     /** A dashboard table downloaded as CSV (the customer table holds personal data). */
     ANALYTICS_EXPORTED;
 

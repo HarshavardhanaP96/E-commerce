@@ -15,6 +15,7 @@ export const AUDIT_ACTIONS = [
   "STORE_SETTINGS_UPDATED", "ANALYTICS_EXPORTED",
   "INTEGRATION_UPDATED", "INTEGRATION_DISCONNECTED",
   "FEED_UPDATED", "FEED_TOKEN_ROTATED",
+  "INTEGRATION_TESTED",
 ] as const;
 
 export type AuditChange = { field: string; before?: unknown; after?: unknown; redacted: boolean };

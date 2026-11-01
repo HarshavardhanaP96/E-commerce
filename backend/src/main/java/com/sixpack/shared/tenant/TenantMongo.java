@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.bson.Document;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
@@ -51,6 +52,13 @@ public class TenantMongo {
 
     public <T> Optional<T> findAndRemove(Query query, Class<T> type) {
         return Optional.ofNullable(mongo.findAndRemove(scoped(query), type));
+    }
+
+    /** Atomically updates and returns one of the current tenant's documents (job claiming). */
+    public <T> Optional<T> findAndModify(Query query, UpdateDefinition update, FindAndModifyOptions options,
+                                         Class<T> type) {
+        rejectTenantChange(update);
+        return Optional.ofNullable(mongo.findAndModify(scoped(query), update, options, type));
     }
 
     /** For read-side code that works with collection names instead of document classes (the dashboard). */
