@@ -8,3 +8,7 @@
 
 # The comment above quotes the same field name, so the scanner matches this file too.
 bbd0d311e5b435c355fb3f27e74ca89a7f73e05a:.gitleaksignore:generic-api-key:3
+
+# Phase 3: the same GA4 field name, in the server-events form and its plan.
+3f84841a80d717d8d2f14d9df5d037b1812f9f41:ecommerce-frontend/src/pages/admin/apps/serverEventsForm.ts:generic-api-key:10
+def40e26082b472abb52ccaab4a6e0a6c061a86f:docs/superpowers/plans/2026-10-31-marketing-phase3-server-events.md:generic-api-key:6000
