@@ -1653,6 +1653,8 @@
   @include custom-scrollbar();
   display: grid;
   align-content: start;
+  // .card has min-height: 0, so auto rows would shrink cards to fit this box and let them overlap.
+  grid-auto-rows: max-content;
   gap: $spacing-lg;
 
   > * {
