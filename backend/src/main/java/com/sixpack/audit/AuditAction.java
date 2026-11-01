@@ -21,6 +21,8 @@ public enum AuditAction {
     STORE_SETTINGS_UPDATED,
     /** A store's marketing tag IDs saved or cleared, and a provider disconnected (Admin → Marketing). */
     INTEGRATION_UPDATED, INTEGRATION_DISCONNECTED,
+    /** An owner sent a test event to Meta or Google from Admin → Marketing. */
+    INTEGRATION_TESTED,
     /** A dashboard table downloaded as CSV (the customer table holds personal data). */
     ANALYTICS_EXPORTED;
 
