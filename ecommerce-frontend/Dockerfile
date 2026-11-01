@@ -8,7 +8,7 @@ COPY . .
 RUN npm run build
 
 # ---- runtime: unprivileged nginx (listens on 8080, runs as uid 101) ----
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 # BACKEND_UPSTREAM is substituted into the template at container start.
 ENV BACKEND_UPSTREAM=http://backend:8080
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
