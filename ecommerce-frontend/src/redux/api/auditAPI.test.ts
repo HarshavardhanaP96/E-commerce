@@ -6,6 +6,10 @@ describe("AUDIT_ACTIONS", () => {
     expect(AUDIT_ACTIONS).toEqual(expect.arrayContaining(["INTEGRATION_UPDATED", "INTEGRATION_DISCONNECTED"]));
   });
 
+  it("lets the audit log be filtered by product feed changes", () => {
+    expect(AUDIT_ACTIONS).toEqual(expect.arrayContaining(["FEED_UPDATED", "FEED_TOKEN_ROTATED"]));
+  });
+
   it("lists each action once", () => {
     expect(new Set(AUDIT_ACTIONS).size).toBe(AUDIT_ACTIONS.length);
   });
