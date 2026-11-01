@@ -45,6 +45,8 @@ class SecurityConfig {
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(GET, "/uploads/**").permitAll()
                         .requestMatchers(GET, "/api/v1/tenant/config").permitAll()
+                        // product feed for Google and Meta: the secret token in the path is checked by the controller
+                        .requestMatchers(GET, "/api/v1/feeds/*/products.xml").permitAll()
                         // platform administration: separate credentials, no tenant
                         .requestMatchers(POST, "/api/v1/platform/login").permitAll()
                         .requestMatchers("/api/v1/platform/**").hasRole("PLATFORM_ADMIN")

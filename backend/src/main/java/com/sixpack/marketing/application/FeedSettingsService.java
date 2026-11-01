@@ -34,11 +34,14 @@ public class FeedSettingsService {
     private final MarketingSettingsRepository settings;
     private final TenantSettings tenant;
     private final AuditTrail audit;
+    private final CatalogFeedService catalogFeed;
 
-    FeedSettingsService(MarketingSettingsRepository settings, TenantSettings tenant, AuditTrail audit) {
+    FeedSettingsService(MarketingSettingsRepository settings, TenantSettings tenant, AuditTrail audit,
+                        CatalogFeedService catalogFeed) {
         this.settings = settings;
         this.tenant = tenant;
         this.audit = audit;
+        this.catalogFeed = catalogFeed;
     }
 
     public Feed view() {
@@ -58,6 +61,7 @@ public class FeedSettingsService {
         if (before.feedEnabled() != after.feedEnabled()) {
             audit.record(AuditEvent.of(AuditAction.FEED_UPDATED).on(ENTITY, ENTITY_ID)
                     .changing(Changes.diff(audited(before), audited(after), POLICY)));
+            catalogFeed.evict();
         }
         return view(after);
     }
@@ -70,6 +74,7 @@ public class FeedSettingsService {
         }
         audit.record(AuditEvent.of(AuditAction.FEED_TOKEN_ROTATED).on(ENTITY, ENTITY_ID)
                 .changing(List.of(FieldChange.redacted("feedToken"))));
+        catalogFeed.evict();
         return view(new MarketingSettings(true, token));
     }
 
