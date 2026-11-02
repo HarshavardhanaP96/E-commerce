@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { LuArrowLeft, LuLock } from "react-icons/lu";
 import { useDispatch, useSelector } from "react-redux";
@@ -35,6 +35,7 @@ const Shipping = () => {
   const [checkout] = useCheckoutMutation();
   const [confirmOrder] = useConfirmOrderMutation();
   const [busy, setBusy] = useState(false);
+  const placed = useRef(false);
   const { data: book } = useGetMyAddressesQuery();
   const [picked, setPicked] = useState<string>("");
   const savedAddresses = book?.addresses ?? [];
@@ -59,8 +60,9 @@ const Shipping = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book]);
 
+  // Skipped after an order: the cart reset renders before the navigation to /order/:id lands.
   useEffect(() => {
-    if (cartItems.length === 0) navigate("/cart");
+    if (cartItems.length === 0 && !placed.current) navigate("/cart");
   }, [cartItems, navigate]);
 
   const changeHandler = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -111,6 +113,7 @@ const Shipping = () => {
       }).unwrap();
       // Here, not on /order/:id (which also shows past orders); tracking sends each order id once.
       track("purchase", { orderId: res.orderId, value: c.total, currency: c.currency, items: cartItems.map(cartLine) });
+      placed.current = true;
       dispatch(resetCart());
       toast.success(res.message);
       navigate(`/order/${res.orderId}`);
