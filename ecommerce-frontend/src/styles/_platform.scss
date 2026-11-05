@@ -1,63 +1,44 @@
-// Operator console for tenants (pages/platform).
-.platform {
-  display: grid;
-  gap: 1.5rem;
-  max-width: 62rem;
-  margin: 2rem auto;
-
-  &__table {
-    width: 100%;
-    border-collapse: collapse;
-
-    th,
-    td {
-      text-align: left;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--border, #ddd);
-    }
-  }
-
-  &__filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  &__due {
-    display: block;
-    margin-top: 0.25rem;
-    color: var(--text-muted);
-  }
-
-  &__json {
-    width: 100%;
-    font-family: ui-monospace, monospace;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-  }
+// Platform console (pages/platform). Pages sit in the admin shell; these are console-only pieces.
+.platform-login {
+  max-width: 26rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
 }
 
-// A checkbox row inside the shared .form-grid, whose labels stack and stretch their inputs.
-.form-grid label.platform__check {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-
-  input {
-    width: auto !important;
-  }
-}
-
-.header__logo-img {
-  height: 1.75rem;
-  width: auto;
+.platform-sidebar__who {
   display: block;
+  color: var(--nav-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.platform-sidebar__out {
+  margin-top: 0.5rem;
+}
+
+// admin-main hides overflow, so every console page scrolls inside its own container.
+.platform-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.platform-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.platform-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
 }

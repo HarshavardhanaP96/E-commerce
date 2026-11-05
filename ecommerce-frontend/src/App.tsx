@@ -122,7 +122,7 @@ const App = () => {
           <Route path="/legal/:slug" element={<Legal />} />
           <Route path="/help" element={<Help />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/platform" element={<Platform />} />
+          <Route path="/platform/*" element={<Platform />} />
 
           {/* only for not logged in */}
           <Route

@@ -4,6 +4,9 @@ import { authedBaseQuery } from "./baseQuery";
 
 type Maybe<T> = T | null;
 
+/** The kind of store, set by the platform at onboarding (ADR-030). */
+export type StoreTypeKey = "GENERAL" | "FASHION" | "GROCERY" | "ELECTRONICS";
+
 /** The store's own shop rules. A null field means "use the platform default". */
 export type StoreSettings = {
   commerce: {
