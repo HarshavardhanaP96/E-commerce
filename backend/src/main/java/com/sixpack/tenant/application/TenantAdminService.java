@@ -9,6 +9,7 @@ import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
+import com.sixpack.shared.tenant.StoreType;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.shared.tenant.TenantLimits;
@@ -25,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +55,7 @@ public class TenantAdminService {
     public record CreateCommand(String slug, String name, List<String> domains, Map<String, String> theme,
                                 String locale, String currency, LegalSettings legal, PaymentSettings payment,
                                 MailSettings mail, StorefrontSettings storefront, Map<String, Boolean> features,
-                                TenantLimits limits, boolean trial, AdminCommand admin) {
+                                TenantLimits limits, boolean trial, AdminCommand admin, StoreType type) {
     }
 
     /**
@@ -63,7 +65,7 @@ public class TenantAdminService {
     public record UpdateCommand(String name, List<String> domains, Map<String, String> theme, String locale,
                                 String currency, LegalSettings legal, PaymentSettings payment, MailSettings mail,
                                 StorefrontSettings storefront, Map<String, Boolean> features,
-                                TenantLimits limits) {
+                                TenantLimits limits, StoreType type) {
     }
 
     private final TenantRepository tenants;
@@ -125,7 +127,9 @@ public class TenantAdminService {
         PaymentSettings payment = validPayment(c.payment());
         MailSettings mail = validMail(c.mail());
         StorefrontSettings storefront = validStorefront(c.storefront());
-        Map<String, Boolean> features = validFeatures(c.features());
+        StoreType type = c.type() == null ? StoreType.GENERAL : c.type();
+        Map<String, Boolean> features = new TreeMap<>(type.features());
+        features.putAll(validFeatures(c.features())); // what the operator asked for wins over the preset
         TenantLimits limits = validLimits(c.limits());
         if (c.admin() != null) {
             requireAdmin(c.admin());
@@ -136,7 +140,7 @@ public class TenantAdminService {
         Tenant created = tenants.save(new Tenant(null, slug, name,
                 c.trial() ? TenantStatus.TRIAL : TenantStatus.ACTIVE, domains, theme,
                 blankToDefault(c.locale(), "en-IN"), blankToDefault(c.currency(), "INR"), null, legal, payment, mail, storefront,
-                features, null, limits, trialEndsAt));
+                features, null, limits, trialEndsAt, type.settings(), type));
         if (c.admin() != null) {
             try {
                 TenantContext.runAs(new TenantRef(created.id(), created.slug()),
@@ -172,7 +176,8 @@ public class TenantAdminService {
                 u.features() != null ? validFeatures(u.features()) : current.features(),
                 current.deletionDueAt(),
                 u.limits() != null ? validLimits(u.limits()) : current.limits(),
-                current.trialEndsAt(), current.settings()));
+                current.trialEndsAt(), current.settings(),
+                u.type() != null ? u.type() : current.type())); // a label only: the preset is never re-applied
         registry.refresh();
         record(AuditAction.TENANT_UPDATED, current, updated);
         log.info("Tenant '{}' updated", updated.slug());

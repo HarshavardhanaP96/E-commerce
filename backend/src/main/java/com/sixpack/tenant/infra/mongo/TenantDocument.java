@@ -33,6 +33,8 @@ class TenantDocument {
     LimitsDoc limits;
     /** Mapped as-is: plain records of numbers and strings. */
     StoreSettings settings;
+    /** {@link com.sixpack.shared.tenant.StoreType} name; null on stores created before store types (= GENERAL). */
+    String type;
 
     static class LimitsDoc {
         Integer products;

@@ -26,7 +26,9 @@ final class TenantAudit {
                 "theme", "legal.termsVersion", "legal.privacyVersion", "legal.adminAupVersion", "payment.provider",
                 "payment.keyId", "payment.secretRef", "mail.baseUrl", "storefront.logoUrl", "storefront.legalName",
                 "storefront.address", "storefront.email", "storefront.phone", "storefront.grievanceOfficer",
-                "storefront.grievanceEmail", "limits.products", "limits.uploadBytes", "limits.requestsPerMinute"));
+                "storefront.grievanceEmail", "limits.products", "limits.uploadBytes", "limits.requestsPerMinute",
+                "type", "settings.commerce.shippingFee", "settings.commerce.freeShippingAbove",
+                "settings.commerce.defaultTaxRate", "settings.commerce.stuckOrderDays", "settings.catalog.lowStockThreshold"));
         for (Feature f : Feature.values()) {
             fields.add("features." + f.key());
         }
@@ -61,6 +63,12 @@ final class TenantAudit {
         v.put("limits.products", t.limits().products());
         v.put("limits.uploadBytes", t.limits().uploadBytes());
         v.put("limits.requestsPerMinute", t.limits().requestsPerMinute());
+        v.put("type", t.type().name());
+        v.put("settings.commerce.shippingFee", t.settings().commerce().shippingFee());
+        v.put("settings.commerce.freeShippingAbove", t.settings().commerce().freeShippingAbove());
+        v.put("settings.commerce.defaultTaxRate", t.settings().commerce().defaultTaxRate());
+        v.put("settings.commerce.stuckOrderDays", t.settings().commerce().stuckOrderDays());
+        v.put("settings.catalog.lowStockThreshold", t.settings().catalog().lowStockThreshold());
         t.features().forEach((key, on) -> v.put("features." + key, on));
         return v;
     }

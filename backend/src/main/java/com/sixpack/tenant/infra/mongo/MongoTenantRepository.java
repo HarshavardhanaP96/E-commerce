@@ -3,6 +3,7 @@ package com.sixpack.tenant.infra.mongo;
 import com.sixpack.shared.tenant.LegalSettings;
 import com.sixpack.shared.tenant.MailSettings;
 import com.sixpack.shared.tenant.PaymentSettings;
+import com.sixpack.shared.tenant.StoreType;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.tenant.domain.Tenant;
@@ -85,6 +86,7 @@ class MongoTenantRepository implements TenantRepository {
         doc.limits.uploadBytes = t.limits().uploadBytes();
         doc.limits.requestsPerMinute = t.limits().requestsPerMinute();
         doc.settings = t.settings();
+        doc.type = t.type().name();
         return toDomain(mongo.save(doc));
     }
 
@@ -110,6 +112,6 @@ class MongoTenantRepository implements TenantRepository {
                 d.features, d.deletionDueAt,
                 d.limits == null ? null : new TenantLimits(d.limits.products, d.limits.uploadBytes,
                         d.limits.requestsPerMinute),
-                d.trialEndsAt, d.settings);
+                d.trialEndsAt, d.settings, d.type == null ? null : StoreType.valueOf(d.type));
     }
 }
