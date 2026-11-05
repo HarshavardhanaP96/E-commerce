@@ -38,6 +38,7 @@ describe("guideForPath", () => {
     ["/admin/app/marketing", "marketing"],
     ["/admin/audit", "audit-log"],
     ["/admin/settings", "store-settings"],
+    ["/admin/settings/orders", "store-settings"],
     ["/admin/somewhere-else", "getting-started"],
     ["/admin/help/tables", ""],
   ])("%s opens %s", (path, slug) => {

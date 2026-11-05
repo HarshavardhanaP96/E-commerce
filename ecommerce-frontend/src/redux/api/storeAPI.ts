@@ -33,6 +33,8 @@ export type StoreSettingsResponse = {
   effective: EffectiveStoreSettings;
   /** What each rule returns to when the field is left empty. */
   defaults: EffectiveStoreSettings;
+  /** The kind of store, set at onboarding (ADR-030). */
+  type: StoreTypeKey;
 };
 
 export const storeAPI = createApi({
@@ -44,7 +46,7 @@ export const storeAPI = createApi({
       query: () => "settings",
       providesTags: ["settings"],
     }),
-    saveStoreSettings: builder.mutation<StoreSettingsResponse, StoreSettings>({
+    saveStoreSettings: builder.mutation<StoreSettingsResponse, Partial<StoreSettings>>({
       query: (body) => ({ url: "settings", method: "PUT", body }),
       invalidatesTags: ["settings"],
     }),

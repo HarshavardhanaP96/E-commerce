@@ -179,7 +179,7 @@ const App = () => {
               <Route path="/admin/app/marketing" element={<Marketing />} />
             )}
             <Route path="/admin/audit" element={<AuditLog />} />
-            <Route path="/admin/settings" element={<StoreSettings />} />
+            <Route path="/admin/settings/:tab?" element={<StoreSettings />} />
 
 
             {/* Management */}

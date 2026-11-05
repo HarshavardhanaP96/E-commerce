@@ -1815,3 +1815,26 @@
     margin-top: 1.25rem;
   }
 }
+
+// "Custom" marker and the Reset to default link on Store settings fields (pages/admin/settings.tsx).
+.tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.link-btn {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: 0.85em;
+  text-decoration: underline;
+  cursor: pointer;
+}

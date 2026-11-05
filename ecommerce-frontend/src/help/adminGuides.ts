@@ -490,6 +490,6 @@ export const guideForPath = (pathname: string): string => {
   if (pathname.startsWith("/admin/app/coupon")) return "coupons";
   if (pathname === "/admin/app/marketing") return "marketing";
   if (pathname === "/admin/audit") return "audit-log";
-  if (pathname === "/admin/settings") return "store-settings";
+  if (pathname === "/admin/settings" || pathname.startsWith("/admin/settings/")) return "store-settings";
   return "getting-started";
 };

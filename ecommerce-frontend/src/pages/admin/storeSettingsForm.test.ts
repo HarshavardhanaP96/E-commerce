@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StoreSettings } from "../../redux/api/storeAPI";
-import { emptyForm, fromSettings, toPayload } from "./storeSettingsForm";
+import { emptyForm, fromSettings, tabDirty, TAB_FIELDS, toPayload, toTabPayload } from "./storeSettingsForm";
 
 const saved: StoreSettings = {
   commerce: { shippingFee: 49, freeShippingAbove: null, defaultTaxRate: 5, maxCouponAmount: null, minimumAge: null,
@@ -45,5 +45,27 @@ describe("store settings form", () => {
     const form = fromSettings(saved);
     expect(form).toMatchObject({ orderPrefix: "", shippingFee: "49", freeShippingAbove: "", defaultTaxRate: "5", pageSize: "24",
       gstin: "29AAACA1234B1Z9", state: "", legalName: "Acme LLP", email: "" });
+  });
+});
+
+describe("settings tabs", () => {
+  it("sends only the groups of the tab being saved", () => {
+    const p = toTabPayload({ ...emptyForm, shippingFee: "49", legalName: "Acme" }, "shipping");
+    expect(Object.keys(p)).toEqual(["commerce"]);
+    expect(p.commerce?.shippingFee).toBe(49);
+    expect(Object.keys(toTabPayload(emptyForm, "invoice")).sort()).toEqual(["invoice", "storefront"]);
+    expect(Object.keys(toTabPayload(emptyForm, "region"))).toEqual(["regional"]);
+  });
+
+  it("knows which tab has unsaved changes", () => {
+    const saved = { ...emptyForm, shippingFee: "49" };
+    expect(tabDirty({ ...saved, shippingFee: "50" }, saved, "shipping")).toBe(true);
+    expect(tabDirty({ ...saved, shippingFee: "50" }, saved, "orders")).toBe(false);
+    expect(tabDirty({ ...saved, orderPrefix: "ACME" }, saved, "orders")).toBe(true);
+  });
+
+  it("puts every form field on exactly one tab", () => {
+    const all = Object.values(TAB_FIELDS).flat();
+    expect(all.sort()).toEqual(Object.keys(emptyForm).sort());
   });
 });
