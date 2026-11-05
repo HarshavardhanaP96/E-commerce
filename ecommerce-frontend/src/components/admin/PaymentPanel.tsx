@@ -4,6 +4,7 @@ import { errorMessage } from "../../redux/api/baseQuery";
 import { useRefundOrderMutation } from "../../redux/api/orderAPI";
 import { OrderPayment } from "../../types/types";
 import { formatDateTime, formatMoney } from "../../utils/features";
+import { currencySymbol } from "../../utils/money";
 import StatusBadge from "./StatusBadge";
 
 /** How the order was paid, what has been returned, and a form to return more. Admin only. */
@@ -55,7 +56,7 @@ const PaymentPanel = ({ orderId, payment }: { orderId: string; payment: OrderPay
       {canRefund && (
         <form className="refund-form" onSubmit={submit}>
           <label>
-            Amount (₹), up to {formatMoney(left)}
+            Amount ({currencySymbol()}), up to {formatMoney(left)}
             <input type="number" min={0.01} max={left} step="0.01" value={amount}
                    placeholder={`Leave empty to refund ${formatMoney(left)}`} onChange={(e) => setAmount(e.target.value)} />
           </label>
