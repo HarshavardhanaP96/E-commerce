@@ -12,7 +12,8 @@ public interface StoreConfig {
     Seller seller();
 
     record Effective(double shippingFee, double freeShippingAbove, double defaultTaxRate, double maxCouponAmount,
-                     int minimumAge, int pageSize, int lowStockThreshold, String timeZone, int stuckOrderDays) {
+                     int minimumAge, int pageSize, int lowStockThreshold, String timeZone, int stuckOrderDays,
+                     String orderPrefix) {
     }
 
     record Seller(String name, String address, String gstin, String state, String email, String phone) {

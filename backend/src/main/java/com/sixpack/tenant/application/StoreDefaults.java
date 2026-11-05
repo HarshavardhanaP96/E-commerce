@@ -1,6 +1,7 @@
 package com.sixpack.tenant.application;
 
 import java.time.ZoneId;
+import java.util.regex.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -10,10 +11,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("app.store.defaults")
 public record StoreDefaults(Double shippingFee, Double freeShippingAbove, Double defaultTaxRate,
                             Double maxCouponAmount, Integer minimumAge, Integer pageSize, Integer lowStockThreshold,
-                            String timeZone, Integer stuckOrderDays) {
+                            String timeZone, Integer stuckOrderDays, String orderPrefix) {
 
     /** The legal floor: no store may sign up shoppers younger than this. */
     static final int MINIMUM_AGE_FLOOR = 18;
+
+    /** No dash, so the invoice number can reuse everything after the first one. */
+    static final Pattern ORDER_PREFIX = Pattern.compile("^[A-Z0-9]{1,6}$");
 
     public StoreDefaults {
         shippingFee = shippingFee == null || shippingFee < 0 ? 200.0 : shippingFee;
@@ -25,5 +29,6 @@ public record StoreDefaults(Double shippingFee, Double freeShippingAbove, Double
         lowStockThreshold = lowStockThreshold == null || lowStockThreshold < 0 ? 5 : lowStockThreshold;
         timeZone = timeZone == null || !ZoneId.getAvailableZoneIds().contains(timeZone) ? "Asia/Kolkata" : timeZone;
         stuckOrderDays = stuckOrderDays == null || stuckOrderDays < 1 || stuckOrderDays > 60 ? 3 : stuckOrderDays;
+        orderPrefix = orderPrefix == null || !ORDER_PREFIX.matcher(orderPrefix).matches() ? "ORD" : orderPrefix;
     }
 }

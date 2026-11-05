@@ -216,7 +216,7 @@ public class CheckoutService {
                     new PaymentInfo(intent.provider(), providerOrderId, paymentId, "PAID", intent.quote().total(),
                             intent.currency() == null ? "INR" : intent.currency(), now, method, null, 0, null),
                     consents.currentVersion(Purpose.TERMS), null,
-                    new OrderDetails(OrderNumbers.generate(now, ThreadLocalRandom.current()), details.billing(),
+                    new OrderDetails(OrderNumbers.generate(store.effective().orderPrefix(), now, ThreadLocalRandom.current()), details.billing(),
                             new Customer(contact.name(), contact.email(), contact.phone()),
                             List.of(new StatusEntry(OrderStatus.PROCESSING, now, userId)), intent.coupon(),
                             details.notes(), intent.attribution())));

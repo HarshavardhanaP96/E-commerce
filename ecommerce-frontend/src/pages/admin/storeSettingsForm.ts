@@ -3,7 +3,7 @@ import type { StoreSettings } from "../../redux/api/storeAPI";
 /** Every field as the input shows it; an empty string means "use the platform default". */
 export const emptyForm = {
   shippingFee: "", freeShippingAbove: "", defaultTaxRate: "", maxCouponAmount: "", minimumAge: "",
-  stuckOrderDays: "",
+  stuckOrderDays: "", orderPrefix: "",
   pageSize: "", lowStockThreshold: "",
   gstin: "", state: "",
   timeZone: "",
@@ -20,6 +20,7 @@ export const toPayload = (f: StoreSettingsForm): StoreSettings => ({
   commerce: {
     shippingFee: num(f.shippingFee), freeShippingAbove: num(f.freeShippingAbove), defaultTaxRate: num(f.defaultTaxRate),
     maxCouponAmount: num(f.maxCouponAmount), minimumAge: num(f.minimumAge), stuckOrderDays: num(f.stuckOrderDays),
+    orderPrefix: text(f.orderPrefix)?.toUpperCase() ?? null,
   },
   catalog: { pageSize: num(f.pageSize), lowStockThreshold: num(f.lowStockThreshold) },
   invoice: { gstin: text(f.gstin)?.toUpperCase() ?? null, state: text(f.state) },
@@ -34,6 +35,7 @@ export const fromSettings = (s: StoreSettings): StoreSettingsForm => ({
   shippingFee: show(s.commerce.shippingFee), freeShippingAbove: show(s.commerce.freeShippingAbove),
   defaultTaxRate: show(s.commerce.defaultTaxRate), maxCouponAmount: show(s.commerce.maxCouponAmount),
   minimumAge: show(s.commerce.minimumAge), stuckOrderDays: show(s.commerce.stuckOrderDays),
+  orderPrefix: show(s.commerce.orderPrefix),
   pageSize: show(s.catalog.pageSize), lowStockThreshold: show(s.catalog.lowStockThreshold),
   gstin: show(s.invoice.gstin), state: show(s.invoice.state),
   timeZone: show(s.regional.timeZone),

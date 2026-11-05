@@ -346,7 +346,7 @@ export const GUIDES: Guide[] = [
     slug: "store-settings",
     group: "Start here",
     title: "Setting your shop's rules",
-    summary: "Shipping, default GST, coupon cap, minimum age, catalogue paging, low-stock level, invoice and contact details, and time zone.",
+    summary: "Shipping, default GST, coupon cap, minimum age, order number prefix, catalogue paging, low-stock level, invoice and contact details, and time zone.",
     openLabel: { to: "/admin/settings", label: "Open Store settings" },
     body: [
       { type: "steps", items: [
@@ -357,6 +357,7 @@ export const GUIDES: Guide[] = [
         "Click Save settings. The cart, checkout and invoices use the new values straight away.",
       ] },
       { type: "p", text: "The default GST rate applies only to products without their own rate. An order keeps the rate it was charged at, so changing the default never changes past invoices." },
+      { type: "p", text: "The order number prefix starts every new order number, for example ACME-20261105-K7M3QX. Use up to 6 letters or digits. Orders you already have keep their number, and invoice numbers follow the order number." },
       { type: "p", text: "Spell the state the way customers type it in their address (Karnataka, not KA). A buyer in the same state pays CGST + SGST, anyone else IGST, and the names are compared as text." },
       { type: "tip", text: "Set a shipping fee of 0 to make shipping free on every order. The minimum age can be raised, but never set below 18. Currency and language are set by your platform administrator." },
       { type: "p", text: "Each save is recorded in the Audit log as STORE_SETTINGS_UPDATED, with the old and new values." },

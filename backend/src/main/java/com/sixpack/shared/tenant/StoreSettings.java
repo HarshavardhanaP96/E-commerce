@@ -23,10 +23,15 @@ public record StoreSettings(Commerce commerce, Catalog catalog, Invoice invoice,
      * @param maxCouponAmount   largest flat discount a coupon may give
      * @param minimumAge        youngest age a shopper may sign up at; never below the platform's legal floor
      * @param stuckOrderDays    an order still Processing after this many days is flagged on Analytics → Orders
+     * @param orderPrefix       start of the store's order numbers ({@code ACME-20261017-K7M3QX}); 1 to 6 letters or digits
      */
     public record Commerce(Double shippingFee, Double freeShippingAbove, Double defaultTaxRate, Double maxCouponAmount,
-                           Integer minimumAge, Integer stuckOrderDays) {
-        public static final Commerce NONE = new Commerce(null, null, null, null, null, null);
+                           Integer minimumAge, Integer stuckOrderDays, String orderPrefix) {
+        public static final Commerce NONE = new Commerce(null, null, null, null, null, null, null);
+
+        public Commerce {
+            orderPrefix = LegalSettings.blankToNull(orderPrefix);
+        }
     }
 
     /**

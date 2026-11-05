@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
+import type { StoreSettings } from "../../redux/api/storeAPI";
 import { emptyForm, fromSettings, toPayload } from "./storeSettingsForm";
+
+const saved: StoreSettings = {
+  commerce: { shippingFee: 49, freeShippingAbove: null, defaultTaxRate: 5, maxCouponAmount: null, minimumAge: null,
+    stuckOrderDays: null, orderPrefix: null },
+  catalog: { pageSize: 24, lowStockThreshold: null },
+  invoice: { gstin: "29AAACA1234B1Z9", state: null },
+  regional: { timeZone: null },
+  storefront: { legalName: "Acme LLP" },
+};
 
 describe("store settings form", () => {
   it("sends an empty field as null, meaning the platform default", () => {
     const payload = toPayload({ ...emptyForm, shippingFee: "49", timeZone: "" });
     expect(payload.commerce).toEqual({ shippingFee: 49, freeShippingAbove: null, defaultTaxRate: null,
-      maxCouponAmount: null, minimumAge: null, stuckOrderDays: null });
+      maxCouponAmount: null, minimumAge: null, stuckOrderDays: null, orderPrefix: null });
     expect(payload.regional).toEqual({ timeZone: null });
   });
 
@@ -19,6 +29,11 @@ describe("store settings form", () => {
     expect(payload.commerce.stuckOrderDays).toBe(7);
   });
 
+  it("trims and upper-cases the order number prefix", () => {
+    expect(toPayload({ ...emptyForm, orderPrefix: " acme " }).commerce.orderPrefix).toBe("ACME");
+    expect(fromSettings({ ...saved, commerce: { ...saved.commerce, orderPrefix: "ACME" } }).orderPrefix).toBe("ACME");
+  });
+
   it("trims text and upper-cases the GSTIN", () => {
     const p = toPayload({ ...emptyForm, gstin: " 29aaaca1234b1z9 ", legalName: "  Acme LLP " });
     expect(p.invoice.gstin).toBe("29AAACA1234B1Z9");
@@ -27,15 +42,8 @@ describe("store settings form", () => {
   });
 
   it("fills the form from saved settings, leaving unset ones empty", () => {
-    const form = fromSettings({
-      commerce: { shippingFee: 49, freeShippingAbove: null, defaultTaxRate: 5, maxCouponAmount: null, minimumAge: null,
-        stuckOrderDays: null },
-      catalog: { pageSize: 24, lowStockThreshold: null },
-      invoice: { gstin: "29AAACA1234B1Z9", state: null },
-      regional: { timeZone: null },
-      storefront: { legalName: "Acme LLP" },
-    });
-    expect(form).toMatchObject({ shippingFee: "49", freeShippingAbove: "", defaultTaxRate: "5", pageSize: "24",
+    const form = fromSettings(saved);
+    expect(form).toMatchObject({ orderPrefix: "", shippingFee: "49", freeShippingAbove: "", defaultTaxRate: "5", pageSize: "24",
       gstin: "29AAACA1234B1Z9", state: "", legalName: "Acme LLP", email: "" });
   });
 });
