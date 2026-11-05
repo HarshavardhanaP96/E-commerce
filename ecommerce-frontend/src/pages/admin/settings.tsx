@@ -93,6 +93,11 @@ const StoreSettings = () => {
               {number("minimumAge", "Minimum shopper age", `Default: ${dflt?.minimumAge}`, { min: 18, max: 100 })}
               <p className="span-2 store-settings__hint">The minimum age can be raised, never set below 18.</p>
               {number("stuckOrderDays", "Flag orders still processing after (days)", `Default: ${dflt?.stuckOrderDays}`, { min: 1, max: 60 })}
+              {textField("orderPrefix", "Order number prefix", { maxLength: 6 })}
+              <p className="span-2 store-settings__hint">
+                Up to 6 letters or digits. Default: {dflt?.orderPrefix}. New orders look like {fx.orderPrefix}-20261105-K7M3QX;
+                existing orders keep their number.
+              </p>
             </section>
 
             <section className="card form-grid">

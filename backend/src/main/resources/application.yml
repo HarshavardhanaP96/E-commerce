@@ -53,6 +53,8 @@ app:
       minimum-age: ${STORE_MINIMUM_AGE:18}
       # An order still Processing after this many days is flagged as stuck on Analytics → Orders.
       stuck-order-days: ${STORE_STUCK_ORDER_DAYS:3}
+      # Start of order numbers (ORD-20261017-K7M3QX): 1 to 6 letters or digits, no dash.
+      order-prefix: ${STORE_ORDER_PREFIX:ORD}
       page-size: ${PRODUCT_PER_PAGE:10}
       low-stock-threshold: ${PRODUCT_LOW_STOCK_THRESHOLD:5}
       # Days start and end in this zone on the store's dashboard, orders and invoices.

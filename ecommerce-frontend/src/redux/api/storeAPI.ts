@@ -9,6 +9,7 @@ export type StoreSettings = {
   commerce: {
     shippingFee: Maybe<number>; freeShippingAbove: Maybe<number>; defaultTaxRate: Maybe<number>;
     maxCouponAmount: Maybe<number>; minimumAge: Maybe<number>; stuckOrderDays: Maybe<number>;
+    orderPrefix: Maybe<string>;
   };
   catalog: { pageSize: Maybe<number>; lowStockThreshold: Maybe<number> };
   invoice: { gstin: Maybe<string>; state: Maybe<string> };
@@ -20,6 +21,7 @@ export type StoreSettings = {
 export type EffectiveStoreSettings = {
   shippingFee: number; freeShippingAbove: number; defaultTaxRate: number; maxCouponAmount: number;
   minimumAge: number; pageSize: number; lowStockThreshold: number; timeZone: string; stuckOrderDays: number;
+  orderPrefix: string;
 };
 
 export type StoreSettingsResponse = {

@@ -168,6 +168,37 @@ class StoreSettingsIntegrationTest extends TenantIntegrationTest {
     }
 
     @Test
+    void orderPrefixFollowsTheStoreWithAPlatformDefaultOfOrd() throws Exception {
+        getSettings(acme, adminA).andExpect(jsonPath("$.effective.orderPrefix").value("ORD"))
+                .andExpect(jsonPath("$.defaults.orderPrefix").value("ORD"));
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("orderPrefix", "acme"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.commerce.orderPrefix").value("ACME"))
+                .andExpect(jsonPath("$.effective.orderPrefix").value("ACME"));
+        getSettings(globex, adminB).andExpect(jsonPath("$.effective.orderPrefix").value("ORD"));
+    }
+
+    @Test
+    void orderPrefixIsOneToSixLettersOrDigits() throws Exception {
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("orderPrefix", "AC-ME"))).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("commerce.orderPrefix: 1 to 6 letters or digits"));
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("orderPrefix", "ABCDEFG"))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void ordersAndInvoicesAreNumberedWithTheStoresPrefix() throws Exception {
+        saveSettings(acme, adminA, Map.of("commerce", Map.of("orderPrefix", "ACME"))).andExpect(status().isOk());
+        String buyer = registerOn(acme, "buyer@acme.test");
+        JsonNode invoice = invoiceOn(acme, buyer, placeOrderOn(acme, buyer, productOn(acme, adminA, "Tee", "500", "10")));
+        String orderNumber = invoice.get("orderNumber").asText();
+        assertThat(orderNumber).matches("ACME-\\d{8}-[A-Z0-9]{6}");
+        assertThat(invoice.get("number").asText()).isEqualTo("INV-" + orderNumber.substring(5));
+
+        String buyerB = registerOn(globex, "buyer@globex.test");
+        assertThat(invoiceOn(globex, buyerB, placeOrderOn(globex, buyerB, productOn(globex, adminB, "Tee", "500", "10")))
+                .get("orderNumber").asText()).startsWith("ORD-");
+    }
+
+    @Test
     void aChangeIsRecordedInTheStoresOwnAuditLog() throws Exception {
         saveSettings(acme, adminA, Map.of("commerce", Map.of("shippingFee", 49))).andExpect(status().isOk());
         List<Document> entries = mongo.getCollection("audit_log")

@@ -21,21 +21,26 @@ class OrderDomainTest {
 
     @Test
     void orderNumbersHaveTheDocumentedShape() {
-        String number = OrderNumbers.generate(T0, new Random(1));
+        String number = OrderNumbers.generate("ORD", T0, new Random(1));
         assertThat(number).matches("ORD-20261017-[A-HJKMNP-Z2-9]{6}");
     }
 
     @Test
+    void orderNumbersStartWithTheStoresPrefix() {
+        assertThat(OrderNumbers.generate("ACME7", T0, new Random(1))).matches("ACME7-20261017-[A-HJKMNP-Z2-9]{6}");
+    }
+
+    @Test
     void orderNumbersUseTheUtcDateAndRarelyCollide() {
-        assertThat(OrderNumbers.generate(Instant.parse("2026-10-17T23:59:59Z"), new Random(2)))
+        assertThat(OrderNumbers.generate("ORD", Instant.parse("2026-10-17T23:59:59Z"), new Random(2)))
                 .startsWith("ORD-20261017-");
-        assertThat(OrderNumbers.generate(Instant.parse("2026-10-18T00:00:01Z"), new Random(2)))
+        assertThat(OrderNumbers.generate("ORD", Instant.parse("2026-10-18T00:00:01Z"), new Random(2)))
                 .startsWith("ORD-20261018-");
 
         Random random = new Random(42);
         Set<String> seen = new HashSet<>();
         for (int i = 0; i < 2000; i++) {
-            seen.add(OrderNumbers.generate(T0, random));
+            seen.add(OrderNumbers.generate("ORD", T0, random));
         }
         assertThat(seen).hasSize(2000);
     }

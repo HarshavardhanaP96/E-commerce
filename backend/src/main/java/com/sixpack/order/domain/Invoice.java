@@ -36,8 +36,9 @@ public record Invoice(String number, Instant date, String orderNumber, Seller se
 
     public static Invoice of(Order order, Seller seller) {
         OrderDetails details = order.details();
-        String suffix = details.orderNumber() != null && details.orderNumber().startsWith("ORD-")
-                ? details.orderNumber().substring(4) : order.id();
+        // Order numbers are PREFIX-date-code and the prefix has no dash, so the invoice keeps everything after the first one.
+        int dash = details.orderNumber() == null ? -1 : details.orderNumber().indexOf('-');
+        String suffix = dash > 0 ? details.orderNumber().substring(dash + 1) : order.id();
         ShippingInfo billTo = details.billingInfo() != null ? details.billingInfo() : order.shippingInfo();
         boolean sameState = sameState(seller.state(), billTo == null ? null : billTo.state());
 

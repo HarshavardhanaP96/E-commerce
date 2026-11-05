@@ -42,7 +42,7 @@ class StoreConfigService implements StoreConfig {
                 or(c.defaultTaxRate(), d.defaultTaxRate()), or(c.maxCouponAmount(), d.maxCouponAmount()),
                 or(c.minimumAge(), d.minimumAge()), or(cat.pageSize(), d.pageSize()),
                 or(cat.lowStockThreshold(), d.lowStockThreshold()), or(own.regional().timeZone(), d.timeZone()),
-                or(c.stuckOrderDays(), d.stuckOrderDays()));
+                or(c.stuckOrderDays(), d.stuckOrderDays()), or(c.orderPrefix(), d.orderPrefix()));
     }
 
     @Override
