@@ -42,3 +42,12 @@
     border-bottom: 1px solid var(--border);
   }
 }
+
+.platform-muted {
+  color: var(--text-muted);
+}
+
+.platform-note {
+  display: block;
+  margin-top: 0.2rem;
+}
