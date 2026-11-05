@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   LuCreditCard,
@@ -10,7 +10,7 @@ import {
   LuStore,
   LuToggleRight,
 } from "react-icons/lu";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
 import DetailLayout from "../../components/admin/DetailLayout";
 import Tabs, { TabDef } from "../../components/admin/Tabs";
@@ -20,6 +20,7 @@ import PlatformSidebar, { PlatformShell } from "./PlatformSidebar";
 import { MOVE_COPY, StatusAction, statusMoves } from "./statusMoves";
 import { findBySlug, typeLabel } from "./storeList";
 import OverviewTab from "./tabs/OverviewTab";
+import { UnsavedContext } from "../../utils/useUnsavedGuard";
 
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const FeaturesTab = lazy(() => import("./tabs/FeaturesTab"));
@@ -46,6 +47,13 @@ const StoreWorkspace = () => {
   const { data: details, isLoading, isError, error } = useTenantQuery(summary?.id ?? "", { skip: !summary });
   const [setStatus, { isLoading: moving }] = useSetTenantStatusMutation();
   const [move, setMove] = useState<StatusAction | null>(null);
+  const navigate = useNavigate();
+  // The open tab reports unsaved edits here, so switching tabs can ask before they are lost.
+  const dirty = useRef(false);
+  const reportDirty = useCallback((d: boolean) => {
+    dirty.current = d;
+  }, []);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
 
   if (!WORKSPACE_TABS.some((t) => t.key === tab)) return <Navigate to={`/platform/stores/${slug}`} replace />;
   if (listLoading || (summary && isLoading)) {
@@ -76,6 +84,7 @@ const StoreWorkspace = () => {
   }
 
   const t = details.tenant;
+  const tabHref = (k: string) => `/platform/stores/${t.slug}${k === "overview" ? "" : `/${k}`}`;
   const moves = statusMoves(t);
   const confirmMove = async () => {
     if (!move) return;
@@ -142,14 +151,33 @@ const StoreWorkspace = () => {
         tabs={WORKSPACE_TABS}
         active={tab}
         label="Store sections"
-        hrefFor={(k) => `/platform/stores/${t.slug}${k === "overview" ? "" : `/${k}`}`}
+        hrefFor={tabHref}
+        canLeave={(k) => {
+          if (!dirty.current) return true;
+          setPendingTab(k);
+          return false;
+        }}
       />
       <div role="tabpanel" aria-labelledby={`tab-${tab}`} className="platform-scroll">
         {/* key: a different store or tab starts its form fresh from the loaded values */}
-        <Suspense key={`${t.id}-${tab}`} fallback={<p>Loading…</p>}>
-          {panels[tab]}
-        </Suspense>
+        <UnsavedContext.Provider value={reportDirty}>
+          <Suspense key={`${t.id}-${tab}`} fallback={<p>Loading…</p>}>
+            {panels[tab]}
+          </Suspense>
+        </UnsavedContext.Provider>
       </div>
+      <ConfirmDialog
+        open={pendingTab !== null}
+        title="Discard unsaved changes?"
+        body={<p>You changed this tab without saving. Discard the changes and switch tabs?</p>}
+        confirmLabel="Discard changes"
+        danger
+        onCancel={() => setPendingTab(null)}
+        onConfirm={() => {
+          if (pendingTab) navigate(tabHref(pendingTab)); // the tab remounts, dropping its edits
+          setPendingTab(null);
+        }}
+      />
       {move && (
         <ConfirmDialog
           open
