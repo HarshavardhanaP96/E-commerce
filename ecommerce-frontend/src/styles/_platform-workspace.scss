@@ -1,0 +1,48 @@
+// Platform console store workspace (pages/platform/StoreWorkspace and tabs/).
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: 1rem;
+  align-content: start;
+
+  h3 {
+    margin-top: 0;
+  }
+
+  &__rules {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.35rem 1rem;
+
+    dt {
+      color: var(--text-muted);
+    }
+
+    dd {
+      margin: 0;
+    }
+  }
+
+  &__activity ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+}
+
+.meter {
+  margin-bottom: 0.75rem;
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  progress {
+    width: 100%;
+    accent-color: var(--accent-strong);
+  }
+}
