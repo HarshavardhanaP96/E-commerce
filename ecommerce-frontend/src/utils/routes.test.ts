@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminPageVisible, showsBottomNav, surfaceFor } from "./routes";
+import { adminPageVisible, isConsolePath, showsBottomNav, surfaceFor } from "./routes";
 
 describe("surfaceFor", () => {
   it("is admin for /admin and anything under it", () => {
@@ -10,7 +10,7 @@ describe("surfaceFor", () => {
   });
 
   it("is store everywhere else, including look-alike paths", () => {
-    for (const p of ["/", "/search", "/administrator", "/platform"]) expect(surfaceFor(p)).toBe("store");
+    for (const p of ["/", "/search", "/administrator", "/platformer"]) expect(surfaceFor(p)).toBe("store");
   });
 });
 
@@ -23,5 +23,16 @@ describe("adminPageVisible", () => {
 
   it("always shows pages that have no switch", () => {
     for (const url of ["/admin/app/coupon", "/admin/settings"]) expect(adminPageVisible(url, {})).toBe(true);
+  });
+});
+
+describe("console paths", () => {
+  it("treats the platform console like the admin", () => {
+    expect(isConsolePath("/platform")).toBe(true);
+    expect(isConsolePath("/platform/stores/acme")).toBe(true);
+    expect(isConsolePath("/admin/settings")).toBe(true);
+    expect(isConsolePath("/platformer")).toBe(false);
+    expect(surfaceFor("/platform/stores")).toBe("admin");
+    expect(showsBottomNav("/platform/stores")).toBe(false);
   });
 });

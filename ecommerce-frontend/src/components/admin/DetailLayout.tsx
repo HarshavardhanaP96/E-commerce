@@ -10,14 +10,16 @@ type Props = {
   subtitle?: ReactNode;
   /** Save / Update / Delete buttons, shown at the top-right. */
   actions?: ReactNode;
+  /** Another console's sidebar (the platform console); the store admin's by default. */
+  sidebar?: ReactNode;
   children: ReactNode;
 };
 
 /** Shared shell for product/user/order detail pages: fits the viewport, actions top-right. */
-const DetailLayout = ({ title, parent, subtitle, actions, children }: Props) => {
+const DetailLayout = ({ title, parent, subtitle, actions, sidebar, children }: Props) => {
   const navigate = useNavigate();
   return (
-    <AdminLayout>
+    <AdminLayout sidebar={sidebar}>
       <div className="detail-page">
         <header className="detail-page__header">
           <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Back">

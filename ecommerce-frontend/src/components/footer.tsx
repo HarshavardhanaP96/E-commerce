@@ -1,3 +1,4 @@
+import { isConsolePath } from "../utils/routes";
 import { brand } from "../tenant/tenant";
 import { Link, useLocation } from "react-router-dom";
 import { BUSINESS, POLICIES, PolicySlug, isFilledIn, policyPath } from "../legal/policies";
@@ -9,7 +10,7 @@ const LEGAL: PolicySlug[] = ["terms", "privacy", "cookies"];
 /** Policy links on every store page (E-Commerce Rules 2020; Razorpay onboarding). Admin has its own shell. */
 const Footer = () => {
   const { pathname } = useLocation();
-  if (pathname.startsWith("/admin")) return null;
+  if (isConsolePath(pathname)) return null;
 
   // Only details the store has filled in; the built-in "[…]" placeholders are never shown.
   const business = [BUSINESS.address, BUSINESS.email, BUSINESS.phone].filter(isFilledIn);

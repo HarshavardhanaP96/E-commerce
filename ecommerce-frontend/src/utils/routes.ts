@@ -1,6 +1,8 @@
-/** Routes that keep the full header instead: admin has its own sidebar, checkout has its own CTA. */
-export const showsBottomNav = (pathname: string) =>
-  !pathname.startsWith("/admin") && !pathname.startsWith("/shipping");
+/** The store admin and the platform console: own sidebar, admin tokens, no storefront footer or bottom nav. */
+export const isConsolePath = (pathname: string) => /^\/(admin|platform)(\/|$)/.test(pathname);
+
+/** Routes that keep the full header instead: consoles have their own sidebar, checkout has its own CTA. */
+export const showsBottomNav = (pathname: string) => !isConsolePath(pathname) && !pathname.startsWith("/shipping");
 
 /** Admin pages that exist only while the store's feature switch is on (tenant config `features`). */
 const FEATURE_PAGES: Record<string, string> = { "/admin/app/marketing": "marketing" };
@@ -11,6 +13,5 @@ export const adminPageVisible = (url: string, features: Record<string, boolean>)
   return !key || features[key] === true;
 };
 
-/** Which token set (see _tokens.scss) a path uses. Only /admin and its children are admin. */
-export const surfaceFor = (pathname: string): "store" | "admin" =>
-  pathname === "/admin" || pathname.startsWith("/admin/") ? "admin" : "store";
+/** Which token set (see _tokens.scss) a path uses: the admin and the platform console are admin. */
+export const surfaceFor = (pathname: string): "store" | "admin" => (isConsolePath(pathname) ? "admin" : "store");
