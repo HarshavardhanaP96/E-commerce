@@ -43,3 +43,41 @@ export const fromSettings = (s: StoreSettings): StoreSettingsForm => ({
   phone: show(s.storefront.phone), grievanceOfficer: show(s.storefront.grievanceOfficer),
   grievanceEmail: show(s.storefront.grievanceEmail), logoUrl: show(s.storefront.logoUrl),
 });
+
+export type SettingsTab = "shipping" | "orders" | "catalogue" | "invoice" | "region";
+
+export const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
+  { key: "shipping", label: "Shipping & tax" },
+  { key: "orders", label: "Orders & coupons" },
+  { key: "catalogue", label: "Catalogue" },
+  { key: "invoice", label: "Invoice & contact" },
+  { key: "region", label: "Region" },
+];
+
+export const TAB_FIELDS: Record<SettingsTab, (keyof StoreSettingsForm)[]> = {
+  shipping: ["shippingFee", "freeShippingAbove", "defaultTaxRate"],
+  orders: ["maxCouponAmount", "minimumAge", "stuckOrderDays", "orderPrefix"],
+  catalogue: ["pageSize", "lowStockThreshold"],
+  invoice: ["legalName", "address", "gstin", "state", "email", "phone", "grievanceOfficer", "grievanceEmail", "logoUrl"],
+  region: ["timeZone"],
+};
+
+const TAB_GROUPS: Record<SettingsTab, (keyof StoreSettings)[]> = {
+  shipping: ["commerce"],
+  orders: ["commerce"],
+  catalogue: ["catalog"],
+  invoice: ["invoice", "storefront"],
+  region: ["regional"],
+};
+
+/**
+ * Only this tab's groups. Commerce spans two tabs, so it is sent whole from the form; the other tab can hold no
+ * unsaved edits because switching tabs asks to discard them first.
+ */
+export const toTabPayload = (f: StoreSettingsForm, tab: SettingsTab): Partial<StoreSettings> => {
+  const all = toPayload(f);
+  return Object.fromEntries(TAB_GROUPS[tab].map((g) => [g, all[g]])) as Partial<StoreSettings>;
+};
+
+export const tabDirty = (form: StoreSettingsForm, saved: StoreSettingsForm, tab: SettingsTab) =>
+  TAB_FIELDS[tab].some((k) => form[k] !== saved[k]);
