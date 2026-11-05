@@ -150,4 +150,9 @@ class ProductCatalogService implements ProductCatalog, CatalogReads {
         return lines.stream().sorted(Comparator.comparing(StockLine::productId)
                 .thenComparing(l -> Objects.toString(l.variantId(), ""))).toList();
     }
+
+    @Override
+    public long count() {
+        return products.count();
+    }
 }

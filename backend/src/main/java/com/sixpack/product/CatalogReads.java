@@ -23,4 +23,7 @@ public interface CatalogReads {
     record Listing(String productId, String variantId, String name, String variantLabel, String description,
                    String brand, String photo, double price, int stock) {
     }
+
+    /** Products in the store in context (shown against its product limit). */
+    long count();
 }

@@ -162,6 +162,11 @@ class LocalFileStorage implements FileStorage {
         TenantContext.current().map(t -> usage.get(t.id())).ifPresent(used -> used.addAndGet(-bytes));
     }
 
+    @Override
+    public long usedBytes() {
+        return sizeOf(tenantDir());
+    }
+
     private static long sizeOf(Path dir) {
         if (!Files.isDirectory(dir)) {
             return 0;

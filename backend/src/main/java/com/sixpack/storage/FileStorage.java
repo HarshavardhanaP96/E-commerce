@@ -25,6 +25,9 @@ public interface FileStorage {
     /** Public paths of every file stored for the tenant in context (for a store export). */
     List<String> tenantFiles();
 
+    /** Bytes stored for the tenant in context (shown against its upload limit). */
+    long usedBytes();
+
     /** Opens a file of the tenant in context by its public path. */
     InputStream open(String path);
 

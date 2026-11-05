@@ -9,7 +9,12 @@ import com.sixpack.shared.tenant.TenantLimits;
 import com.sixpack.shared.web.ApiResponse;
 import com.sixpack.tenant.application.TenantAdminService;
 import com.sixpack.tenant.application.TenantAdminService.AdminCommand;
+import com.sixpack.shared.tenant.Feature;
 import com.sixpack.shared.tenant.StoreType;
+import com.sixpack.tenant.application.FeatureProperties;
+import com.sixpack.tenant.application.LimitProperties;
+import com.sixpack.tenant.application.TenantUsage;
+import java.util.LinkedHashMap;
 import com.sixpack.tenant.application.TenantAdminService.CreateCommand;
 import com.sixpack.tenant.application.TenantAdminService.UpdateCommand;
 import com.sixpack.tenant.domain.Tenant;
@@ -72,9 +77,17 @@ class PlatformTenantController {
     private final TenantAdminService service;
     private final TenantExport export;
 
-    PlatformTenantController(TenantAdminService service, TenantExport export) {
+    private final TenantUsage usage;
+    private final FeatureProperties featureDefaults;
+    private final LimitProperties limitDefaults;
+
+    PlatformTenantController(TenantAdminService service, TenantExport export, TenantUsage usage,
+                             FeatureProperties featureDefaults, LimitProperties limitDefaults) {
         this.service = service;
         this.export = export;
+        this.usage = usage;
+        this.featureDefaults = featureDefaults;
+        this.limitDefaults = limitDefaults;
     }
 
     @GetMapping
@@ -82,9 +95,21 @@ class PlatformTenantController {
         return ApiResponse.of("tenants", service.list().stream().map(TenantView::from).toList());
     }
 
+    /** One store for its workspace: the store, the owner's own shop rules, usage and the platform defaults. */
     @GetMapping("/{id}")
     Map<String, Object> get(@PathVariable String id) {
-        return ApiResponse.of("tenant", TenantView.from(service.get(id)));
+        Tenant t = service.get(id);
+        Map<String, Boolean> features = new LinkedHashMap<>();
+        for (Feature f : Feature.values()) {
+            features.put(f.key(), featureDefaults.defaults().getOrDefault(f.key(), false));
+        }
+        Map<String, Object> limits = Map.of("products", limitDefaults.products(),
+                "uploadBytes", limitDefaults.uploads().toBytes(),
+                "requestsPerMinute", limitDefaults.requestsPerMinute());
+        Map<String, Object> body = new LinkedHashMap<>(ApiResponse.of("tenant", TenantView.from(t),
+                "settings", t.settings(), "defaults", Map.of("features", features, "limits", limits)));
+        body.put("usage", usage.of(t).orElse(null)); // Map.of refuses nulls
+        return body;
     }
 
     @PostMapping
