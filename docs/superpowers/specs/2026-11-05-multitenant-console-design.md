@@ -120,21 +120,23 @@ Each tab warns before leaving it with unsaved changes. After a save the workspac
 
 ### 4.1 Backend additions
 
-`GET /platform/tenants/{id}` (single store only, not the list) also returns:
+`GET /platform/tenants/{id}` (single store only, not the list) returns `{tenant, settings, usage|null, defaults}`:
 
-- `type` (always present; `GENERAL` when null),
+- `tenant.type` (always present; `GENERAL` when null),
 - `settings`: the owner's `StoreSettings` (read-only here),
-- `usage`: `{products, uploadBytes}`, counted inside that store's tenant context, the same way `TenantExport` reads one store.
+- `usage`: `{products, uploadBytes}`, counted inside that store's tenant context, the same way `TenantExport` reads one store,
+- `defaults`: the platform's feature switches and limits, for "Default: n" hints.
 
-`GET /platform/tenants` adds `type` to each row. No new write endpoints.
+`GET /platform/tenants` adds `type` to each row. `GET /platform/store-types` lists the types and their presets for the
+onboarding page (one source of truth for the presets). No new write endpoints.
 
 ### 4.2 Call budget
 
 | Screen | First load | Per action |
 |---|---|---|
 | Store list | 1 (`GET /platform/tenants`) | 0 (search, chips and sort are local) |
-| Onboard store | 0 | 1 (create) |
-| Store workspace | 2 on Overview (store + recent audit), 1 on any other tab | 1 per save or status move |
+| Onboard store | 1 (store types, cached an hour) | 1 (create) |
+| Store workspace | 2 on Overview (store + recent audit), 1 on any other tab; +1 on a deep link (the list, to resolve the slug) | 1 per save or status move |
 | Audit log | 1 | 1 per filter change or page |
 
 ## 5. Store owner's Store settings

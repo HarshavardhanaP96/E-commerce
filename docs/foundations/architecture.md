@@ -20,7 +20,7 @@ other modules may use. Everything in its sub-packages is internal, and Spring Mo
 | Module      | Public API (root package)                         | Internals |
 |-------------|---------------------------------------------------|-----------|
 | `shared`    | (open module) error model, security config, JWT, rate limit, web config; `shared.tenant`: `TenantContext`, `TenantMongo`, `TenantOwned`, `BackfillTarget` | — |
-| `tenant`    | — (others use `shared.tenant`)                    | tenants and platform administrators (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, legacy index cleanup, tenant settings, `/tenant/config` and `/platform/**` |
+| `tenant`    | — (others use `shared.tenant`)                    | tenants and platform administrators (platform-global data), host-to-tenant registry, per-request resolution filter, default tenant bootstrap, backfill, legacy index cleanup, tenant settings, store types (`shared.tenant.StoreType`, ADR-030), per-store usage (`TenantUsage`), `/tenant/config` and `/platform/**` |
 | `user`      | `UserDirectory` (look up name / exists), `UserDeletedEvent`, `AccountDeletionGuard` (other modules can veto a deletion) | `web` controllers + DTOs, `application` services, `domain` model + ports, `infra` Mongo + mail adapters |
 | `product`   | `ProductCatalog` (snapshot, reserve and release stock) | same layering; also owns `Category` (`/category`) |
 | `coupon`    | `CouponLookup` (discount for a code)              | same layering |
@@ -122,6 +122,14 @@ Single backend replica in prod today (ADR-008); these hold for N. Marketing serv
   FAQ answers restate `legal/policies.ts`, so update both when a policy changes.
 
 ## Key decisions (append-only log, newest first)
+- 2026-11-05: ADR-030 **Store types are presets applied once.** Stores of different kinds need different starting
+  features and shop rules, and hand-editing JSON per store was slow and error-prone. `StoreType` (`GENERAL`,
+  `FASHION`, `GROCERY`, `ELECTRONICS`) lives in code (`shared.tenant`). On create its preset is written as the store's
+  own feature switches and `StoreSettings`; values sent explicitly in the request win. Afterwards the type is a label:
+  changing it never re-applies a preset. A store with no type reads as `GENERAL` (no migration). `marketing` is never
+  part of a preset. Consequences: presets change only with a release and are reviewed like code; owners see preset
+  values as their own (Custom) and can reset them to the platform default. Editable types, plans and billing are out
+  of scope. The platform console (`/platform/stores…`) onboards with a type and edits each store in tabs instead of JSON.
 - 2026-10-31: ADR-029 **Owner-set marketing secrets are encrypted in MongoDB.** Store owners paste a Meta
   Conversions API access token and a GA4 Measurement Protocol API secret on Admin → Marketing; phase 4 adds OAuth
   refresh tokens that rotate on their own. The T+ rule for tenant secrets (a sealed secret per store, referenced by
