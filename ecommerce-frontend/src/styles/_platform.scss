@@ -42,3 +42,81 @@
     border-bottom: 1px solid var(--border);
   }
 }
+
+.platform-muted {
+  color: var(--text-muted);
+}
+
+.platform-note {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.onboard {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+
+  fieldset {
+    border: 1px solid var(--border);
+  }
+
+  &__summary {
+    margin: 0.75rem 0 0;
+    color: var(--text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-bottom: 1rem;
+  }
+}
+
+.type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.type-card {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  // The radio stays focusable for keyboards; the card shows its state.
+  input {
+    position: absolute;
+    opacity: 0;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    font-size: 1.5rem;
+    color: var(--accent-strong);
+  }
+
+  span {
+    color: var(--text-muted);
+  }
+
+  &--active {
+    border-color: var(--accent-strong);
+    box-shadow: inset 0 0 0 1px var(--accent-strong);
+  }
+}
+
+.platform-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
