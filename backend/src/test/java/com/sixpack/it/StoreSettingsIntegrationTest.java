@@ -1,5 +1,7 @@
 package com.sixpack.it;
 
+import com.sixpack.shared.tenant.StoreType;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -335,5 +337,16 @@ class StoreSettingsIntegrationTest extends TenantIntegrationTest {
         mvc.perform(post("/api/v1/platform/tenants/" + acme.id() + "/suspend").header("Authorization", bearer(platform)));
         assertThat(tenantRepository.findById(acme.id()).orElseThrow().settings().commerce().shippingFee())
                 .isEqualTo(49.0);
+    }
+
+    @Test
+    void theSettingsNameTheStoresType() throws Exception {
+        getSettings(acme, adminA).andExpect(jsonPath("$.type").value("GENERAL"));
+        Tenant a = tenantRepository.findById(acme.id()).orElseThrow();
+        tenantRepository.save(new Tenant(a.id(), a.slug(), a.name(), a.status(), a.domains(), a.theme(), a.locale(),
+                a.currency(), a.createdAt(), a.legal(), a.payment(), a.mail(), a.storefront(), a.features(),
+                a.deletionDueAt(), a.limits(), a.trialEndsAt(), a.settings(), StoreType.FASHION));
+        tenantRegistry.refresh(); // StoreSettingsService.get reads through the cached registry
+        getSettings(acme, adminA).andExpect(jsonPath("$.type").value("FASHION"));
     }
 }

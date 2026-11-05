@@ -102,4 +102,16 @@ class PlatformStoreTypesIntegrationTest extends TenantIntegrationTest {
         assertThat(changeOf(entry, "settings.commerce.shippingFee").get("after")).isEqualTo(40.0);
         assertThat(changeOf(entry, "settings.catalog.lowStockThreshold").get("after")).isEqualTo(10);
     }
+
+    @Test
+    void theOperatorCanListTheStoreTypesAndTheirPresets() throws Exception {
+        mvc.perform(get("/api/v1/platform/store-types").header("Authorization", bearer(platformToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.types.length()").value(4))
+                .andExpect(jsonPath("$.types[0].key").value("GENERAL"))
+                .andExpect(jsonPath("$.types[1].label").value("Fashion"))
+                .andExpect(jsonPath("$.types[1].features.variants").value(true))
+                .andExpect(jsonPath("$.types[2].settings.commerce.shippingFee").value(40.0));
+        mvc.perform(get("/api/v1/platform/store-types")).andExpect(status().isUnauthorized());
+    }
 }

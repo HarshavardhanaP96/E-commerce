@@ -37,6 +37,9 @@ class StoreSettingsController {
         settings.put("invoice", v.settings().invoice());
         settings.put("regional", v.settings().regional());
         settings.put("storefront", v.storefront());
-        return ApiResponse.of("settings", settings, "effective", v.effective(), "defaults", v.defaults());
+        Map<String, Object> out = new java.util.LinkedHashMap<>(
+                ApiResponse.of("settings", settings, "effective", v.effective(), "defaults", v.defaults()));
+        out.put("type", v.type().name()); // ApiResponse.of stops at three pairs
+        return out;
     }
 }

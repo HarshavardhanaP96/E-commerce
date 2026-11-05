@@ -8,6 +8,7 @@ import com.sixpack.audit.Changes.FieldPolicy;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.tenant.StoreConfig;
 import com.sixpack.shared.tenant.StoreSettings;
+import com.sixpack.shared.tenant.StoreType;
 import com.sixpack.shared.tenant.StorefrontSettings;
 import com.sixpack.shared.tenant.TenantContext;
 import com.sixpack.tenant.domain.Tenant;
@@ -34,7 +35,7 @@ public class StoreSettingsService {
 
     /** @param defaults what each rule returns to when the store clears its own value */
     public record View(StoreSettings settings, StorefrontSettings storefront, StoreConfig.Effective effective,
-                       StoreConfig.Effective defaults) {
+                       StoreConfig.Effective defaults, StoreType type) {
     }
 
     private static final Pattern GSTIN = Pattern.compile("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$");
@@ -81,7 +82,7 @@ public class StoreSettingsService {
 
     private View view(Tenant t) {
         return new View(t.settings(), t.storefront(), StoreConfigService.resolve(t.settings(), defaults),
-                StoreConfigService.resolve(StoreSettings.NONE, defaults));
+                StoreConfigService.resolve(StoreSettings.NONE, defaults), t.type());
     }
 
     private static StoreSettings.Commerce validCommerce(StoreSettings.Commerce c) {
