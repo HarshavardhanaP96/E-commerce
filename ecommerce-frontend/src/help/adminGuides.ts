@@ -350,12 +350,13 @@ export const GUIDES: Guide[] = [
     openLabel: { to: "/admin/settings", label: "Open Store settings" },
     body: [
       { type: "steps", items: [
-        "Go to Store settings.",
+        "Go to Store settings. The page has tabs: Shipping & tax, Orders & coupons, Catalogue, Invoice & contact and Region. Each tab saves on its own.",
         "Every field shows the platform default in grey. Type a value to use your own, or leave it empty to keep the default.",
         "Under Invoices and contact details, enter your legal name, registered address, GSTIN and state, plus the contact email, phone and grievance officer. Your invoices print these, and your Terms, Privacy and Contact pages show them.",
         "Under Region, pick your time zone. Analytics days and the dates on orders and invoices follow it.",
         "Click Save settings. The cart, checkout and invoices use the new values straight away.",
       ] },
+      { type: "p", text: "A field you have set shows a Custom tag; Reset to default clears it so the platform default applies again after you save. If your store was set up as a Fashion, Grocery or Electronics store, some fields start with values chosen for that kind of store." },
       { type: "p", text: "The default GST rate applies only to products without their own rate. An order keeps the rate it was charged at, so changing the default never changes past invoices." },
       { type: "p", text: "The order number prefix starts every new order number, for example ACME-20261105-K7M3QX. Use up to 6 letters or digits. Orders you already have keep their number, and invoice numbers follow the order number." },
       { type: "p", text: "Spell the state the way customers type it in their address (Karnataka, not KA). A buyer in the same state pays CGST + SGST, anyone else IGST, and the names are compared as text." },
