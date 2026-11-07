@@ -5,8 +5,10 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
 import Tabs from "../../components/admin/Tabs";
 import { errorMessage } from "../../redux/api/baseQuery";
+import { useIndianStatesQuery } from "../../redux/api/referenceAPI";
 import { useSaveStoreSettingsMutation, useStoreSettingsQuery } from "../../redux/api/storeAPI";
 import { loadTenantConfig } from "../../tenant/tenant";
+import { savedStateChoice } from "../../utils/indianStates";
 import { currencySymbol, formatMoney } from "../../utils/money";
 import { typeLabel } from "../../utils/storeTypes";
 import { useUnsavedGuard } from "../../utils/useUnsavedGuard";
@@ -39,6 +41,9 @@ const StoreSettings = () => {
   const [save, { isLoading: saving }] = useSaveStoreSettingsMutation();
   const [form, setForm] = useState<StoreSettingsForm>(emptyForm);
   const [pendingTab, setPendingTab] = useState<SettingsTab | null>(null);
+  const { data: stateList } = useIndianStatesQuery();
+  const states = stateList?.states ?? [];
+  const stateChoice = savedStateChoice(form.state, states);
 
   const saved = useMemo(() => (data ? fromSettings(data.settings) : emptyForm), [data]);
   useEffect(() => setForm(saved), [saved]);
@@ -139,9 +144,20 @@ const StoreSettings = () => {
         {contact("legalName", "Legal name", { span: true })}
         {contact("address", "Registered address", { span: true })}
         {contact("gstin", "GSTIN", { maxLength: 15 })}
-        {contact("state", "State of registration", { maxLength: 60 })}
+        <label>
+          <span>
+            State of registration
+            {tag("state")}
+          </span>
+          <select value={stateChoice.value} onChange={set("state")}>
+            <option value="">Not set</option>
+            {stateChoice.extra && <option value={stateChoice.extra.value}>{stateChoice.extra.label}</option>}
+            {states.map((s) => <option key={s.code} value={s.name}>{s.name}</option>)}
+          </select>
+          {own("state", "Clear")}
+        </label>
         <p className="span-2 store-settings__hint">
-          The state decides CGST + SGST (buyer in the same state) or IGST. Spell it as customers do, e.g. Karnataka.
+          The state decides CGST + SGST (buyer in the same state) or IGST.
         </p>
         {contact("email", "Contact email", { type: "email" })}
         {contact("phone", "Contact phone", { type: "tel" })}

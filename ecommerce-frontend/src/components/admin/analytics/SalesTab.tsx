@@ -4,19 +4,24 @@ import { formatMoney } from "../../../utils/features";
 import { BarChart } from "../Charts";
 import { chartColors as c } from "../chartTheme";
 import { alignPrevious, bucketLabel } from "./sections";
-import { CsvButton, SectionState } from "./Shared";
+import { AudienceNote, CsvButton, SectionState } from "./Shared";
 
 const SalesTab = ({ params }: { params: SectionParams }) => {
   const { data, isLoading, isError } = useGetSalesQuery(params);
   if (isLoading) return <SectionState loading />;
   if (isError || !data) return <SectionState />;
   const s = data.section;
+  const audience = { gender: params.gender, ageBand: params.ageBand };
+  const note = <AudienceNote audience={audience} hidden={s.small} previousHidden={s.previousSmall}
+                             comparison="comparison period" />;
+  if (s.small) return note;
   const previous = alignPrevious(s.series, s.previousSeries);
   const b = s.breakdown;
 
   return (
     <>
       <div className="analytics__actions"><CsvButton section="sales" params={params} /></div>
+      {note}
       {!b && <p className="analytics__note">The breakdown covers whole orders, so it is hidden while a category is selected.</p>}
       <section className="analytics__grid">
         <div className="card chart-card chart-card--wide">

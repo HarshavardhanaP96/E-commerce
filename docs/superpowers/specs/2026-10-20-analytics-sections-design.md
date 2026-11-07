@@ -1,6 +1,6 @@
 # Analytics sections — design
 
-Status: **Amended 2026-10-21 (plan Amendment 1: builds on dev's step-3 tabs; Stock and Customers dropped; ADR-026).** Previously: **approved in conversation 2026-10-20, awaiting review of this written spec.** Branch: `feat/analytics`
+Status: **Implemented on feat/analytics per docs/superpowers/plans/2026-10-20-analytics-sections.md with Amendments 1 and 2 (ADR-027).** Where this spec and the code differ, the code and `docs/foundations/contracts.md` win: Stock, this spec's Customers and Demand were dropped (dev's Products and Customers tabs cover them; trending and bought-together moved onto Products), Sales has no `byCategory`/`byPaymentMethod`, Orders has no `topCoupons`, and the audience table and gender/age filters were added (Amendment 2). Amended 2026-10-21 (plan Amendment 1: builds on dev's step-3 tabs). Previously: **approved in conversation 2026-10-20, awaiting review of this written spec.** Branch: `feat/analytics`
 (fast-forwarded to `dev` at `5e8541a`). This is step 3 of the analytics plan ("more shop sections + CSV"), widened with
 Location and in-tab trends. Steps 2 (daily summary table) and 4–6 are unchanged and out of scope here.
 

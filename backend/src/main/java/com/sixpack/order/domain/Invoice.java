@@ -1,9 +1,9 @@
 package com.sixpack.order.domain;
 
+import com.sixpack.shared.geo.IndianStates;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -40,7 +40,8 @@ public record Invoice(String number, Instant date, String orderNumber, Seller se
         int dash = details.orderNumber() == null ? -1 : details.orderNumber().indexOf('-');
         String suffix = dash > 0 ? details.orderNumber().substring(dash + 1) : order.id();
         ShippingInfo billTo = details.billingInfo() != null ? details.billingInfo() : order.shippingInfo();
-        boolean sameState = sameState(seller.state(), billTo == null ? null : billTo.state());
+        boolean sameState = sameState(seller.state(), billTo == null ? null : billTo.state(),
+                billTo == null ? null : billTo.country());
 
         List<Line> lines = new ArrayList<>();
         Map<Double, Long> paiseByRate = new TreeMap<>();
@@ -71,8 +72,8 @@ public record Invoice(String number, Instant date, String orderNumber, Seller se
                 payment == null ? 0 : payment.refunded());
     }
 
-    private static boolean sameState(String a, String b) {
-        return a != null && b != null && !a.isBlank() && a.trim().toLowerCase(Locale.ROOT)
-                .equals(b.trim().toLowerCase(Locale.ROOT));
+    /** The seller is in India: the store's GST registration is Indian. */
+    static boolean sameState(String sellerState, String buyerState, String buyerCountry) {
+        return IndianStates.same(sellerState, "India", buyerState, buyerCountry);
     }
 }

@@ -25,6 +25,12 @@
   share, idle products, days of stock left), Customers (new vs returning, repeat rate, top customers, places),
   Coupons, Payments (method mix, refunds over time) and Tax (GST by month and rate, CGST/SGST/IGST), each table
   downloadable as CSV with the download audited. *Steps 1–3 of the analytics plan; the super admin view follows.*
+  Added on `feat/analytics` (ADR-027): Overview (KPIs, trend, weekday/hour), Sales (trend vs comparison, where the
+  money went), Orders (status, ship/deliver times, stuck orders after the store's `stuckOrderDays`, order size,
+  refund rate) and Location (country → Indian state → PIN area) tabs, each with an audited CSV; Products rising/falling
+  and bought-together; a Customers Audience table (gender × age band) and gender/age filters on Sales and Products, with
+  a 5-buyer threshold and complementary suppression; Indian states picked from a list at checkout and in Store
+  settings.
 - [ ] FR10: Admin tables have filters inline with search, with pagination at the bottom (`prompt.txt`).
 - [ ] FR11: Detail pages (product, user, order) have Save and Delete at the top right and fit the viewport without page scroll.
 - [ ] FR12: Admins must accept an acceptable-use agreement before using admin endpoints, and again when its version changes.

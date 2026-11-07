@@ -15,7 +15,8 @@ import java.util.Set;
  */
 public final class IndianStates {
 
-    public record State(String code, String name, boolean unionTerritory) {
+    /** {@code aliases}: the other spellings and older codes accepted for it, beyond case, spaces and punctuation. */
+    public record State(String code, String name, boolean unionTerritory, List<String> aliases) {
     }
 
     private static final List<State> ALL;
@@ -83,19 +84,38 @@ public final class IndianStates {
         return country != null && INDIA.contains(key(country));
     }
 
+    /**
+     * Whether two addresses are in the same state. Both in India: the same Indian state however spelled ("KA",
+     * "karnataka "). Otherwise, or when either is not on the list, the trimmed text must match ignoring case: a code
+     * like "TN" means something else abroad (Tennessee). Null or blank is never the same.
+     */
+    public static boolean same(String stateA, String countryA, String stateB, String countryB) {
+        if (stateA == null || stateB == null || stateA.isBlank() || stateB.isBlank()) {
+            return false;
+        }
+        if (isIndia(countryA) && isIndia(countryB)) {
+            Optional<State> a = normalise(stateA);
+            Optional<State> b = normalise(stateB);
+            if (a.isPresent() && b.isPresent()) {
+                return a.get().equals(b.get());
+            }
+        }
+        return stateA.trim().toLowerCase(Locale.ROOT).equals(stateB.trim().toLowerCase(Locale.ROOT));
+    }
+
     private static void state(String code, String name, String... aliases) {
-        add(new State(code, name, false), aliases);
+        add(new State(code, name, false, List.of(aliases)));
     }
 
     private static void territory(String code, String name, String... aliases) {
-        add(new State(code, name, true), aliases);
+        add(new State(code, name, true, List.of(aliases)));
     }
 
-    private static void add(State s, String... aliases) {
+    private static void add(State s) {
         BY_CODE.put(s.code(), s);
         BY_KEY.put(key(s.code()), s);
         BY_KEY.put(key(s.name()), s);
-        for (String alias : aliases) {
+        for (String alias : s.aliases()) {
             BY_KEY.put(key(alias), s);
         }
     }

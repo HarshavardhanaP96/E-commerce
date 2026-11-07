@@ -10,6 +10,7 @@ import { auditAPI } from "./api/auditAPI";
 import { storeAPI } from "./api/storeAPI";
 import { platformAPI } from "./api/platformAPI";
 import { marketingAPI } from "./api/marketingAPI";
+import { referenceAPI } from "./api/referenceAPI";
 import { userReducer } from "./reducer/userReducer";
 import { cartReducer, persistCart } from "./reducer/cartReducer";
 
@@ -26,6 +27,7 @@ export const store = configureStore({
     [platformAPI.reducerPath]: platformAPI.reducer,
     [storeAPI.reducerPath]: storeAPI.reducer,
     [marketingAPI.reducerPath]: marketingAPI.reducer,
+    [referenceAPI.reducerPath]: referenceAPI.reducer,
     [userReducer.name]: userReducer.reducer,
     [cartReducer.name]: cartReducer.reducer,
   },
@@ -41,7 +43,8 @@ export const store = configureStore({
       auditAPI.middleware,
       platformAPI.middleware,
       storeAPI.middleware,
-      marketingAPI.middleware
+      marketingAPI.middleware,
+      referenceAPI.middleware
     ),
 });
 

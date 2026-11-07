@@ -85,6 +85,13 @@ Run these once, in this order. The first two have never been done for this work.
    deployment checklist). Set the `INVOICE_SELLER_*` values before customers open invoices. The frontend now calls
    `POST /order/quote` for coupon previews, so deploy backend and frontend together.
 
+   Analytics sections release (ADR-027): no data migration and no new collection. One new optional store setting,
+   `commerce.stuckOrderDays` (absent = the platform's `STORE_STUCK_ORDER_DAYS`, 3). Checkout and `PUT /store/settings`
+   now reject an Indian state that is not on the list (400) and store the official name; states saved before are
+   normalised when read, not rewritten. The frontend calls the new `/dashboard/overview|sales|orders|location` and
+   `/reference/indian-states` routes, so deploy backend and frontend together. Raise the privacy version as the
+   deployment checklist (§6) says, after the 7-day notice.
+
 ## Rollback / monitoring
 - Signals: 5xx rate, p95 latency, readiness failures, `sixpack.checkout.failed`, ERROR logs containing
   `paid_but_unfulfilled`.

@@ -27,7 +27,7 @@ class SalesSectionTest {
         Window w = new Window(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 2), null, null, "UTC", "day");
         SalesSection s = new SalesSection(w, "net",
                 List.of(new Series.Point(LocalDate.of(2026, 10, 1), 10, 1), new Series.Point(LocalDate.of(2026, 10, 2), 20, 2)),
-                List.of(new Series.Point(LocalDate.of(2026, 9, 29), 5, 1)), null);
+                List.of(new Series.Point(LocalDate.of(2026, 9, 29), 5, 1)), null, false, false);
         assertThat(s.csvHeader()).containsExactly("start", "revenue", "orders", "previousRevenue");
         assertThat(s.csvRows()).containsExactly(Arrays.asList(LocalDate.of(2026, 10, 1), 10.0, 1L, 5.0),
                 Arrays.asList(LocalDate.of(2026, 10, 2), 20.0, 2L, null));

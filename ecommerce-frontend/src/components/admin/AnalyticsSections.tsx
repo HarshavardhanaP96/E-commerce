@@ -12,20 +12,25 @@ import {
 import { bucketLabel, DateRange } from "../../utils/dateRange";
 import { formatMoney } from "../../utils/features";
 import type { RangeSectionName } from "../../types/analytics";
-import { daysLeftLabel, downloadCsv, ExportTable } from "../../utils/sections";
+import type { Audience, AudienceCell, TrendRow } from "../../types/sections";
+import {
+  AudienceFilter, audienceBandLabel, audienceCellText, audienceGenderLabel, daysLeftLabel, downloadCsv, ExportTable,
+  HIDDEN_CELL, REMOVED_PRODUCT, trendChange,
+} from "../../utils/sections";
+import { AudienceNote } from "./analytics/Shared";
 import { BarChart, DoughnutChart } from "./Charts";
 import { chartColors as c } from "./chartTheme";
 
 /** One card with a title, an optional CSV download for its table, and the table or chart. */
-const Card = ({ title, table, range, wide, children }: {
-  title: string; table?: ExportTable; range: DateRange; wide?: boolean; children: ReactNode;
+const Card = ({ title, table, range, audience, wide, children }: {
+  title: string; table?: ExportTable; range: DateRange; audience?: AudienceFilter; wide?: boolean; children: ReactNode;
 }) => {
   const [busy, setBusy] = useState(false);
   const download = async () => {
     if (!table) return;
     setBusy(true);
     try {
-      await downloadCsv(table, range);
+      await downloadCsv(table, range, audience);
     } catch {
       toast.error("Could not download the CSV");
     } finally {
@@ -61,14 +66,78 @@ const Status = ({ loading, error }: { loading: boolean; error: boolean }) =>
   loading ? <p className="section-card__empty">Loading…</p>
     : error ? <p className="data-table__empty">Could not load this section. Please retry.</p> : null;
 
-const Products = ({ range }: { range: DateRange }) => {
+/** Rising or falling products; a removed product has no page to open. */
+const TrendList = ({ title, rows, empty, up }: { title: string; rows: TrendRow[]; empty: string; up: boolean }) => {
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useGetProductsSectionQuery(range);
+  return (
+    <div>
+      <h5>{title}</h5>
+      {rows.length === 0 ? <Empty>{empty}</Empty> : (
+        <table className="mini-table">
+          <thead><tr><th>Product</th><th>Units</th><th>Before</th><th>Change</th></tr></thead>
+          <tbody>
+            {rows.map((r) => {
+              const open = r.name !== REMOVED_PRODUCT;
+              return (
+                <tr key={r.productId} className={open ? "clickable" : undefined}
+                    onClick={open ? () => navigate(`/admin/product/${r.productId}`) : undefined}>
+                  <td>{r.name}</td><td>{r.units}</td><td>{r.previousUnits}</td>
+                  <td className={up ? "green" : "red"}>{trendChange(r)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+const AudienceValue = ({ cell }: { cell: AudienceCell }) => {
+  const { value, detail } = audienceCellText(cell, formatMoney);
+  return detail === null ? <span className="audience-table__small">{value}</span> : (
+    <>
+      <b>{value}</b>
+      <small>{detail}</small>
+    </>
+  );
+};
+
+/** Gender × age band grid; hidden cells (small groups and the cells that would give them away) show no figures. */
+const AudienceTable = ({ audience }: { audience: Audience }) => (
+  <table className="mini-table audience-table">
+    <thead>
+      <tr>
+        <th scope="col">Gender</th>
+        {audience.bands.map((b) => <th key={b} scope="col">{audienceBandLabel(b)}</th>)}
+        <th scope="col">All ages</th>
+      </tr>
+    </thead>
+    <tbody>
+      {audience.rows.map((r) => (
+        <tr key={r.gender} className={r.gender === "all" ? "audience-table__total" : undefined}>
+          <th scope="row">{audienceGenderLabel(r.gender)}</th>
+          {r.cells.map((cell, i) => <td key={audience.bands[i]}><AudienceValue cell={cell} /></td>)}
+          <td><AudienceValue cell={r.total} /></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
+
+const Products = ({ range, audience }: { range: DateRange; audience: AudienceFilter }) => {
+  const navigate = useNavigate();
+  const { data, isLoading, isError } = useGetProductsSectionQuery({ ...range, ...audience });
   if (!data) return <Status loading={isLoading} error={isError} />;
   const p = data.products;
+  const note = <AudienceNote audience={audience} hidden={p.small} previousHidden={p.previousSmall}
+                             comparison="period before" />;
+  if (p.small) return note;
   return (
+    <>
+    {note}
     <section className="analytics__grid">
-      <Card title="Top sellers" table="top-products" range={range} wide>
+      <Card title="Top sellers" table="top-products" range={range} audience={audience} wide>
         {p.top.length === 0 ? <Empty>No sales in this range.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Units</th><th>Orders</th><th>Revenue</th></tr></thead>
@@ -82,7 +151,7 @@ const Products = ({ range }: { range: DateRange }) => {
           </table>
         )}
       </Card>
-      <Card title="Revenue by category" table="categories" range={range}>
+      <Card title="Revenue by category" table="categories" range={range} audience={audience}>
         {p.categories.length === 0 ? <Empty>No sales in this range.</Empty> : (
           <ul className="category-bars">
             {p.categories.map((r) => (
@@ -95,7 +164,7 @@ const Products = ({ range }: { range: DateRange }) => {
           </ul>
         )}
       </Card>
-      <Card title="Not sold in this range" table="idle-products" range={range}>
+      <Card title="Not sold in this range" table="idle-products" range={range} audience={audience}>
         {p.idle.length === 0 ? <Empty>Every product on sale sold at least once.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Stock</th></tr></thead>
@@ -109,8 +178,34 @@ const Products = ({ range }: { range: DateRange }) => {
           </table>
         )}
       </Card>
-      <Card title="Low stock: days left at this range's selling rate" table="stock" range={range} wide>
-        {p.stock.length === 0 ? <Empty>Everything is above its low-stock level.</Empty> : (
+      <Card title="Rising and falling" table="trending" range={range} audience={audience} wide>
+        {p.trending ? (
+          <div className="section-card__split">
+            <TrendList title="Rising" rows={p.trending.rising} up empty="No product sold more than before." />
+            <TrendList title="Falling" rows={p.trending.falling} up={false} empty="No product sold less than before." />
+          </div>
+        ) : <Empty>The period before is {HIDDEN_CELL} for this group, so there is nothing to compare with.</Empty>}
+        <p className="section-card__note">
+          Units sold against the same number of days just before this range. Products need 3 or more units in one
+          of the two.
+        </p>
+      </Card>
+      <Card title="Often bought together" table="bought-together" range={range} audience={audience}>
+        {p.boughtTogether.length === 0 ? <Empty>No two products were ordered together 3 or more times.</Empty> : (
+          <table className="mini-table">
+            <thead><tr><th>Products</th><th>Orders</th></tr></thead>
+            <tbody>
+              {p.boughtTogether.map((r) => (
+                <tr key={`${r.productA}+${r.productB}`}><td>{r.nameA} + {r.nameB}</td><td>{r.orders}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+      <Card title="Low stock: days left at this range's selling rate" table={p.stock ? "stock" : undefined}
+            range={range} wide>
+        {!p.stock ? <Empty>Stock cover uses the whole store&apos;s selling rate: choose all genders and ages to see it.</Empty>
+          : p.stock.length === 0 ? <Empty>Everything is above its low-stock level.</Empty> : (
           <table className="mini-table">
             <thead><tr><th>Product</th><th>Stock</th><th>Sold in range</th><th>Days left</th></tr></thead>
             <tbody>
@@ -127,10 +222,11 @@ const Products = ({ range }: { range: DateRange }) => {
         )}
       </Card>
     </section>
+    </>
   );
 };
 
-const Customers = ({ range }: { range: DateRange }) => {
+const Customers =({ range }: { range: DateRange }) => {
   const { data, isLoading, isError } = useGetCustomersSectionQuery(range);
   if (!data) return <Status loading={isLoading} error={isError} />;
   const s = data.customers;
@@ -157,6 +253,15 @@ const Customers = ({ range }: { range: DateRange }) => {
               </tbody>
             </table>
           )}
+        </Card>
+        <Card title="Audience" table="audience" range={range} wide>
+          <AudienceTable audience={s.audience} />
+          <p className="section-card__note">
+            Revenue from signed-in buyers by gender and age band, with its share of their revenue in this range.
+            Age is counted on {bucketLabel(s.audience.asOf, "day")} {s.audience.asOf.slice(0, 4)}, the range&apos;s
+            last day, so a birthday inside the range can move a buyer up one band. Cells with fewer than 5 buyers,
+            and some cells next to them, are hidden so that no small group can be worked out from the totals.
+          </p>
         </Card>
         <Card title="Orders by place" table="places" range={range} wide>
           {s.places.length === 0 ? <Empty>No orders in this range.</Empty> : (
@@ -274,9 +379,11 @@ const Tax = ({ range }: { range: DateRange }) => {
 };
 
 /** The body of one of step 3's tabs (Products, Customers, Coupons, Payments, Tax). */
-const AnalyticsSection = ({ tab, range }: { tab: RangeSectionName; range: DateRange }) => {
+const AnalyticsSection = ({ tab, range, audience }: {
+  tab: RangeSectionName; range: DateRange; audience: AudienceFilter;
+}) => {
   switch (tab) {
-    case "products": return <Products range={range} />;
+    case "products": return <Products range={range} audience={audience} />;
     case "customers": return <Customers range={range} />;
     case "coupons": return <Coupons range={range} />;
     case "payments": return <Payments range={range} />;

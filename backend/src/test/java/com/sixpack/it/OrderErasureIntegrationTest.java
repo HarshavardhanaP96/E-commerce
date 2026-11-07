@@ -51,7 +51,7 @@ class OrderErasureIntegrationTest extends IntegrationTest {
         assertThat(stored).isNotNull();
         Document shipping = stored.get("shippingInfo", Document.class);
         assertThat(shipping.get("city")).isEqualTo("Bengaluru");
-        assertThat(shipping.get("state")).isEqualTo("KA");
+        assertThat(shipping.get("state")).isEqualTo("Karnataka");
         assertThat(shipping).doesNotContainKeys("address", "pinCode", "name", "phone");
         assertThat(stored).doesNotContainKeys("billingInfo", "customer", "notes");
 

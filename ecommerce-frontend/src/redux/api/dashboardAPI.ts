@@ -1,9 +1,12 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { BarResponse, LineResponse, PieResponse, StatsResponse, SummaryResponse, VariantSalesResponse } from "../../types/api-types";
-import { OrdersSection, OverviewSection, SalesSection, SectionParams, SectionResponse } from "../../types/analytics";
+import {
+  LocationParams, LocationSection, OrdersSection, OverviewSection, SalesSection, SectionParams, SectionResponse,
+} from "../../types/analytics";
 import { DashboardScope, SummaryParams } from "../../types/types";
 import type { CouponsSection, CustomersSection, PaymentsSection, ProductsSection, TaxSection } from "../../types/sections";
 import type { DateRange } from "../../utils/dateRange";
+import type { AudienceFilter } from "../../utils/sections";
 import { authedBaseQuery } from "./baseQuery";
 import { clean } from "./userAPI";
 
@@ -36,8 +39,11 @@ export const dashboardAPI = createApi({
     getOrdersSection: builder.query<SectionResponse<OrdersSection>, SectionParams>({
       query: (params) => ({ url: "orders", params: clean(params) }),
     }),
-    getProductsSection: builder.query<{ products: ProductsSection }, DateRange>({
-      query: (params) => ({ url: "products", params }),
+    getLocationSection: builder.query<SectionResponse<LocationSection>, LocationParams>({
+      query: (params) => ({ url: "location", params: clean(params) }),
+    }),
+    getProductsSection: builder.query<{ products: ProductsSection }, DateRange & AudienceFilter>({
+      query: (params) => ({ url: "products", params: clean(params) }),
     }),
     getCustomersSection: builder.query<{ customers: CustomersSection }, DateRange>({
       query: (params) => ({ url: "customers", params }),
@@ -67,6 +73,7 @@ export const {
   useGetOverviewQuery,
   useGetSalesQuery,
   useGetOrdersSectionQuery,
+  useGetLocationSectionQuery,
   useGetProductsSectionQuery,
   useGetCustomersSectionQuery,
   useGetCouponsSectionQuery,

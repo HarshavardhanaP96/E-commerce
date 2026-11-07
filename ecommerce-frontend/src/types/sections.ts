@@ -2,9 +2,21 @@
 export type ProductsSection = {
   top: { productId: string; name: string; units: number; revenue: number; orders: number }[];
   categories: { category: string; revenue: number; units: number; share: number }[];
-  stock: { productId: string; name: string; variantId: string | null; label: string | null; stock: number;
-    threshold: number; unitsSold: number; daysLeft: number | null }[];
+  /** Absent when narrowed to an audience segment (stock cover is the whole store's selling rate). */
+  stock?: { productId: string; name: string; variantId: string | null; label: string | null; stock: number;
+    threshold: number; unitsSold: number; daysLeft: number | null }[] | null;
   idle: { productId: string; name: string; stock: number }[];
+  /** Against the same number of days before the range; `change` is null when `isNew`. Absent when hidden. */
+  trending?: { rising: TrendRow[]; falling: TrendRow[] } | null;
+  boughtTogether: { productA: string; nameA: string; productB: string; nameB: string; orders: number }[];
+  /** Narrowed to a segment the range's audience table hides: every list is empty. */
+  small: boolean;
+  /** The previous period's audience table hides the segment: no trending. */
+  previousSmall: boolean;
+};
+
+export type TrendRow = {
+  productId: string; name: string; units: number; previousUnits: number; change: number | null; isNew: boolean;
 };
 
 export type CustomersSection = {
@@ -14,7 +26,23 @@ export type CustomersSection = {
   repeatRate: number;
   top: { userId: string; name: string | null; email: string | null; orders: number; revenue: number }[];
   places: { state: string | null; city: string | null; orders: number; revenue: number }[];
+  audience: Audience;
 };
+
+/**
+ * `small` = hidden, every figure null: fewer than 5 buyers, or a cell (of any size) the totals would give such a
+ * group away from.
+ * The grand total is never hidden. `share` = percent of the range's buyer revenue.
+ */
+export type AudienceCell = {
+  buyers: number | null; orders: number | null; revenue: number | null; share: number | null; small: boolean;
+};
+
+/** `gender` is female, male, unknown or "all" (the column totals); `cells` follow `Audience.bands`. */
+export type AudienceRow = { gender: string; cells: AudienceCell[]; total: AudienceCell };
+
+/** Sales by gender and age band; age in whole years on `asOf`, the range's last day. */
+export type Audience = { asOf: string; bands: string[]; rows: AudienceRow[] };
 
 export type CouponsSection = {
   ordersWithCoupon: number;

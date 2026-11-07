@@ -62,6 +62,7 @@ class SecurityConfig {
                         .requestMatchers("/api/v1/user/**").hasRole(ADMIN)
                         // legal & consent
                         .requestMatchers(GET, "/api/v1/legal/**").permitAll()
+                        .requestMatchers(GET, "/api/v1/reference/**").permitAll()
                         .requestMatchers("/api/v1/consent/**", "/api/v1/consent").authenticated()
                         // product
                         .requestMatchers(GET, "/api/v1/product/admin-products", "/api/v1/product/low-stock",

@@ -3,15 +3,19 @@ package com.sixpack.dashboard.web;
 import com.sixpack.audit.AuditAction;
 import com.sixpack.audit.AuditEvent;
 import com.sixpack.audit.AuditTrail;
+import com.sixpack.dashboard.application.LocationService;
 import com.sixpack.dashboard.application.OrdersService;
 import com.sixpack.dashboard.application.OverviewService;
 import com.sixpack.dashboard.application.SalesService;
 import com.sixpack.dashboard.application.StoreTime;
+import com.sixpack.dashboard.domain.AudienceSegment;
+import com.sixpack.dashboard.domain.LocationSection;
 import com.sixpack.dashboard.domain.Section;
 import com.sixpack.dashboard.domain.SectionQuery;
 import com.sixpack.shared.ApiException;
 import com.sixpack.shared.web.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 import org.springframework.http.ContentDisposition;
@@ -21,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -38,14 +43,16 @@ class AnalyticsController {
     private final OverviewService overview;
     private final SalesService sales;
     private final OrdersService ordersSection;
+    private final LocationService location;
     private final AuditTrail audit;
 
     AnalyticsController(StoreTime time, OverviewService overview, SalesService sales, OrdersService ordersSection,
-                        AuditTrail audit) {
+                        LocationService location, AuditTrail audit) {
         this.time = time;
         this.overview = overview;
         this.sales = sales;
         this.ordersSection = ordersSection;
+        this.location = location;
         this.audit = audit;
     }
 
@@ -55,8 +62,11 @@ class AnalyticsController {
     }
 
     @GetMapping("/sales")
-    ResponseEntity<?> sales(@Valid SectionRequest req) {
-        return respond("sales", req, sales::section);
+    ResponseEntity<?> sales(@Valid SectionRequest req,
+                            @RequestParam(required = false) @Size(max = 10) String gender,
+                            @RequestParam(required = false) @Size(max = 10) String ageBand) {
+        AudienceSegment segment = SectionRequest.segment(gender, ageBand);
+        return respond("sales", segment.fileTag(), req, q -> sales.section(q, segment));
     }
 
     @GetMapping("/orders")
@@ -64,7 +74,22 @@ class AnalyticsController {
         return respond("orders", req, ordersSection::section);
     }
 
+    @GetMapping("/location")
+    ResponseEntity<?> location(@Valid SectionRequest req,
+                               @RequestParam(required = false) @Size(max = 60) String country,
+                               @RequestParam(required = false) @Size(max = 10) String state,
+                               @RequestParam(required = false) @Size(max = 3) String pinPrefix) {
+        return respond("location", req, q -> location.section(q,
+                new LocationSection.Filter(country, state, pinPrefix), req.csv()));
+    }
+
     private ResponseEntity<?> respond(String name, SectionRequest req, Function<SectionQuery, ? extends Section> load) {
+        return respond(name, "", req, load);
+    }
+
+    /** @param fileTag added to the CSV file name after {@code name}, e.g. the audience segment */
+    private ResponseEntity<?> respond(String name, String fileTag, SectionRequest req,
+                                      Function<SectionQuery, ? extends Section> load) {
         boolean csv;
         Section section;
         try {
@@ -78,7 +103,7 @@ class AnalyticsController {
         }
         String body = CsvWriter.write(section.csvHeader(), section.csvRows());
         audit.record(AuditEvent.of(AuditAction.ANALYTICS_EXPORTED).on("report", name));
-        String file = name + "-" + section.window().from() + "_" + section.window().to() + ".csv";
+        String file = name + fileTag + "-" + section.window().from() + "_" + section.window().to() + ".csv";
         return ResponseEntity.ok().contentType(CSV)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(file).build().toString())
                 .body(body);

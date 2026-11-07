@@ -55,9 +55,25 @@ sends the purchase to GA4 (Measurement Protocol) with the `_ga` client id and no
 only to consents given under cookie-notice version 2026-10-31 or later, the version that discloses it. No IP address
 is sent.
 
-**Data minimisation:** registration currently *requires* `gender` and `dob`. DOB is justified because we need it
-for the age check (§3, C2). Gender is only used by the admin dashboard charts, so **make it optional**, or else
-state that purpose in P2 and take consent for it.
+**Data minimisation:** registration requires `dob`, which we need for the age check (§3, C2). `gender` is optional.
+Both are used for the per-customer admin views (gender in the customers list, gender, date of birth and age on the
+customer record) and for anonymous audience statistics (the table below); P2 states both purposes.
+
+**Processing purposes for DOB and gender (stated in P2, "What we collect and why"):**
+
+| Data | Purpose | Who sees the result | Safeguard |
+|---|---|---|---|
+| `dob` | Age check at registration (C2) | The check itself only gives yes/no | Server-side check |
+| `dob`, `gender` | Account administration: the store's admins see gender in the customers list (Gender column and filter) and gender, full date of birth and age on the customer record (Customer management) | The store's admins | Admin-only routes. These are per-person views, not statistics, so the 5-buyer rule does not apply |
+| `dob` | Anonymous store statistics: the age band (18-24 … 55+, worked out at the end of the chosen period) in the Customers → Audience table and the Sales and Products gender/age-band filters (added 2026-10-27) | The store's admins, on screen and in the CSV exports | Audience figures: any group with fewer than 5 distinct buyers in the date range is hidden, plus any other cell or total that would let it be worked out (`AudienceBands.MIN_BUYERS`, `AudienceSuppression`); no per-person rows. A filtered Sales/Products tab is hidden as a whole under the same rule |
+| `gender` (optional) | Anonymous store statistics: the same Audience table and filters | Same | Same |
+
+The audience figures are a fixed rule, not a store setting. Lists that do name customers (top customers, customer
+management) are separate admin features and are not part of these statistics. Adding the age-band and audience-sales
+purpose is a **new purpose** under §6, so `LEGAL_PRIVACY_VERSION` is bumped **at release** (decided 2026-10-27): users
+get the notice email at least 7 days before, then the version is raised and everyone is re-prompted. The step is in
+`docs/cicd/DEPLOYMENT_CHECKLIST.md` §6. The legacy `GET /dashboard/stats` (`genderRatio`) and `GET /dashboard/pie`
+(`ageGroup`) still compute gender and age counts, but the admin panel no longer shows them.
 
 ## 3. When to prompt: consent and notice points
 
@@ -250,3 +266,4 @@ The Admin Acceptable Use Agreement tells admins that their activity is recorded.
 - Will we ship or sell to EU/UK customers? If yes, move to Option B or C and add GDPR wording to P2.
 - Should under-18s be blocked outright (recommended) or allowed with verifiable parental consent (much more work)?
 - Will we send promotional email or SMS? This decides whether C3 / P7 is needed.
+- ~~The 2026-10-27 Privacy Policy text adds the age-band / audience-sales statistics purpose: bump `LEGAL_PRIVACY_VERSION`?~~ Decided 2026-10-27: yes, at release, after a 7-day notice email (`docs/cicd/DEPLOYMENT_CHECKLIST.md` §6). Not bumped on the branch.

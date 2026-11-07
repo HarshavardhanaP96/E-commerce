@@ -3,8 +3,8 @@ import { SummaryChange, SummaryKpis } from "./api-types";
 /** Step 3's tabs (DashboardSectionsController): date range only. */
 export type RangeSectionName = "products" | "customers" | "coupons" | "payments" | "tax";
 
-/** Every Analytics tab; Overview, Sales and Orders also take compare, basis and category. */
-export type SectionName = "overview" | "sales" | "orders" | RangeSectionName;
+/** Every Analytics tab; Overview, Sales, Orders and Location also take compare and category. */
+export type SectionName = "overview" | "sales" | "orders" | "location" | RangeSectionName;
 
 export type SectionParams = {
   from: string;
@@ -13,6 +13,9 @@ export type SectionParams = {
   basis: "net" | "gross";
   category?: string;
   limit?: number;
+  /** Sales only: the audience segment (see utils/sections AUDIENCE_GENDERS / AUDIENCE_BANDS). */
+  gender?: string;
+  ageBand?: string;
 };
 
 export type SectionWindow = {
@@ -47,6 +50,10 @@ export type SalesSection = SectionWindow & {
     charged: number; discount: number; tax: number; shipping: number; refunds: number; net: number;
     couponOrders: number; couponOrderShare: number;
   } | null;
+  /** Narrowed to a segment the range's audience table hides: no figures (empty series). */
+  small: boolean;
+  /** The comparison period's audience table hides the segment: no previousSeries. */
+  previousSmall: boolean;
 };
 
 type Leg = { medianHours?: number | null; p90Hours?: number | null; count: number };
@@ -65,4 +72,19 @@ export type OrdersSection = SectionWindow & {
   size: { averageItems: number; bands: Record<string, number> };
   refunds?: { orders: number; amount: number; rate: number } | null;
   truncated: boolean;
+};
+
+export type LocationParams = SectionParams & { country?: string; state?: string; pinPrefix?: string };
+
+export type LocationSection = SectionWindow & {
+  level: "country" | "state" | "pin_prefix" | "pin";
+  country?: string | null;
+  state?: string | null;
+  pinPrefix?: string | null;
+  rows: {
+    key: string; label: string; orders: number; revenue: number; averageOrderValue: number; share: number;
+    change?: number | null; small: boolean;
+  }[];
+  unrecognised?: { orders: number; samples: { raw: string; orders: number }[] } | null;
+  topProducts: { productId: string; name: string; units: number; revenue: number }[];
 };

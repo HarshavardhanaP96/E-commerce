@@ -954,8 +954,9 @@
     margin-bottom: $spacing-md;
   }
 
+  // a split of lists keeps its height so the card scrolls; shrunk, it overflowed onto the note below it
   > canvas,
-  > div:not(.category-bars) {
+  > div:not(.category-bars, .section-card__split) {
     flex: 1;
     min-height: 0;
   }
@@ -1034,6 +1035,35 @@
     &:hover {
       background: $color-bg-primary;
     }
+  }
+}
+
+// gender × age band grid on the Customers tab: revenue over a muted detail line per cell
+.audience-table {
+  th[scope="row"] {
+    @include text(body-sm);
+    color: $color-text-primary;
+  }
+
+  td {
+    vertical-align: top;
+    min-width: 7rem;
+  }
+
+  td b,
+  td small {
+    display: block;
+  }
+
+  td small,
+  &__small {
+    @include text(caption);
+    color: $color-text-muted;
+  }
+
+  &__total th,
+  &__total td {
+    border-top: 2px solid $color-border;
   }
 }
 
@@ -1755,6 +1785,17 @@
 
   &__note {
     margin-top: 0.75rem;
+  }
+
+  // two lists side by side in one card (rising and falling), stacked when the card is narrow
+  &__split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: $spacing-lg;
+
+    h5 {
+      margin: 0 0 0.5rem;
+    }
   }
 
   // wide tables scroll inside the card on narrow screens instead of widening the page

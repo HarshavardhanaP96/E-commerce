@@ -12,17 +12,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Raw figures behind the dashboard sections for the current store, for orders placed in [from, to). */
+/**
+ * Raw figures behind the dashboard sections for the current store, for orders placed in [from, to). Where a read
+ * takes {@code buyers}, null means every order and otherwise only orders whose {@code user} is one of them.
+ */
 public interface SectionsReadPort {
 
-    /** Every product sold, by revenue, highest first. */
-    List<ProductSales> productSales(Instant from, Instant to);
+    /** Every product sold, by revenue, highest first; the name is the one on the latest order line. */
+    List<ProductSales> productSales(Instant from, Instant to, Collection<String> buyers);
+
+    record PairCount(String productA, String productB, long orders) {
+    }
+
+    /**
+     * Pairs of different products in the same order, in at least {@code minOrders} orders, most first, then by id;
+     * productA sorts before productB. Orders with more than {@code maxDistinct} distinct products are skipped, and
+     * lines without a product id never pair.
+     */
+    List<PairCount> boughtTogether(Instant from, Instant to, Collection<String> buyers, int minOrders, int limit,
+                                   int maxDistinct);
+
+    /** Catalogue names of the products that still exist; ids that are null or not ObjectIds are skipped. */
+    Map<String, String> productNames(Collection<String> productIds);
 
     /** Units sold per line: the key is the product id, or "productId:variantId" for a variant. */
     Map<String, Double> unitsByLine(Instant from, Instant to);
 
     /** Revenue and units per product category (looked up on the product; "uncategorised" when missing). */
-    Map<String, double[]> categorySales(Instant from, Instant to);
+    Map<String, double[]> categorySales(Instant from, Instant to, Collection<String> buyers);
 
     record OnSale(String productId, String name, int stock) {
     }
@@ -32,6 +49,19 @@ public interface SectionsReadPort {
 
     /** Every buyer in the period, by revenue, highest first. */
     List<CustomerTotals> customerTotals(Instant from, Instant to);
+
+    /**
+     * @param gender as stored, null when not given
+     * @param dob    the birth date's calendar day, null when not given
+     */
+    record Profile(String gender, LocalDate dob) {
+    }
+
+    /**
+     * The gender and birth date of those of {@code userIds} that have an account in this store, by id; ids that are
+     * null or not ObjectIds are skipped. One {@code $in} read of {@code users}, never a join from orders.
+     */
+    Map<String, Profile> profiles(Collection<String> userIds);
 
     /** Which of {@code userIds} placed an order before {@code before}. */
     Set<String> orderedBefore(Collection<String> userIds, Instant before);
@@ -60,9 +90,10 @@ public interface SectionsReadPort {
      * One order's items at one GST rate.
      *
      * @param rate  null on order lines saved before each line carried its rate
-     * @param state the billing state, else the delivery state
+     * @param state   the billing state, else the delivery state
+     * @param country the country of that same address
      */
-    record TaxGroup(String orderId, String month, Double rate, String state, double taxableValue) {
+    record TaxGroup(String orderId, String month, Double rate, String state, String country, double taxableValue) {
     }
 
     /** Per order and rate, by local month (YYYY-MM) in {@code zone}. */

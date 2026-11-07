@@ -11,25 +11,31 @@ import com.sixpack.shared.tenant.TenantMongo;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
-/** Aggregations for the dashboard sections over the raw `orders` and `products` collections. */
+/** Aggregations for the dashboard sections over the raw `orders`, `products` and `users` collections. */
 @Component
 class MongoSectionsReadAdapter implements SectionsReadPort {
 
     private static final String ORDERS = "orders";
     private static final String PRODUCTS = "products";
+    private static final String USERS = "users";
     private static final String REFUNDS = "payment.refunds";
 
     private final TenantMongo mongo;
@@ -39,9 +45,11 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     @Override
-    public List<ProductSales> productSales(Instant from, Instant to) {
+    public List<ProductSales> productSales(Instant from, Instant to, Collection<String> buyers) {
         List<ProductSales> out = new ArrayList<>();
-        for (Document d : aggregate(placed(from, to), unwindItems(),
+        for (Document d : aggregate(placed(from, to, buyers),
+                stage("$sort", new Document("createdAt", 1)), // so $last is the latest order line's name
+                unwindItems(),
                 stage("$group", new Document("_id", "$orderItems.productId")
                         .append("name", new Document("$last", "$orderItems.name"))
                         .append("units", new Document("$sum", orZero("$orderItems.quantity")))
@@ -50,6 +58,52 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                 stage("$sort", new Document("revenue", -1).append("_id", 1)))) {
             out.add(new ProductSales(id(d.get("_id")), d.getString("name"), number(d.get("units")),
                     number(d.get("revenue")), d.getList("orders", Object.class, List.of()).size()));
+        }
+        return out;
+    }
+
+    @Override
+    public List<PairCount> boughtTogether(Instant from, Instant to, Collection<String> buyers, int minOrders,
+                                          int limit, int maxDistinct) {
+        Document size = new Document("$size", "$p");
+        // orders without items give an empty set, not null; lines without a product id are dropped
+        Document products = new Document("$filter", new Document("input", new Document("$setUnion", List.of(
+                new Document("$ifNull", List.of("$orderItems.productId", List.of())), List.of())))
+                .append("cond", new Document("$ne", Arrays.asList("$$this", null))));
+        List<PairCount> out = new ArrayList<>();
+        for (Document d : aggregate(placed(from, to, buyers),
+                stage("$project", new Document("p", products)),
+                stage("$match", new Document("$expr", new Document("$and", List.of(
+                        new Document("$gte", List.of(size, 2)), new Document("$lte", List.of(size, maxDistinct)))))),
+                stage("$project", new Document("a", "$p").append("b", "$p")),
+                stage("$unwind", "$a"),
+                stage("$unwind", "$b"),
+                stage("$match", new Document("$expr", new Document("$lt", List.of("$a", "$b")))),
+                stage("$group", new Document("_id", new Document("a", "$a").append("b", "$b"))
+                        .append("orders", new Document("$sum", 1))),
+                stage("$match", new Document("orders", new Document("$gte", minOrders))),
+                stage("$sort", new Document("orders", -1).append("_id.a", 1).append("_id.b", 1)),
+                stage("$limit", limit))) {
+            Document key = d.get("_id", Document.class);
+            out.add(new PairCount(id(key.get("a")), id(key.get("b")), (long) number(d.get("orders"))));
+        }
+        return out;
+    }
+
+    @Override
+    public Map<String, String> productNames(Collection<String> productIds) {
+        List<ObjectId> ids = productIds.stream().filter(id -> id != null && ObjectId.isValid(id))
+                .distinct().map(ObjectId::new).toList();
+        Map<String, String> out = new HashMap<>();
+        if (ids.isEmpty()) {
+            return out;
+        }
+        Query query = Query.query(Criteria.where("_id").in(ids));
+        query.fields().include("name");
+        for (Document d : mongo.find(query, Document.class, PRODUCTS)) {
+            if (d.getString("name") != null) {
+                out.put(id(d.get("_id")), d.getString("name"));
+            }
         }
         return out;
     }
@@ -69,7 +123,7 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     @Override
-    public Map<String, double[]> categorySales(Instant from, Instant to) {
+    public Map<String, double[]> categorySales(Instant from, Instant to, Collection<String> buyers) {
         // the lookup is matched on tenantId as well: TenantMongo scopes only the collection being aggregated
         Document lookup = new Document("from", PRODUCTS)
                 .append("let", new Document("pid", "$orderItems.productId").append("t", "$tenantId"))
@@ -79,7 +133,7 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                         new Document("$project", new Document("category", 1))))
                 .append("as", "product");
         Map<String, double[]> out = new LinkedHashMap<>();
-        for (Document d : aggregate(placed(from, to), unwindItems(), stage("$lookup", lookup),
+        for (Document d : aggregate(placed(from, to, buyers), unwindItems(), stage("$lookup", lookup),
                 stage("$group", new Document("_id", new Document("$ifNull", List.of(
                                 new Document("$first", "$product.category"), "uncategorised")))
                         .append("revenue", new Document("$sum", lineValue()))
@@ -117,6 +171,25 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                 stage("$sort", new Document("revenue", -1).append("_id", 1)))) {
             out.add(new CustomerTotals(String.valueOf(d.get("_id")), d.getString("name"), d.getString("email"),
                     (long) number(d.get("orders")), number(d.get("revenue"))));
+        }
+        return out;
+    }
+
+    @Override
+    public Map<String, Profile> profiles(Collection<String> userIds) {
+        List<ObjectId> ids = userIds.stream().filter(id -> id != null && ObjectId.isValid(id))
+                .distinct().map(ObjectId::new).toList();
+        Map<String, Profile> out = new HashMap<>();
+        if (ids.isEmpty()) {
+            return out;
+        }
+        Query query = Query.query(Criteria.where("_id").in(ids));
+        query.fields().include("gender", "dob");
+        for (Document d : mongo.find(query, Document.class, USERS)) {
+            // birth dates are saved as midnight UTC: the UTC calendar day is the one the shopper entered
+            LocalDate dob = d.get("dob") instanceof Date date ? date.toInstant().atZone(ZoneOffset.UTC).toLocalDate()
+                    : null;
+            out.put(id(d.get("_id")), new Profile(d.get("gender") instanceof String g ? g : null, dob));
         }
         return out;
     }
@@ -207,13 +280,16 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
                 stage("$group", new Document("_id", new Document("order", "$_id")
                         .append("month", localDate("$createdAt", zone, "%Y-%m"))
                         .append("rate", "$orderItems.taxRate")
-                        .append("state", new Document("$ifNull", List.of("$billingInfo.state", "$shippingInfo.state"))))
+                        .append("state", new Document("$ifNull", List.of("$billingInfo.state", "$shippingInfo.state")))
+                        .append("country",
+                                new Document("$ifNull", List.of("$billingInfo.country", "$shippingInfo.country"))))
                         .append("taxable", new Document("$sum", lineValue()))),
                 stage("$sort", new Document("_id.month", 1)))) {
             Document key = d.get("_id", Document.class);
             Object rate = key.get("rate");
             out.add(new TaxGroup(String.valueOf(key.get("order")), key.getString("month"),
-                    rate == null ? null : number(rate), key.getString("state"), number(d.get("taxable"))));
+                    rate == null ? null : number(rate), key.getString("state"), key.getString("country"),
+                    number(d.get("taxable"))));
         }
         return out;
     }
@@ -223,7 +299,13 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     private static AggregationOperation placed(Instant from, Instant to) {
-        return match(Criteria.where("createdAt").gte(Date.from(from)).lt(Date.from(to)));
+        return placed(from, to, null);
+    }
+
+    /** @param buyers null for every order, else only orders by these users (an audience segment) */
+    private static AggregationOperation placed(Instant from, Instant to, Collection<String> buyers) {
+        Criteria c = Criteria.where("createdAt").gte(Date.from(from)).lt(Date.from(to));
+        return match(buyers == null ? c : c.and("user").in(buyers));
     }
 
     private static AggregationOperation placedWithUser(Instant from, Instant to) {
@@ -252,7 +334,7 @@ class MongoSectionsReadAdapter implements SectionsReadPort {
     }
 
     private static String id(Object value) {
-        return value == null ? null : value instanceof org.bson.types.ObjectId oid ? oid.toHexString() : value.toString();
+        return value == null ? null : value instanceof ObjectId oid ? oid.toHexString() : value.toString();
     }
 
     private static double number(Object value) {

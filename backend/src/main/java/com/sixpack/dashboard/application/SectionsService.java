@@ -2,6 +2,8 @@ package com.sixpack.dashboard.application;
 
 import static com.sixpack.shared.config.CacheConfig.DASHBOARD;
 
+import com.sixpack.dashboard.domain.AudienceBands;
+import com.sixpack.dashboard.domain.AudienceSegment;
 import com.sixpack.dashboard.domain.Granularity;
 import com.sixpack.dashboard.domain.Period;
 import com.sixpack.dashboard.domain.Sections;
@@ -10,22 +12,30 @@ import com.sixpack.dashboard.domain.Sections.CouponUse;
 import com.sixpack.dashboard.domain.Sections.CustomerTotals;
 import com.sixpack.dashboard.domain.Sections.IdleProduct;
 import com.sixpack.dashboard.domain.Sections.MethodShare;
+import com.sixpack.dashboard.domain.Sections.Pair;
+import com.sixpack.dashboard.domain.Sections.Place;
 import com.sixpack.dashboard.domain.Sections.ProductSales;
 import com.sixpack.dashboard.domain.Sections.RefundPoint;
 import com.sixpack.dashboard.domain.Sections.StockLeft;
 import com.sixpack.dashboard.domain.Sections.TaxRow;
 import com.sixpack.dashboard.domain.SectionsReadPort;
 import com.sixpack.dashboard.domain.SectionsReadPort.MethodTotals;
+import com.sixpack.dashboard.domain.SectionsReadPort.PairCount;
 import com.sixpack.dashboard.domain.SectionsReadPort.RefundIssued;
 import com.sixpack.dashboard.domain.SectionsReadPort.TaxGroup;
+import com.sixpack.dashboard.domain.Trending;
 import com.sixpack.product.LowStockLine;
 import com.sixpack.product.ProductCatalog;
+import com.sixpack.shared.geo.IndianStates;
 import com.sixpack.shared.tenant.StoreConfig;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -37,8 +47,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * The shop dashboard's sections (analytics step 3), read live for the period in the store's time zone. With
- * {@code limit} > 0 the ranked lists (top products, top customers, places) are cut to that many rows; 0 keeps every
- * row, for the CSV exports.
+ * {@code limit} > 0 the ranked lists (top products, rising and falling products, top customers, places) are cut to
+ * that many rows; 0 keeps every row, for the CSV exports.
  */
 @Service
 public class SectionsService {
@@ -47,35 +57,87 @@ public class SectionsService {
     private static final double LEGACY_TAX_RATE = 18.0;
     /** Places shown on the page; the export has them all. */
     private static final int PLACES_SHOWN = 50;
+    /** Bought together: a pair counts from this many shared orders; the page and export show the top ones. */
+    static final int PAIR_MIN_ORDERS = 3;
+    static final int PAIRS_SHOWN = 10;
+    /** Orders with more distinct products than this (bulk or test orders) would pair everything: skipped. */
+    static final int PAIR_MAX_DISTINCT = 20;
+    static final String REMOVED_PRODUCT = "Removed product";
 
     private final SectionsReadPort read;
     private final ProductCatalog catalog;
     private final StoreConfig store;
 
-    SectionsService(SectionsReadPort read, ProductCatalog catalog, StoreConfig store) {
+    private final AudienceSegments segments;
+
+    SectionsService(SectionsReadPort read, ProductCatalog catalog, StoreConfig store, AudienceSegments segments) {
         this.read = read;
         this.catalog = catalog;
         this.store = store;
+        this.segments = segments;
     }
 
     public ZoneId zone() {
         return ZoneId.of(store.effective().timeZone());
     }
 
-    @Cacheable(cacheNames = DASHBOARD, key = "'products:' + #root.target.zone() + #period + #limit")
-    public Sections.Products products(Period period, int limit) {
+    /**
+     * @param segment {@link AudienceSegment#ALL} for every order; otherwise only the segment's buyers count, nothing
+     *                is shown when the period's audience table hides the segment, and trending is dropped when the
+     *                previous period's table hides it (ages on each period's last day)
+     */
+    @Cacheable(cacheNames = DASHBOARD, key = "'products:' + #root.target.zone() + #period + #limit + #segment")
+    public Sections.Products products(Period period, int limit, AudienceSegment segment) {
         ZoneId zone = zone();
         Instant from = period.start(zone);
         Instant to = period.end(zone);
-        List<ProductSales> sales = read.productSales(from, to);
+        Set<String> buyers = null;
+        if (!segment.isAll()) {
+            AudienceSegment.Match m = segments.match(segment, period, zone);
+            if (m.hidden()) {
+                return Sections.Products.hidden();
+            }
+            buyers = m.buyers();
+        }
+        List<ProductSales> sales = read.productSales(from, to, buyers);
 
-        Map<String, double[]> byCategory = read.categorySales(from, to);
+        Map<String, double[]> byCategory = read.categorySales(from, to, buyers);
         double total = byCategory.values().stream().mapToDouble(v -> v[0]).sum();
         List<CategoryShare> categories = byCategory.entrySet().stream()
                 .map(e -> new CategoryShare(e.getKey(), e.getValue()[0], e.getValue()[1],
                         Sections.percent(e.getValue()[0], total)))
                 .toList();
 
+        List<StockLeft> stock = segment.isAll() ? stock(period, from, to) : null;
+
+        Set<String> sold = sales.stream().map(ProductSales::productId).collect(Collectors.toSet());
+        List<IdleProduct> idle = read.onSale(to).stream().filter(p -> !sold.contains(p.productId()))
+                .map(p -> new IdleProduct(p.productId(), p.name(), p.stock())).toList();
+
+        Period previous = period.previous();
+        List<ProductSales> before = List.of();
+        boolean previousSmall = false;
+        if (segment.isAll()) {
+            before = read.productSales(previous.start(zone), previous.end(zone), null);
+        } else {
+            AudienceSegment.Match m = segments.match(segment, previous, zone);
+            previousSmall = m.hidden();
+            if (!previousSmall) {
+                before = read.productSales(previous.start(zone), previous.end(zone), m.buyers());
+            }
+        }
+        List<PairCount> pairs = read.boughtTogether(from, to, buyers, PAIR_MIN_ORDERS, PAIRS_SHOWN,
+                PAIR_MAX_DISTINCT);
+        Map<String, String> names = names(sales, before, pairs);
+        Trending trending = previousSmall ? null : Trending.of(named(sales, names), named(before, names), limit);
+        List<Pair> together = pairs.stream().map(pc -> new Pair(pc.productA(), names.get(pc.productA()),
+                pc.productB(), names.get(pc.productB()), pc.orders())).toList();
+        return new Sections.Products(cut(sales, limit), categories, stock, idle, trending, together, false,
+                previousSmall);
+    }
+
+    /** Low and out-of-stock lines with days left at the whole store's selling rate in the period. */
+    private List<StockLeft> stock(Period period, Instant from, Instant to) {
         Map<String, Double> units = read.unitsByLine(from, to);
         List<StockLeft> stock = new ArrayList<>();
         for (LowStockLine line : catalog.lowStock()) {
@@ -86,11 +148,39 @@ public class SectionsService {
             stock.add(new StockLeft(line.productId(), line.name(), line.variantId(), line.label(), line.stock(),
                     line.threshold(), sold, daysLeft));
         }
+        return stock;
+    }
 
-        Set<String> sold = sales.stream().map(ProductSales::productId).collect(Collectors.toSet());
-        List<IdleProduct> idle = read.onSale(to).stream().filter(p -> !sold.contains(p.productId()))
-                .map(p -> new IdleProduct(p.productId(), p.name(), p.stock())).toList();
-        return new Sections.Products(cut(sales, limit), categories, stock, idle);
+    /**
+     * A name for every product in the trending lists and pairs: the latest order line's name in the period, else
+     * the one before, else the catalogue's, else "Removed product".
+     */
+    private Map<String, String> names(List<ProductSales> now, List<ProductSales> before, List<PairCount> pairs) {
+        Map<String, String> out = new HashMap<>();
+        Set<String> ids = new LinkedHashSet<>();
+        for (List<ProductSales> period : List.of(now, before)) {
+            for (ProductSales s : period) {
+                if (s.productId() != null) {
+                    ids.add(s.productId());
+                    if (s.name() != null) {
+                        out.putIfAbsent(s.productId(), s.name());
+                    }
+                }
+            }
+        }
+        pairs.forEach(p -> ids.addAll(List.of(p.productA(), p.productB())));
+        ids.removeAll(out.keySet());
+        if (!ids.isEmpty()) {
+            out.putAll(read.productNames(ids));
+            ids.forEach(id -> out.putIfAbsent(id, REMOVED_PRODUCT));
+        }
+        return out;
+    }
+
+    private static List<ProductSales> named(List<ProductSales> sales, Map<String, String> names) {
+        return sales.stream().map(s -> s.productId() == null ? s
+                : new ProductSales(s.productId(), names.get(s.productId()), s.units(), s.revenue(), s.orders()))
+                .toList();
     }
 
     @Cacheable(cacheNames = DASHBOARD, key = "'customers:' + #root.target.zone() + #period + #limit")
@@ -99,11 +189,13 @@ public class SectionsService {
         Instant from = period.start(zone);
         Instant to = period.end(zone);
         List<CustomerTotals> buyers = read.customerTotals(from, to);
-        long returning = read.orderedBefore(buyers.stream().map(CustomerTotals::userId).toList(), from).size();
+        List<String> ids = buyers.stream().map(CustomerTotals::userId).toList();
+        long returning = read.orderedBefore(ids, from).size();
         long repeat = buyers.stream().filter(b -> b.orders() >= 2).count();
         return new Sections.Customers(buyers.size(), buyers.size() - returning, returning,
                 Sections.percent(repeat, buyers.size()), cut(buyers, limit),
-                cut(read.places(from, to), limit == 0 ? 0 : PLACES_SHOWN));
+                cut(places(read.places(from, to)), limit == 0 ? 0 : PLACES_SHOWN),
+                AudienceBands.table(segments.buyers(buyers), period.to()));
     }
 
     @Cacheable(cacheNames = DASHBOARD, key = "'coupons:' + #root.target.zone() + #period")
@@ -164,7 +256,7 @@ public class SectionsService {
             double[] row = rows.computeIfAbsent(group.month() + "|" + String.format(Locale.ROOT, "%08.3f", rate),
                     k -> new double[5]);
             row[0] += paise / 100.0;
-            if (sameState(sellerState, group.state())) {
+            if (IndianStates.same(sellerState, "India", group.state(), group.country())) { // the store is Indian
                 row[1] += tax / 2;
                 row[2] += tax / 2;
             } else {
@@ -181,9 +273,30 @@ public class SectionsService {
                 out.stream().mapToDouble(TaxRow::tax).sum());
     }
 
-    private static boolean sameState(String a, String b) {
-        return a != null && b != null && !a.isBlank()
-                && a.trim().toLowerCase(Locale.ROOT).equals(b.trim().toLowerCase(Locale.ROOT));
+    /**
+     * Groups places by state and city the way the Location tab does: spellings of one Indian state ("KA",
+     * "karnataka ") merge under its official name, and a state the list does not know keeps the shopper's text.
+     * Cities match ignoring case and surrounding spaces; a merged row keeps the spelling of its biggest part.
+     */
+    static List<Place> places(List<Place> rows) {
+        Map<String, Place> merged = new LinkedHashMap<>();
+        for (Place p : rows) {
+            String state = IndianStates.normalise(p.state()).map(IndianStates.State::name).orElse(trim(p.state()));
+            String city = trim(p.city());
+            String key = lower(state) + '\u0000' + lower(city);
+            merged.merge(key, new Place(state, city, p.orders(), p.revenue()),
+                    (a, b) -> new Place(a.state(), a.city(), a.orders() + b.orders(), a.revenue() + b.revenue()));
+        }
+        return merged.values().stream().sorted(Comparator.comparingDouble(Place::revenue).reversed()
+                .thenComparing(Comparator.comparingLong(Place::orders).reversed())).toList();
+    }
+
+    private static String trim(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private static String lower(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ROOT);
     }
 
     private static <T> List<T> cut(List<T> rows, int limit) {
