@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PRICE, activeFilters } from "./filters";
+import { MAX_PRICE, activeFilters, clampPrice } from "./filters";
 
 const money = (n: number) => `₹${n}`;
 const none = { search: "", category: "", maxPrice: MAX_PRICE, picked: {} };
@@ -23,5 +23,17 @@ describe("activeFilters", () => {
 
   it("ignores whitespace-only search text", () => {
     expect(activeFilters({ ...none, search: "   " }, money)).toEqual([]);
+  });
+});
+
+describe("clampPrice: what a typed max price commits to", () => {
+  it("keeps a typed value inside the range", () => {
+    expect(clampPrice("5000")).toBe(5000);
+    expect(clampPrice("50")).toBe(100);
+    expect(clampPrice("999999")).toBe(MAX_PRICE);
+  });
+  it("treats an empty or non-numeric box as no limit", () => {
+    expect(clampPrice("")).toBe(MAX_PRICE);
+    expect(clampPrice("abc")).toBe(MAX_PRICE);
   });
 });

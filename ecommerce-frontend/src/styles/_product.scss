@@ -100,7 +100,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: $focus-ring;
   }
 
   &.is-on {
@@ -147,7 +147,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: $focus-ring;
   }
 
   &.is-on {
@@ -249,7 +249,7 @@
 
       &:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 3px var(--ring);
+        box-shadow: $focus-ring;
       }
 
       img {
@@ -357,7 +357,7 @@
 
     &:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 3px var(--ring);
+      box-shadow: $focus-ring;
     }
 
     &:disabled {
@@ -441,7 +441,7 @@
 
     &:focus-visible {
       outline: none;
-      box-shadow: inset 0 0 0 3px var(--ring);
+      box-shadow: inset 0 0 0 2px var(--focus);
     }
   }
 
@@ -502,7 +502,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: $focus-ring;
   }
 }
 

@@ -134,10 +134,13 @@ $type-steps: (
 // CONTROLS
 // ===================================
 
+// Opaque two-tone ring: a surface-coloured gap, then --focus (≥3:1 on the page, also for store themes).
+$focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus);
+
 @mixin focus-ring {
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring);
+    box-shadow: $focus-ring;
   }
 }
 
@@ -163,8 +166,9 @@ $type-steps: (
     border-color: $color-text-muted;
   }
 
+  // The border carries the contrast (--focus ≥3:1); the soft --ring glow is decoration.
   &:focus {
-    border-color: $color-accent-primary;
+    border-color: var(--focus);
     box-shadow: 0 0 0 3px var(--ring);
   }
 }

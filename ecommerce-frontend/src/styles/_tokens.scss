@@ -49,7 +49,8 @@
   --primary: #1c1917; // main CTA is ink
   --primary-hover: #3a3532;
   --on-primary: #ffffff;
-  --ring: rgba(228, 87, 46, 0.35);
+  --ring: rgba(228, 87, 46, 0.35); // soft glow on focused fields (the border carries the contrast)
+  --focus: #e4572e; // focus outline / ring: 3.36:1 on bg, 3.68:1 on white
 
   // The one gradient: the home banner, tinted from the store's own accent.
   --hero-from: color-mix(in srgb, var(--accent) 16%, var(--surface));
@@ -106,6 +107,7 @@
   --primary-hover: #0b5f7a;
   --on-primary: #ffffff;
   --ring: rgba(11, 106, 136, 0.35);
+  --focus: #0b6a88;
 
   --nav-bg: #0f2430;
   --nav-text: #c9d6d8; // 10.7:1 on nav

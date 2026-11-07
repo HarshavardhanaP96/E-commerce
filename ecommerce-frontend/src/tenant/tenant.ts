@@ -2,7 +2,7 @@ import { server } from "../redux/config";
 import { BUSINESS, refreshPolicies } from "../legal/policies";
 import { regional } from "../utils/money";
 import { commerce } from "../utils/pricing";
-import { readableOn } from "../utils/contrast";
+import { readableOn, toHex } from "../utils/contrast";
 import { MarketingTags, configureTracking } from "../utils/tracking";
 
 export type StorefrontConfig = {
@@ -41,7 +41,6 @@ export const featureOn = (key: string) => features[key] ?? true;
 
 const THEME_KEY = /^--[a-z0-9-]{1,40}$/;
 const THEME_VALUE = /^[^;{}<>]{1,60}$/;
-const HEX = /^#[0-9a-f]{6}$/i;
 
 /** Store themes recolour the storefront only; the admin keeps its own tokens (ADR-026). */
 export const STORE_THEME_SELECTOR = '[data-surface="store"]';
@@ -49,17 +48,23 @@ export const STORE_THEME_SELECTOR = '[data-surface="store"]';
 /**
  * Writes the store's design tokens into one <style id="tenant-theme">. Same specificity as the store
  * defaults in _tokens.scss and later in the page, so it wins there and nowhere else. Keys and values are
- * re-checked here (the API validates too). A light accent gets readable darker shades for badges and text.
+ * re-checked here (the API validates too). A light accent gets readable darker shades for badges, text, hover
+ * and the focus ring; the accent may be #rgb, #rrggbb, rgb() or hsl() (a colour name derives nothing).
  */
 export const applyTheme = (theme: Record<string, string>) => {
   const tokens = Object.entries(theme).filter(
     ([key, value]) => THEME_KEY.test(key) && typeof value === "string" && THEME_VALUE.test(value)
   );
-  const accent = theme["--accent"];
-  if (accent && HEX.test(accent)) {
+  const accent = theme["--accent"] ? toHex(theme["--accent"]) : null;
+  if (accent) {
     const has = (key: string) => tokens.some(([k]) => k === key);
-    if (!has("--accent-strong")) tokens.push(["--accent-strong", readableOn(accent, "#ffffff", 4.5)]);
-    if (!has("--accent-text")) tokens.push(["--accent-text", readableOn(accent, "#f5f5f3", 4.5)]);
+    const derive = (key: string, bg: string, min: number) => {
+      if (!has(key)) tokens.push([key, readableOn(accent, bg, min)]);
+    };
+    derive("--accent-strong", "#ffffff", 4.5); // white text on badges
+    derive("--accent-text", "#f5f5f3", 4.5); // links and small text on the backdrop
+    derive("--accent-hover", "#f5f5f3", 4.5); // hovered links
+    derive("--focus", "#f5f5f3", 3); // focus outline / ring
   }
 
   let style = document.getElementById("tenant-theme");

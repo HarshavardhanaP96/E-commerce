@@ -65,7 +65,7 @@ a {
   text-decoration: none;
 
   &:hover {
-    color: $color-accent-primary;
+    color: var(--accent-hover);
   }
 }
 
@@ -78,7 +78,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid $color-accent-primary;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
