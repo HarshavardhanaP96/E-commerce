@@ -17,9 +17,12 @@ audit is in [`docs/AUDIT.md`](docs/AUDIT.md).
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env            # then set JWT_SECRET (openssl rand -base64 48) and ADMIN_PASSWORD
-docker compose up --build       # app: http://localhost:8081   API: http://localhost:8080
+secrun projects/6pack/root -- docker compose up --build   # app: http://localhost:8081   API: http://localhost:8080
 ```
+
+Secrets live in `pass` (entry `projects/6pack/root`, keys as in `.env.example`), not in a `.env` file;
+`secrun` asks for the passphrase and passes them to Compose. Without `pass`: `cp .env.example .env`,
+set `JWT_SECRET` (openssl rand -base64 48) and `ADMIN_PASSWORD`, then `docker compose up --build`.
 
 Use `BACKEND_PORT=… FRONTEND_PORT=…` if those ports are taken. The bootstrap admin is created from
 `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Payments use the **fake** gateway unless you set `PAYMENT_PROVIDER=razorpay`
