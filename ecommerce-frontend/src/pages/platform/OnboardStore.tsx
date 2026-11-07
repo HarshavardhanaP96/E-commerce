@@ -115,7 +115,7 @@ const OnboardStore = () => {
             <input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="shop.example.com" required />
             {err("domain")}
           </label>
-          <label className="span-2 platform-check">
+          <label className="span-2 check">
             <input type="checkbox" checked={trial} onChange={(e) => setTrial(e.target.checked)} />
             Start as a trial (suspended when the trial ends unless activated)
           </label>

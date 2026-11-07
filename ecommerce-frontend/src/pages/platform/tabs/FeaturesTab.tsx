@@ -34,7 +34,7 @@ const FeaturesTab = ({ details }: { details: TenantDetails }) => {
       {FEATURES.map((f) => (
         <fieldset key={f.key} className="feature-row">
           <legend>{f.label}</legend>
-          <p className="muted">{f.help}</p>
+          <p className="platform-muted">{f.help}</p>
           <div className="segmented" role="radiogroup" aria-label={f.label}>
             {CHOICES.map((c) => (
               <label key={c} className={`segmented__opt${choices[f.key] === c ? " segmented__opt--active" : ""}`}>

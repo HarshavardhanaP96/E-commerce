@@ -109,6 +109,14 @@
     flex: 1;
     min-width: 0;
   }
+
+}
+
+// .form-grid label forces controls to width: 100% !important; the unit picker and the Add button keep their own size.
+.form-grid .input-with-unit select,
+.form-grid .input-with-unit .btn {
+  flex: none;
+  width: auto !important;
 }
 
 .domain-chips {

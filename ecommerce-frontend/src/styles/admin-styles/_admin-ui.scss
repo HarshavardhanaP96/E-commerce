@@ -443,6 +443,24 @@
     @include flex(row, flex-end, center, $spacing-sm);
   }
 
+  // Phones: the title keeps its own line and the actions wrap underneath instead of squeezing it.
+  @media (max-width: 640px) {
+    &__header {
+      flex-wrap: wrap;
+    }
+
+    &__title {
+      flex: 1;
+    }
+
+    &__actions {
+      flex-basis: 100%;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      margin-left: 0;
+    }
+  }
+
   &__body {
     flex: 1;
     min-height: 0;
@@ -1755,7 +1773,12 @@
   overflow-x: auto;
   border-bottom: 1px solid var(--border);
   margin-bottom: 1rem;
-  scrollbar-width: thin;
+  // Its scrollbar drew a bar under the first tab on phones, reading as "selected"; the cut-off last tab shows it scrolls.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   &__tab {
     display: inline-flex;
@@ -1786,6 +1809,7 @@
 
 // Modal confirm (components/admin/ConfirmDialog.tsx).
 .confirm-dialog {
+  margin: auto; // the global reset zeroes margins, which would pin a modal <dialog> to the top-left
   max-width: min(28rem, calc(100vw - 2rem));
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

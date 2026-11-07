@@ -34,7 +34,7 @@ const LimitsTab = ({ details }: { details: TenantDetails }) => {
 
   return (
     <form className="card form-grid tab-form" onSubmit={submit}>
-      <p className="span-2 muted">Leave a field empty to use the platform default shown in it.</p>
+      <p className="span-2 platform-muted">Leave a field empty to use the platform default shown in it.</p>
       <label>
         Products
         <input
@@ -45,7 +45,7 @@ const LimitsTab = ({ details }: { details: TenantDetails }) => {
           onChange={(e) => setForm({ ...form, products: e.target.value })}
           placeholder={`Default: ${defaults.limits.products}`}
         />
-        {usage && <small className="muted">In use: {usage.products}</small>}
+        {usage && <small className="platform-muted">In use: {usage.products}</small>}
       </label>
       <label>
         Photo storage
@@ -63,7 +63,7 @@ const LimitsTab = ({ details }: { details: TenantDetails }) => {
             <option value="GB">GB</option>
           </select>
         </span>
-        {usage && <small className="muted">In use: {formatBytes(usage.uploadBytes)}</small>}
+        {usage && <small className="platform-muted">In use: {formatBytes(usage.uploadBytes)}</small>}
       </label>
       <label>
         Requests per minute

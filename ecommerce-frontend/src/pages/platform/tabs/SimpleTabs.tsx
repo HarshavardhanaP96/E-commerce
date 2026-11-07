@@ -22,12 +22,12 @@ const GroupForm = ({ details, group, fields, note }: { details: TenantDetails; g
 
   return (
     <form className="card form-grid tab-form" onSubmit={submit}>
-      <p className="span-2 muted">{note}</p>
+      <p className="span-2 platform-muted">{note}</p>
       {fields.map((f) => (
         <label key={f.key} className="span-2">
           {f.label}
           <input value={form[f.key]} maxLength={f.maxLength ?? 200} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
-          {f.hint && <small className="muted">{f.hint}</small>}
+          {f.hint && <small className="platform-muted">{f.hint}</small>}
         </label>
       ))}
       <TabActions dirty={dirty} saving={saving} error={error} onDiscard={() => setForm(initial)} />

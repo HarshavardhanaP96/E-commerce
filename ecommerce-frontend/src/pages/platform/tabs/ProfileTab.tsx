@@ -81,7 +81,7 @@ const ProfileTab = ({ details }: { details: TenantDetails }) => {
             </option>
           ))}
         </select>
-        <small className="muted">A label only: changing it does not change any setting.</small>
+        <small className="platform-muted">A label only: changing it does not change any setting.</small>
       </label>
 
       <fieldset className="span-2">
@@ -119,7 +119,7 @@ const ProfileTab = ({ details }: { details: TenantDetails }) => {
             Add
           </button>
         </span>
-        <small className="muted">A store needs at least one domain.</small>
+        <small className="platform-muted">A store needs at least one domain.</small>
       </fieldset>
 
       <label>
@@ -145,14 +145,14 @@ const ProfileTab = ({ details }: { details: TenantDetails }) => {
           aria-label="Other theme tokens"
           onChange={(e) => setForm({ ...form, otherTheme: e.target.value })}
         />
-        <small className="muted">
+        <small className="platform-muted">
           One token per line, as <code>--name: value</code>.
         </small>
       </details>
 
       <fieldset className="span-2 form-grid">
         <legend>Storefront and legal entity</legend>
-        <p className="span-2 muted">The store owner can also edit these in Store settings.</p>
+        <p className="span-2 platform-muted">The store owner can also edit these in Store settings.</p>
         {STOREFRONT.map((f) => (
           <label key={f.key} className={f.wide ? "span-2" : undefined}>
             {f.label}

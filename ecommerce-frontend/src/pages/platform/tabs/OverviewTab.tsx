@@ -38,7 +38,7 @@ const OverviewTab = ({ details }: { details: TenantDetails }) => {
         <p>
           <StatusBadge status={tenant.status} /> {statusNote(tenant)}
         </p>
-        <p className="muted">Domains: {tenant.domains.join(", ") || "—"}</p>
+        <p className="platform-muted">Domains: {tenant.domains.join(", ") || "—"}</p>
       </section>
 
       <section className="card">
@@ -49,7 +49,7 @@ const OverviewTab = ({ details }: { details: TenantDetails }) => {
             <Meter label="Photo storage" used={usage.uploadBytes} limit={limits.uploadBytes} format={formatBytes} />
           </>
         ) : (
-          <p className="muted">Usage unavailable.</p>
+          <p className="platform-muted">Usage unavailable.</p>
         )}
       </section>
 
@@ -68,7 +68,7 @@ const OverviewTab = ({ details }: { details: TenantDetails }) => {
           <dt>Time zone</dt>
           <dd>{rule(settings.regional.timeZone)}</dd>
         </dl>
-        <p className="muted">Set by the store owner in Store settings.</p>
+        <p className="platform-muted">Set by the store owner in Store settings.</p>
       </section>
 
       <section className="card overview__activity">
@@ -77,10 +77,10 @@ const OverviewTab = ({ details }: { details: TenantDetails }) => {
           {(audit?.entries ?? []).slice(0, 10).map((e) => (
             <li key={e._id}>
               <time dateTime={e.at}>{new Date(e.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>{" "}
-              <strong>{e.action}</strong> <span className="muted">{summariseChanges(e.changes)}</span>
+              <strong>{e.action}</strong> <span className="platform-muted">{summariseChanges(e.changes)}</span>
             </li>
           ))}
-          {audit && audit.entries.length === 0 && <li className="muted">No activity yet.</li>}
+          {audit && audit.entries.length === 0 && <li className="platform-muted">No activity yet.</li>}
         </ul>
         <Link to={`/platform/audit?tenant=${tenant.id}`}>View all</Link>
       </section>

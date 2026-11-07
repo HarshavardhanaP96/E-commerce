@@ -56,6 +56,7 @@
   display: grid;
   gap: 1rem;
   align-content: start;
+  grid-auto-rows: max-content; // .card has min-height: 0, so rows would otherwise shrink to fit the scroll box
 
   fieldset {
     border: 1px solid var(--border);
@@ -115,8 +116,3 @@
   }
 }
 
-.platform-check {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
