@@ -19,6 +19,11 @@ vi.mock("../redux/api/orderAPI", () => ({
   useConfirmOrderMutation: () => [confirmOrder],
 }));
 vi.mock("../redux/api/userAPI", () => ({ useGetMyAddressesQuery: () => ({ data: undefined }) }));
+vi.mock("../redux/api/referenceAPI", () => ({
+  useIndianStatesQuery: () => ({
+    data: { success: true, states: [{ code: "MH", name: "Maharashtra", unionTerritory: false, aliases: [] }] },
+  }),
+}));
 vi.mock("../utils/tracking", async (actual) => ({
   ...(await actual<typeof import("../utils/tracking")>()),
   track: vi.fn(),
